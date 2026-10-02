@@ -1,0 +1,14 @@
+# PROJECT: Micro-SaaS Appointment Booking
+
+# TECH STACK:
+- Backend: Java 17+, Spring Boot 3.x
+- Database: MySQL
+- ORM: Spring Data JPA (Hibernate)
+- Frontend: React.js
+- Authentication: Spring Security + JWT
+
+# ARCHITECTURE & RULES:
+1. Luôn tuân thủ mô hình 3 lớp: Controller -> Service -> Repository.
+2. Tên bảng Database và tên cột phải dùng snake_case (VD: customer_name).
+3. Tên API phải tuân thủ chuẩn RESTful (VD: GET /api/v1/bookings).
+4. Thực thể Booking bắt buộc phải có trường @Version để sử dụng Optimistic Locking xử lý Concurrency (chống trùng lịch).
