@@ -7,6 +7,7 @@ import com.example.spabooking.staff.entity.Staff;
 import com.example.spabooking.tenant.entity.Tenant;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "bookings")
@@ -41,6 +42,9 @@ public class Booking {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private BookingStatus status;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal price;
 
     @Column(name = "is_reminded")
     private Boolean isReminded = false;
@@ -91,6 +95,9 @@ public class Booking {
 
     public BookingStatus getStatus() { return status; }
     public void setStatus(BookingStatus status) { this.status = status; }
+
+    public BigDecimal getPrice() { return price; }
+    public void setPrice(BigDecimal price) { this.price = price; }
 
     public Boolean getIsReminded() { return isReminded; }
     public void setIsReminded(Boolean reminded) { isReminded = reminded; }
