@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import api from '../../lib/api/axios';
+import { subscribeToAuthFailure } from '../../lib/api/authEvents';
 import type { LoginResponse } from '../../types/auth';
 import { AuthContext } from './authTypes';
 import type { AuthContextProps } from './authTypes';
@@ -33,6 +34,11 @@ function loadPersistedAuth(): { token: string | null; user: AuthContextProps['us
   return { token: null, user: null };
 }
 
+function clearStorage() {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('authUser');
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Use lazy initializers to synchronously restore persisted auth (no effect needed)
   const [persisted] = useState(loadPersistedAuth);
@@ -42,6 +48,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // isLoading is false from the start because we initialize synchronously
   const isLoading = false;
 
+  // Stable logout reference (used by the event-bus subscription)
+  const logout = useCallback(() => {
+    clearStorage();
+    setToken(null);
+    setUser(null);
+  }, []);
+
+  // Subscribe to Axios 401 events so expired/invalid sessions are cleared automatically
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthFailure(logout);
+    return unsubscribe;
+  }, [logout]);
+
   const login = async (data: Parameters<AuthContextProps['login']>[0]) => {
     const response = await api.post<LoginResponse>('/auth/login', data);
     const { accessToken, username, roles } = response.data;
@@ -50,13 +69,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('authUser', JSON.stringify(authUser));
     setToken(accessToken);
     setUser(authUser);
-  };
-
-  const logout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('authUser');
-    setToken(null);
-    setUser(null);
   };
 
   return (

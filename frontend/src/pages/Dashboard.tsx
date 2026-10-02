@@ -1,31 +1,20 @@
+import AppShell from '../components/AppShell';
 import { useAuth } from '../app/auth/useAuth';
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();
-  };
+  const { user } = useAuth();
 
   return (
-    <div className="p-6 min-h-screen bg-gray-50">
-      <header className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 bg-red-600 text-white rounded"
-        >
-          Logout
-        </button>
-      </header>
-      <section>
-        <p className="text-lg">
-          Welcome, {user?.username ?? 'User'}! You are authenticated as{' '}
-          {user?.roles?.join(', ') ?? ''}.
+    <AppShell title="Dashboard">
+      <div className="placeholder-page">
+        <p className="placeholder-welcome">
+          Welcome back, <strong>{user?.username ?? 'User'}</strong>!
         </p>
-        {/* Future dashboard widgets will go here */}
-      </section>
-    </div>
+        <p className="placeholder-hint">
+          Dashboard metrics will appear here in a future week.
+        </p>
+      </div>
+    </AppShell>
   );
 };
 

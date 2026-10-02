@@ -1,20 +1,192 @@
+import { useState, useId } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../app/auth/useAuth';
 import type { LoginRequest } from '../types/auth';
+import type { AxiosError } from 'axios';
+import type { ApiError } from '../types/api';
+
+/**
+ * Returns a safe internal redirect path.
+ * Only accepts paths that begin with exactly one "/".
+ * Rejects protocol-relative (//, //evil.com), backslash tricks,
+ * control characters, and any path whose resolved origin differs
+ * from the current page (catches https://..., http://..., etc.).
+ * Falls back to /dashboard on any rejection.
+ */
+function sanitizeRedirect(raw: string | null): string {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.includes('\\')) {
+    return '/dashboard';
+  }
+  // Reject control characters (U+0000–U+001F, U+007F) without a regex literal
+  for (let i = 0; i < raw.length; i++) {
+    const cp = raw.codePointAt(i) ?? 0;
+    if (cp <= 0x1f || cp === 0x7f) {
+      return '/dashboard';
+    }
+  }
+  try {
+    const url = new URL(raw, window.location.origin);
+    if (url.origin !== window.location.origin) {
+      return '/dashboard';
+    }
+    // Reconstruct from parsed parts to strip any injected scheme
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return '/dashboard';
+  }
+}
+
+
+type LoginError =
+  | { kind: 'credentials' }
+  | { kind: 'network' }
+  | { kind: 'validation' }
+  | { kind: 'server' };
+
+function resolveError(err: unknown): LoginError {
+  const axiosErr = err as AxiosError<ApiError>;
+  const status = axiosErr.response?.status;
+
+  if (!axiosErr.response) {
+    // Network-level failure (no response received)
+    return { kind: 'network' };
+  }
+  if (status === 401 || status === 403) {
+    return { kind: 'credentials' };
+  }
+  if (status === 400) {
+    return { kind: 'validation' };
+  }
+  return { kind: 'server' };
+}
+
+function errorMessage(err: LoginError): string {
+  switch (err.kind) {
+    case 'credentials':
+      return 'Username or password is incorrect.';
+    case 'network':
+      return 'Unable to connect to the server. Please try again.';
+    case 'validation':
+      return 'Please enter a valid username and password.';
+    case 'server':
+      return 'An unexpected error occurred. Please try again later.';
+  }
+}
 
 const LoginPage = () => {
   const { login } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const handleLogin = async () => {
-    const demoCredentials: LoginRequest = { username: 'owner', password: 'password' };
-    await login(demoCredentials);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<LoginError | null>(null);
+
+  // Stable IDs for accessibility (input <-> label association)
+  const usernameId = useId();
+  const passwordId = useId();
+  const errorId = useId();
+
+  const redirectTo = sanitizeRedirect(searchParams.get('redirect'));
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+
+    // Basic client-side presence check
+    if (!username.trim() || !password.trim()) {
+      setError({ kind: 'validation' });
+      return;
+    }
+
+    const credentials: LoginRequest = { username: username.trim(), password };
+    setIsSubmitting(true);
+
+    try {
+      await login(credentials);
+      navigate(redirectTo, { replace: true });
+    } catch (err: unknown) {
+      setError(resolveError(err));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <h2 className="text-2xl mb-4">Login (demo)</h2>
-      <button onClick={handleLogin} className="px-4 py-2 bg-blue-600 text-white rounded">
-        Demo Login
-      </button>
+    <div className="login-page">
+      <div className="login-card">
+        {/* Brand */}
+        <div className="login-brand">
+          <span className="login-brand-icon" aria-hidden="true">✦</span>
+          <span className="login-brand-name">Spa Booking</span>
+        </div>
+
+        <h1 className="login-heading">Sign in to your account</h1>
+
+        {/* Error banner */}
+        {error && (
+          <div
+            id={errorId}
+            role="alert"
+            className="login-error"
+            aria-live="assertive"
+          >
+            {errorMessage(error)}
+          </div>
+        )}
+
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          aria-describedby={error ? errorId : undefined}
+        >
+          <div className="login-field">
+            <label htmlFor={usernameId} className="login-label">
+              Username
+            </label>
+            <input
+              id={usernameId}
+              type="text"
+              name="username"
+              autoComplete="username"
+              required
+              disabled={isSubmitting}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="login-input"
+              aria-required="true"
+            />
+          </div>
+
+          <div className="login-field">
+            <label htmlFor={passwordId} className="login-label">
+              Password
+            </label>
+            <input
+              id={passwordId}
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              required
+              disabled={isSubmitting}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="login-input"
+              aria-required="true"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="login-submit-btn"
+            aria-busy={isSubmitting}
+          >
+            {isSubmitting ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };
