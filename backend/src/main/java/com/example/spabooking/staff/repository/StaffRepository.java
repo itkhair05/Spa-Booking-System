@@ -9,7 +9,10 @@ import java.util.Optional;
 
 @Repository
 public interface StaffRepository extends JpaRepository<Staff, Long> {
+    List<Staff> findAllByTenantIdAndIsActiveTrue(Long tenantId);
     
+    Optional<Staff> findByIdAndTenantIdAndIsActiveTrue(Long id, Long tenantId);
+
     List<Staff> findAllByTenantId(Long tenantId);
     
     Optional<Staff> findByIdAndTenantId(Long id, Long tenantId);
