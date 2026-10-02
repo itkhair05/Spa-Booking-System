@@ -35,9 +35,10 @@ public class BookingController {
     public ResponseEntity<List<BookingResponse>> getBookings(
             @RequestParam(required = false) Long staffId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) com.example.spabooking.booking.enums.BookingStatus status) {
         
-        List<Booking> bookings = bookingService.findAll(staffId, startDate, endDate);
+        List<Booking> bookings = bookingService.findAll(staffId, startDate, endDate, status);
         List<BookingResponse> response = bookings.stream()
                 .map(BookingResponse::fromEntity)
                 .collect(Collectors.toList());

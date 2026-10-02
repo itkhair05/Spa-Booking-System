@@ -47,9 +47,21 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
-    public List<Booking> findAll(Long staffId, LocalDateTime startDate, LocalDateTime endDate) {
+    public List<Booking> findAll(Long staffId, LocalDateTime startDate, LocalDateTime endDate, BookingStatus status) {
         Long tenantId = TenantContext.requireTenantId();
-        return bookingRepository.findAllByFilters(tenantId, staffId, startDate, endDate);
+        
+        if (startDate != null && endDate != null) {
+            if (endDate.isBefore(startDate)) {
+                throw new IllegalArgumentException("endDate must not be before startDate");
+            }
+            if (java.time.Duration.between(startDate, endDate).toDays() > 90) {
+                throw new IllegalArgumentException("Date range must not exceed 90 days");
+            }
+        } else if (startDate != null || endDate != null) {
+            throw new IllegalArgumentException("Both startDate and endDate must be provided together");
+        }
+        
+        return bookingRepository.findAllByFilters(tenantId, staffId, startDate, endDate, status);
     }
 
     @Transactional(readOnly = true)

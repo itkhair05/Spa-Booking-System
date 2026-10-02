@@ -10,8 +10,11 @@ public class BookingResponse {
     
     private Long id;
     private Long customerId;
+    private String customerName;
     private Long serviceId;
+    private String serviceName;
     private Long staffId;
+    private String staffName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private BookingStatus status;
@@ -24,8 +27,11 @@ public class BookingResponse {
         BookingResponse response = new BookingResponse();
         response.setId(booking.getId());
         response.setCustomerId(booking.getCustomer().getId());
+        response.setCustomerName(booking.getCustomer().getName());
         response.setServiceId(booking.getService().getId());
+        response.setServiceName(booking.getService().getName());
         response.setStaffId(booking.getStaff().getId());
+        response.setStaffName(booking.getStaff().getName());
         response.setStartTime(booking.getStartTime());
         response.setEndTime(booking.getEndTime());
         response.setStatus(booking.getStatus());
@@ -43,11 +49,20 @@ public class BookingResponse {
     public Long getCustomerId() { return customerId; }
     public void setCustomerId(Long customerId) { this.customerId = customerId; }
 
+    public String getCustomerName() { return customerName; }
+    public void setCustomerName(String customerName) { this.customerName = customerName; }
+
     public Long getServiceId() { return serviceId; }
     public void setServiceId(Long serviceId) { this.serviceId = serviceId; }
 
+    public String getServiceName() { return serviceName; }
+    public void setServiceName(String serviceName) { this.serviceName = serviceName; }
+
     public Long getStaffId() { return staffId; }
     public void setStaffId(Long staffId) { this.staffId = staffId; }
+
+    public String getStaffName() { return staffName; }
+    public void setStaffName(String staffName) { this.staffName = staffName; }
 
     public LocalDateTime getStartTime() { return startTime; }
     public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
