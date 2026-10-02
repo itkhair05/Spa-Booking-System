@@ -13,4 +13,8 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     List<Customer> findAllByTenantId(Long tenantId);
     
     Optional<Customer> findByIdAndTenantId(Long id, Long tenantId);
+
+    List<Customer> findAllByTenantIdAndIsActiveTrue(Long tenantId);
+
+    Optional<Customer> findByIdAndTenantIdAndIsActiveTrue(Long id, Long tenantId);
 }

@@ -46,12 +46,12 @@ public class CustomerServiceTest {
         TenantContext.setTenantId(10L);
         Customer mockCustomer = new Customer();
         mockCustomer.setId(1L);
-        when(customerRepository.findAllByTenantId(10L)).thenReturn(Collections.singletonList(mockCustomer));
+        when(customerRepository.findAllByTenantIdAndIsActiveTrue(10L)).thenReturn(Collections.singletonList(mockCustomer));
 
         List<Customer> result = customerService.findAll();
         assertEquals(1, result.size());
         assertEquals(1L, result.get(0).getId());
-        verify(customerRepository, times(1)).findAllByTenantId(10L);
+        verify(customerRepository, times(1)).findAllByTenantIdAndIsActiveTrue(10L);
     }
 
     @Test
@@ -59,22 +59,22 @@ public class CustomerServiceTest {
         TenantContext.setTenantId(20L);
         Customer mockCustomer = new Customer();
         mockCustomer.setId(2L);
-        when(customerRepository.findByIdAndTenantId(2L, 20L)).thenReturn(Optional.of(mockCustomer));
+        when(customerRepository.findByIdAndTenantIdAndIsActiveTrue(2L, 20L)).thenReturn(Optional.of(mockCustomer));
 
         Optional<Customer> result = customerService.findById(2L);
         assertTrue(result.isPresent());
         assertEquals(2L, result.get().getId());
-        verify(customerRepository, times(1)).findByIdAndTenantId(2L, 20L);
+        verify(customerRepository, times(1)).findByIdAndTenantIdAndIsActiveTrue(2L, 20L);
     }
 
     @Test
     void testFindByIdCrossTenantDenied() {
         TenantContext.setTenantId(30L);
-        when(customerRepository.findByIdAndTenantId(3L, 30L)).thenReturn(Optional.empty());
+        when(customerRepository.findByIdAndTenantIdAndIsActiveTrue(3L, 30L)).thenReturn(Optional.empty());
 
         Optional<Customer> result = customerService.findById(3L);
         assertFalse(result.isPresent(), "Cross-tenant access should return empty Optional (Not Found)");
-        verify(customerRepository, times(1)).findByIdAndTenantId(3L, 30L);
+        verify(customerRepository, times(1)).findByIdAndTenantIdAndIsActiveTrue(3L, 30L);
     }
 
     @Test
@@ -82,7 +82,7 @@ public class CustomerServiceTest {
         assertThrows(IllegalStateException.class, () -> customerService.findAll(), "Expected requireTenantId to throw exception");
         assertThrows(IllegalStateException.class, () -> customerService.findById(1L), "Expected requireTenantId to throw exception");
         
-        verify(customerRepository, never()).findAllByTenantId(any());
-        verify(customerRepository, never()).findByIdAndTenantId(any(), any());
+        verify(customerRepository, never()).findAllByTenantIdAndIsActiveTrue(any());
+        verify(customerRepository, never()).findByIdAndTenantIdAndIsActiveTrue(any(), any());
     }
 }
