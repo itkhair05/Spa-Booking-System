@@ -24,13 +24,16 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthEntryPointJwt unauthorizedHandler;
     private final com.example.spabooking.tenant.filter.TenantContextFilter tenantContextFilter;
+    private final com.example.spabooking.publicapi.filter.PublicTenantContextFilter publicTenantContextFilter;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter, 
                           AuthEntryPointJwt unauthorizedHandler,
-                          com.example.spabooking.tenant.filter.TenantContextFilter tenantContextFilter) {
+                          com.example.spabooking.tenant.filter.TenantContextFilter tenantContextFilter,
+                          com.example.spabooking.publicapi.filter.PublicTenantContextFilter publicTenantContextFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.unauthorizedHandler = unauthorizedHandler;
         this.tenantContextFilter = tenantContextFilter;
+        this.publicTenantContextFilter = publicTenantContextFilter;
     }
 
     @Bean
@@ -51,10 +54,12 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/login").permitAll()
+                .requestMatchers("/api/v1/public/**").permitAll()
                 .anyRequest().authenticated()
             );
 
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(publicTenantContextFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterAfter(tenantContextFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

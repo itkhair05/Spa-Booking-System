@@ -21,4 +21,6 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @org.springframework.data.jpa.repository.Query("SELECT c FROM Customer c WHERE c.id = :id AND c.tenant.id = :tenantId AND c.isActive = true")
     Optional<Customer> findByIdAndTenantIdAndIsActiveTrueForUpdate(@org.springframework.data.repository.query.Param("id") Long id, @org.springframework.data.repository.query.Param("tenantId") Long tenantId);
+
+    Optional<Customer> findByPhoneAndTenantId(String phone, Long tenantId);
 }

@@ -13,4 +13,6 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
     List<Service> findAllByTenantId(Long tenantId);
     
     Optional<Service> findByIdAndTenantId(Long id, Long tenantId);
+
+    List<Service> findAllByTenantIdAndIsActiveTrue(Long tenantId);
 }
