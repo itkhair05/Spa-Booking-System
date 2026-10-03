@@ -12,7 +12,13 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import com.example.spabooking.service.entity.Service;
+import com.example.spabooking.service.repository.ServiceRepository;
+import com.example.spabooking.staff.entity.Staff;
+import com.example.spabooking.staff.repository.StaffRepository;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
+import java.util.List;
 
 @Component
 @Profile("dev")
@@ -28,17 +34,23 @@ public class DevDataSeeder implements CommandLineRunner {
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ServiceRepository serviceRepository;
+    private final StaffRepository staffRepository;
     private final String ownerPassword;
     private final String staffPassword;
 
     public DevDataSeeder(TenantRepository tenantRepository,
                          UserRepository userRepository,
                          PasswordEncoder passwordEncoder,
+                         ServiceRepository serviceRepository,
+                         StaffRepository staffRepository,
                          @Value("${dev.seed.owner-password}") String ownerPassword,
                          @Value("${dev.seed.staff-password}") String staffPassword) {
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.serviceRepository = serviceRepository;
+        this.staffRepository = staffRepository;
         this.ownerPassword = ownerPassword;
         this.staffPassword = staffPassword;
     }
@@ -84,6 +96,9 @@ public class DevDataSeeder implements CommandLineRunner {
         } else {
             logger.info("Demo staff already exists: {}", DEMO_STAFF_USERNAME);
         }
+
+        seedServices(tenant);
+        seedStaff(tenant);
     }
 
     private Tenant createDemoTenant() {
@@ -95,5 +110,53 @@ public class DevDataSeeder implements CommandLineRunner {
 
         logger.info("Demo tenant initialized: {}", DEMO_TENANT_SLUG);
         return tenant;
+    }
+
+    private void seedServices(Tenant tenant) {
+        List<Service> existingServices = serviceRepository.findAllByTenantId(tenant.getId());
+
+        seedServiceIfAbsent(tenant, existingServices, "Facial Basic", "A basic facial treatment for skin health.", 60, new BigDecimal("300000.00"));
+        seedServiceIfAbsent(tenant, existingServices, "Relaxing Massage", "Full body relaxing massage.", 60, new BigDecimal("350000.00"));
+        seedServiceIfAbsent(tenant, existingServices, "Deep Cleansing Facial", "Deep cleansing and exfoliation.", 90, new BigDecimal("450000.00"));
+    }
+
+    private void seedServiceIfAbsent(Tenant tenant, List<Service> existingServices, String name, String description, int durationMinutes, BigDecimal price) {
+        boolean exists = existingServices.stream().anyMatch(s -> s.getName().equals(name));
+        if (!exists) {
+            Service s = new Service();
+            s.setTenant(tenant);
+            s.setName(name);
+            s.setDescription(description);
+            s.setDurationMinutes(durationMinutes);
+            s.setPrice(price);
+            s.setIsActive(true);
+            serviceRepository.save(s);
+            logger.info("Demo service initialized: {}", name);
+        } else {
+            logger.info("Demo service already exists: {}", name);
+        }
+    }
+
+    private void seedStaff(Tenant tenant) {
+        List<Staff> existingStaff = staffRepository.findAllByTenantId(tenant.getId());
+
+        seedStaffIfAbsent(tenant, existingStaff, "Nguyễn An", "0901234567");
+        seedStaffIfAbsent(tenant, existingStaff, "Trần Linh", "0912345678");
+        seedStaffIfAbsent(tenant, existingStaff, "Lê Minh", "0923456789");
+    }
+
+    private void seedStaffIfAbsent(Tenant tenant, List<Staff> existingStaff, String name, String phone) {
+        boolean exists = existingStaff.stream().anyMatch(s -> s.getPhone() != null && s.getPhone().equals(phone));
+        if (!exists) {
+            Staff st = new Staff();
+            st.setTenant(tenant);
+            st.setName(name);
+            st.setPhone(phone);
+            st.setIsActive(true);
+            staffRepository.save(st);
+            logger.info("Demo staff initialized: {}", name);
+        } else {
+            logger.info("Demo staff already exists: {}", name);
+        }
     }
 }
