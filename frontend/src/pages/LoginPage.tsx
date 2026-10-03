@@ -1,6 +1,8 @@
 import { useState, useId } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../app/auth/useAuth';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 import type { LoginRequest } from '../types/auth';
 import type { AxiosError } from 'axios';
 import type { ApiError } from '../types/api';
@@ -140,51 +142,43 @@ const LoginPage = () => {
           onSubmit={handleSubmit}
           noValidate
           aria-describedby={error ? errorId : undefined}
+          className="flex flex-col gap-5"
         >
-          <div className="login-field">
-            <label htmlFor={usernameId} className="login-label">
-              Username
-            </label>
-            <input
-              id={usernameId}
-              type="text"
-              name="username"
-              autoComplete="username"
-              required
-              disabled={isSubmitting}
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="login-input"
-              aria-required="true"
-            />
-          </div>
+          <Input
+            id={usernameId}
+            label="Username"
+            type="text"
+            name="username"
+            autoComplete="username"
+            required
+            disabled={isSubmitting}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            aria-required="true"
+          />
 
-          <div className="login-field">
-            <label htmlFor={passwordId} className="login-label">
-              Password
-            </label>
-            <input
-              id={passwordId}
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              required
-              disabled={isSubmitting}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="login-input"
-              aria-required="true"
-            />
-          </div>
+          <Input
+            id={passwordId}
+            label="Password"
+            type="password"
+            name="password"
+            autoComplete="current-password"
+            required
+            disabled={isSubmitting}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            aria-required="true"
+          />
 
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="login-submit-btn"
             aria-busy={isSubmitting}
+            className="w-full mt-2"
+            size="lg"
           >
             {isSubmitting ? 'Signing in…' : 'Sign in'}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

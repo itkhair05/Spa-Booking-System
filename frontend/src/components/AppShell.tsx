@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../app/auth/useAuth';
@@ -24,39 +25,68 @@ interface AppShellProps {
 
 /**
  * Authenticated application shell.
- * Renders a fixed sidebar + top header + scrollable main content area.
+ * Renders a fixed sidebar (collapsible on mobile) + top header + scrollable main content area.
  */
 const AppShell = ({ children, title }: AppShellProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login', { replace: true });
   };
 
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+
   return (
     <div className="app-shell">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="sidebar" aria-label="Main navigation">
+      <aside
+        className={`sidebar ${isSidebarOpen ? 'sidebar--open' : ''}`}
+        aria-label="Main navigation"
+      >
         <div className="sidebar-brand">
           <span className="sidebar-brand-icon" aria-hidden="true">✦</span>
           <span className="sidebar-brand-name">Spa Booking</span>
+          {/* Mobile close button inside sidebar */}
+          <button
+            type="button"
+            className="sidebar-close-btn lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+            aria-label="Close menu"
+          >
+            ✕
+          </button>
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map(({ to, label, icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                ['sidebar-nav-link', isActive ? 'sidebar-nav-link--active' : ''].join(' ').trim()
-              }
-            >
-              <span className="sidebar-nav-icon" aria-hidden="true">{icon}</span>
-              <span>{label}</span>
-            </NavLink>
-          ))}
+          {NAV_ITEMS.map(({ to, label, icon }) => {
+            // Very simple permission check: if staff, maybe hide some items in the future.
+            // Currently, everyone sees all items as placeholders.
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                onClick={() => setIsSidebarOpen(false)}
+                className={({ isActive }) =>
+                  ['sidebar-nav-link', isActive ? 'sidebar-nav-link--active' : ''].join(' ').trim()
+                }
+              >
+                <span className="sidebar-nav-icon" aria-hidden="true">{icon}</span>
+                <span>{label}</span>
+              </NavLink>
+            );
+          })}
         </nav>
 
         <div className="sidebar-footer">
@@ -86,12 +116,21 @@ const AppShell = ({ children, title }: AppShellProps) => {
       <div className="main-area">
         {/* Top header */}
         <header className="main-header">
+          <button
+            type="button"
+            className="mobile-menu-btn"
+            onClick={toggleSidebar}
+            aria-label="Open menu"
+            aria-expanded={isSidebarOpen}
+          >
+            ☰
+          </button>
           <h1 className="main-header-title">{title}</h1>
         </header>
 
         {/* Page content */}
         <main className="main-content" id="main-content">
-          {children}
+          <div className="content-container">{children}</div>
         </main>
       </div>
     </div>
