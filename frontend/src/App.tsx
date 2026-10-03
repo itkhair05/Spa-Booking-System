@@ -8,6 +8,7 @@ import Bookings from './pages/Bookings';
 import Customers from './pages/Customers';
 import Services from './pages/Services';
 import Staff from './pages/Staff';
+import Settings from './pages/Settings';
 
 /**
  * Guard for authenticated-only routes.
@@ -98,6 +99,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Staff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             }
           />

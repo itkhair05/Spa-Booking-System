@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   Sparkles,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -27,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/customers', label: 'Customers', icon: Users },
   { to: '/services', label: 'Services', icon: Scissors },
   { to: '/staff', label: 'Staff', icon: UserRound },
+  { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ];
 
 interface AppShellProps {
