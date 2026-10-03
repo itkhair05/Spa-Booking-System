@@ -10,6 +10,8 @@ import com.example.spabooking.service.repository.ServiceRepository;
 import com.example.spabooking.service.entity.Service;
 import com.example.spabooking.staff.repository.StaffRepository;
 import com.example.spabooking.staff.entity.Staff;
+import com.example.spabooking.booking.repository.BookingRepository;
+import com.example.spabooking.customer.repository.CustomerRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,6 +63,12 @@ class DevDataSeederTest {
     @Autowired
     private StaffRepository staffRepository;
 
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private CustomerRepository customerRepository;
+
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -75,6 +83,12 @@ class DevDataSeederTest {
         userRepository.findByUsername(DevDataSeeder.DEMO_OWNER_USERNAME).ifPresent(userRepository::delete);
         userRepository.findByUsername(DevDataSeeder.DEMO_STAFF_USERNAME).ifPresent(userRepository::delete);
         tenantRepository.findBySlug(DevDataSeeder.DEMO_TENANT_SLUG).ifPresent(t -> {
+            bookingRepository.findAllByTenantId(t.getId()).forEach(bookingRepository::delete);
+            bookingRepository.flush();
+
+            customerRepository.findAllByTenantId(t.getId()).forEach(customerRepository::delete);
+            customerRepository.flush();
+
             serviceRepository.findAllByTenantId(t.getId()).forEach(serviceRepository::delete);
             staffRepository.findAllByTenantId(t.getId()).forEach(staffRepository::delete);
             tenantRepository.delete(t);
