@@ -9,6 +9,7 @@ import Customers from './pages/Customers';
 import Services from './pages/Services';
 import Staff from './pages/Staff';
 import Settings from './pages/Settings';
+import PublicBooking from './pages/PublicBooking';
 
 /**
  * Guard for authenticated-only routes.
@@ -60,6 +61,11 @@ function App() {
               </PublicRoute>
             }
           />
+
+            <Route
+              path="/spas/:slug"
+              element={<PublicBooking />}
+            />
 
           {/* Protected */}
           <Route
