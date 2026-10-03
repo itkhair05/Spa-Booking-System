@@ -6,6 +6,10 @@ import com.example.spabooking.auth.enums.UserRole;
 import com.example.spabooking.auth.repository.UserRepository;
 import com.example.spabooking.tenant.entity.Tenant;
 import com.example.spabooking.tenant.repository.TenantRepository;
+import com.example.spabooking.service.repository.ServiceRepository;
+import com.example.spabooking.service.entity.Service;
+import com.example.spabooking.staff.repository.StaffRepository;
+import com.example.spabooking.staff.entity.Staff;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +55,12 @@ class DevDataSeederTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private ServiceRepository serviceRepository;
+
+    @Autowired
+    private StaffRepository staffRepository;
+
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -64,13 +74,19 @@ class DevDataSeederTest {
         // Clean slate for the fixed demo identifiers; rolled back by @Transactional.
         userRepository.findByUsername(DevDataSeeder.DEMO_OWNER_USERNAME).ifPresent(userRepository::delete);
         userRepository.findByUsername(DevDataSeeder.DEMO_STAFF_USERNAME).ifPresent(userRepository::delete);
-        tenantRepository.findBySlug(DevDataSeeder.DEMO_TENANT_SLUG).ifPresent(tenantRepository::delete);
+        tenantRepository.findBySlug(DevDataSeeder.DEMO_TENANT_SLUG).ifPresent(t -> {
+            serviceRepository.findAllByTenantId(t.getId()).forEach(serviceRepository::delete);
+            staffRepository.findAllByTenantId(t.getId()).forEach(staffRepository::delete);
+            tenantRepository.delete(t);
+        });
         userRepository.flush();
         tenantRepository.flush();
+        serviceRepository.flush();
+        staffRepository.flush();
     }
 
     private DevDataSeeder seeder(String ownerPassword, String staffPassword) {
-        return new DevDataSeeder(tenantRepository, userRepository, passwordEncoder, ownerPassword, staffPassword);
+        return new DevDataSeeder(tenantRepository, userRepository, passwordEncoder, serviceRepository, staffRepository, ownerPassword, staffPassword);
     }
 
     @Test
@@ -82,12 +98,12 @@ class DevDataSeederTest {
         User staff = userRepository.findByUsername(DevDataSeeder.DEMO_STAFF_USERNAME).orElseThrow();
 
         assertEquals("Demo Spa", tenant.getName());
-        
+
         assertEquals(UserRole.OWNER, owner.getRole());
         assertNotNull(owner.getTenant());
         assertEquals(tenant.getId(), owner.getTenant().getId());
         assertEquals(Boolean.TRUE, owner.getIsActive());
-        
+
         assertEquals(UserRole.STAFF, staff.getRole());
         assertNotNull(staff.getTenant());
         assertEquals(tenant.getId(), staff.getTenant().getId());
@@ -104,7 +120,7 @@ class DevDataSeederTest {
         assertNotEquals(DEMO_PASSWORD, owner.getPassword());
         assertTrue(owner.getPassword().startsWith("$2"));
         assertTrue(passwordEncoder.matches(DEMO_PASSWORD, owner.getPassword()));
-        
+
         assertNotEquals(DEMO_STAFF_PASSWORD, staff.getPassword());
         assertTrue(staff.getPassword().startsWith("$2"));
         assertTrue(passwordEncoder.matches(DEMO_STAFF_PASSWORD, staff.getPassword()));
@@ -126,9 +142,15 @@ class DevDataSeederTest {
                 .filter(u -> DevDataSeeder.DEMO_STAFF_USERNAME.equals(u.getUsername()))
                 .count();
 
+        Tenant tenant = tenantRepository.findBySlug(DevDataSeeder.DEMO_TENANT_SLUG).orElseThrow();
+        long servicesCount = serviceRepository.findAllByTenantId(tenant.getId()).size();
+        long staffRecordsCount = staffRepository.findAllByTenantId(tenant.getId()).size();
+
         assertEquals(1, tenants);
         assertEquals(1, owners);
         assertEquals(1, staffs);
+        assertEquals(3, servicesCount);
+        assertEquals(3, staffRecordsCount);
     }
 
     @Test
@@ -141,6 +163,65 @@ class DevDataSeederTest {
         assertTrue(tenantRepository.findBySlug(DevDataSeeder.DEMO_TENANT_SLUG).isEmpty());
         assertTrue(userRepository.findByUsername(DevDataSeeder.DEMO_OWNER_USERNAME).isEmpty());
         assertTrue(userRepository.findByUsername(DevDataSeeder.DEMO_STAFF_USERNAME).isEmpty());
+    }
+
+    @Test
+    void partialSeedRecoveryRestoresMissingFixtures() {
+        // 1. Initial seed
+        DevDataSeeder seeder = seeder(DEMO_PASSWORD, DEMO_STAFF_PASSWORD);
+        seeder.run();
+
+        Tenant tenant = tenantRepository.findBySlug(DevDataSeeder.DEMO_TENANT_SLUG).orElseThrow();
+
+        // 2. Delete one Service and one Staff
+        var services = serviceRepository.findAllByTenantId(tenant.getId());
+        Service serviceToDelete = services.stream().filter(s -> s.getName().equals("Relaxing Massage")).findFirst().orElseThrow();
+        serviceRepository.delete(serviceToDelete);
+
+        var staffs = staffRepository.findAllByTenantId(tenant.getId());
+        Staff staffToDelete = staffs.stream().filter(s -> "0912345678".equals(s.getPhone())).findFirst().orElseThrow();
+        staffRepository.delete(staffToDelete);
+
+        // Ensure deletion is flushed
+        serviceRepository.flush();
+        staffRepository.flush();
+
+        // 3. Seed again
+        seeder.run();
+
+        // 4. Verify recovery
+        var servicesAfter = serviceRepository.findAllByTenantId(tenant.getId());
+        var staffsAfter = staffRepository.findAllByTenantId(tenant.getId());
+
+        assertEquals(3, servicesAfter.size(), "Should have exactly 3 services after recovery");
+        assertTrue(servicesAfter.stream().anyMatch(s -> s.getName().equals("Relaxing Massage")), "Missing service should be recovered");
+
+        assertEquals(3, staffsAfter.size(), "Should have exactly 3 staff records after recovery");
+        assertTrue(staffsAfter.stream().anyMatch(s -> "0912345678".equals(s.getPhone())), "Missing staff should be recovered");
+    }
+
+    @Test
+    void seededServicesAndStaffAreActiveAndBelongToTenant() {
+        seeder(DEMO_PASSWORD, DEMO_STAFF_PASSWORD).run();
+
+        Tenant tenant = tenantRepository.findBySlug(DevDataSeeder.DEMO_TENANT_SLUG).orElseThrow();
+        var services = serviceRepository.findAllByTenantId(tenant.getId());
+        var staffs = staffRepository.findAllByTenantId(tenant.getId());
+
+        assertEquals(3, services.size());
+        for (Service s : services) {
+            assertTrue(s.getIsActive());
+            assertEquals(tenant.getId(), s.getTenant().getId());
+            assertNotNull(s.getPrice());
+            assertNotNull(s.getDurationMinutes());
+        }
+
+        assertEquals(3, staffs.size());
+        for (Staff st : staffs) {
+            assertTrue(st.getIsActive());
+            assertEquals(tenant.getId(), st.getTenant().getId());
+            assertNotNull(st.getName());
+        }
     }
 
     @Test
