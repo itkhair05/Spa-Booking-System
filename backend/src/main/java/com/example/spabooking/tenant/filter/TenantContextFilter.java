@@ -23,6 +23,13 @@ public class TenantContextFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        // Public endpoints resolve their tenant from the URL slug; a caller's JWT
+        // must not override that resolution.
+        if (request.getRequestURI().startsWith("/api/v1/public/spas/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
