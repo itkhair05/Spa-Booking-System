@@ -14,6 +14,7 @@ export interface CreateServiceRequest {
   description?: string;
   durationMinutes: number;
   price: number;
+  isActive?: boolean;
 }
 
 export interface UpdateServiceRequest {
@@ -21,4 +22,5 @@ export interface UpdateServiceRequest {
   description?: string;
   durationMinutes: number;
   price: number;
+  isActive?: boolean;
 }
