@@ -12,10 +12,12 @@ export interface CreateStaffRequest {
   name: string;
   phone?: string;
   email?: string;
+  isActive?: boolean;
 }
 
 export interface UpdateStaffRequest {
   name: string;
   phone?: string;
   email?: string;
+  isActive?: boolean;
 }
