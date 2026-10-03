@@ -55,8 +55,10 @@ class AuthControllerTest {
                 .webAppContextSetup(context)
                 .apply(springSecurity())
                 .build();
-        userRepository.deleteAll();
-        tenantRepository.deleteAll();
+        userRepository.findByUsername("testowner").ifPresent(userRepository::delete);
+        tenantRepository.findBySlug("testspa").ifPresent(tenantRepository::delete);
+        userRepository.flush();
+        tenantRepository.flush();
 
         Tenant tenant = new Tenant();
         tenant.setName("Test Spa");
