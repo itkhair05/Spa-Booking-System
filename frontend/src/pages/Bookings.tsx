@@ -36,7 +36,7 @@ const Bookings = () => {
       setBookings(data);
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      setError(errorObj.response?.data?.message || 'Failed to load bookings.');
+      setError(errorObj.response?.data?.message || 'Không thể tải dữ liệu lịch hẹn.');
     } finally {
       setIsLoading(false);
     }
@@ -69,14 +69,14 @@ const Bookings = () => {
       fetchBookings();
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      alert(errorObj.response?.data?.message || 'Failed to update booking status.');
+      alert(errorObj.response?.data?.message || 'Không thể cập nhật trạng thái lịch hẹn.');
     }
   };
 
   if (isFormOpen) {
     return (
-      <AppShell title="Bookings">
-        <PageHeader title="Booking Management" />
+      <AppShell title="Lịch hẹn">
+        <PageHeader title="Quản lý Lịch hẹn" />
         <div className="max-w-2xl mx-auto">
           <BookingForm 
             booking={editingBooking}
@@ -89,10 +89,10 @@ const Bookings = () => {
   }
 
   return (
-    <AppShell title="Bookings">
+    <AppShell title="Lịch hẹn">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <PageHeader title="Booking Management" description="Manage all your spa appointments here." />
-        <Button onClick={() => handleOpenForm()}>New Booking</Button>
+        <PageHeader title="Quản lý Lịch hẹn" description="Quản lý tất cả lịch hẹn tại spa của bạn." />
+        <Button onClick={() => handleOpenForm()}>Tạo lịch hẹn</Button>
       </div>
 
       {isLoading && (
@@ -110,20 +110,20 @@ const Bookings = () => {
       {error && !isLoading && (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)]" role="alert">
           <AlertCircle className="text-[var(--color-error)] mb-4" size={40} />
-          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Unable to load bookings</h3>
+          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Không thể tải dữ liệu</h3>
           <p className="text-[var(--color-neutral-500)] mb-6 text-center max-w-md">{error}</p>
-          <Button onClick={fetchBookings}>Try Again</Button>
+          <Button onClick={fetchBookings}>Thử lại</Button>
         </div>
       )}
 
       {!isLoading && !error && bookings.length === 0 && (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)] text-center">
           <Calendar className="text-[var(--color-neutral-400)] mb-4" size={40} />
-          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">No bookings yet</h3>
+          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Chưa có lịch hẹn</h3>
           <p className="text-[var(--color-neutral-500)] mb-6">
-            You don't have any bookings to show.
+            Hiện chưa có lịch hẹn nào để hiển thị.
           </p>
-          <Button onClick={() => handleOpenForm()}>New Booking</Button>
+          <Button onClick={() => handleOpenForm()}>Tạo lịch hẹn</Button>
         </div>
       )}
 
@@ -143,15 +143,15 @@ const Bookings = () => {
                   
                   <div className="text-sm text-[var(--color-neutral-600)]">
                     <p>
-                      <strong>Time:</strong> {formatDate(booking.startTime)} - {formatDate(booking.endTime)}
+                      <strong>Thời gian:</strong> {formatDate(booking.startTime)} - {formatDate(booking.endTime)}
                     </p>
                     <p>
-                      <strong>Staff:</strong> {booking.staffName}
+                      <strong>Nhân viên:</strong> {booking.staffName}
                     </p>
                     <p>
-                      <strong>Status:</strong>{' '}
+                      <strong>Trạng thái:</strong>{' '}
                       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--color-neutral-100)] border border-[var(--color-neutral-200)]">
-                        {booking.status}
+                        {booking.status === 'PENDING' ? 'Chờ xác nhận' : booking.status === 'CONFIRMED' ? 'Đã xác nhận' : booking.status === 'COMPLETED' ? 'Đã hoàn thành' : booking.status === 'CANCELLED' ? 'Đã hủy' : booking.status}
                       </span>
                     </p>
                   </div>
@@ -159,16 +159,16 @@ const Bookings = () => {
 
                 <div className="flex flex-wrap items-center gap-2">
                   <Button variant="secondary" size="sm" onClick={() => handleOpenForm(booking)}>
-                    Edit
+                    Chỉnh sửa
                   </Button>
                   
                   {booking.status === 'PENDING' && (
                     <>
                       <Button size="sm" onClick={() => handleStatusChange(booking.id, 'CONFIRMED')}>
-                        Confirm
+                        Xác nhận
                       </Button>
                       <Button variant="danger" size="sm" onClick={() => handleStatusChange(booking.id, 'CANCELLED')}>
-                        Cancel
+                        Hủy
                       </Button>
                     </>
                   )}
@@ -176,10 +176,10 @@ const Bookings = () => {
                   {booking.status === 'CONFIRMED' && (
                     <>
                       <Button size="sm" onClick={() => handleStatusChange(booking.id, 'COMPLETED')}>
-                        Complete
+                        Hoàn thành
                       </Button>
                       <Button variant="danger" size="sm" onClick={() => handleStatusChange(booking.id, 'CANCELLED')}>
-                        Cancel
+                        Hủy
                       </Button>
                     </>
                   )}

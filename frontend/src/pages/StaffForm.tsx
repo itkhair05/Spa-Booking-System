@@ -24,7 +24,7 @@ export const StaffForm = ({ staff, onSuccess, onCancel }: StaffFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError('Name is required.');
+      setError('Vui lòng nhập họ và tên.');
       return;
     }
 
@@ -51,7 +51,7 @@ export const StaffForm = ({ staff, onSuccess, onCancel }: StaffFormProps) => {
       onSuccess();
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      setError(errorObj.response?.data?.message || 'An error occurred while saving the staff member.');
+      setError(errorObj.response?.data?.message || 'Có lỗi xảy ra khi lưu nhân viên.');
     } finally {
       setIsSubmitting(false);
     }
@@ -61,7 +61,7 @@ export const StaffForm = ({ staff, onSuccess, onCancel }: StaffFormProps) => {
     <Card>
       <CardContent className="p-6">
         <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-4">
-          {staff ? 'Edit Staff Member' : 'New Staff Member'}
+          {staff ? 'Chỉnh sửa nhân viên' : 'Thêm nhân viên'}
         </h3>
         
         {error && (
@@ -73,27 +73,27 @@ export const StaffForm = ({ staff, onSuccess, onCancel }: StaffFormProps) => {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input 
             type="text" 
-            label="Name" 
+            label="Họ và tên" 
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
             minLength={2}
             maxLength={100}
-            placeholder="e.g. Jane Doe"
+            placeholder="VD: Nguyễn Văn A"
           />
           <Input 
             type="tel" 
-            label="Phone" 
+            label="Số điện thoại" 
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="e.g. 0912345678"
+            placeholder="VD: 0912345678"
           />
           <Input 
             type="email" 
             label="Email" 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="e.g. jane@example.com"
+            placeholder="VD: nguyen@example.com"
           />
           
           <label className="flex items-center gap-2 text-sm font-semibold text-[var(--color-neutral-700)] mt-2 cursor-pointer">
@@ -103,15 +103,15 @@ export const StaffForm = ({ staff, onSuccess, onCancel }: StaffFormProps) => {
               onChange={(e) => setIsActive(e.target.checked)}
               className="w-4 h-4 rounded border-[var(--color-neutral-300)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-500)]"
             />
-            Active
+            Đang hoạt động
           </label>
 
           <div className="flex justify-end gap-3 mt-4">
             <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
-              Cancel
+              Hủy
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : (staff ? 'Save Changes' : 'Create Staff')}
+              {isSubmitting ? 'Đang lưu...' : (staff ? 'Lưu thay đổi' : 'Thêm nhân viên')}
             </Button>
           </div>
         </form>

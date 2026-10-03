@@ -25,7 +25,7 @@ export const ServiceForm = ({ service, onSuccess, onCancel }: ServiceFormProps) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !durationMinutes || !price) {
-      setError('Name, duration, and price are required.');
+      setError('Vui lòng nhập tên, thời lượng và giá.');
       return;
     }
 
@@ -33,12 +33,12 @@ export const ServiceForm = ({ service, onSuccess, onCancel }: ServiceFormProps) 
     const priceVal = parseFloat(price);
 
     if (isNaN(duration) || duration < 1) {
-      setError('Duration must be at least 1 minute.');
+      setError('Thời lượng phải ít nhất 1 phút.');
       return;
     }
     
     if (isNaN(priceVal) || priceVal < 0) {
-      setError('Price cannot be negative.');
+      setError('Giá không được âm.');
       return;
     }
 
@@ -67,7 +67,7 @@ export const ServiceForm = ({ service, onSuccess, onCancel }: ServiceFormProps) 
       onSuccess();
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      setError(errorObj.response?.data?.message || 'An error occurred while saving the service.');
+      setError(errorObj.response?.data?.message || 'Có lỗi xảy ra khi lưu dịch vụ.');
     } finally {
       setIsSubmitting(false);
     }
@@ -77,7 +77,7 @@ export const ServiceForm = ({ service, onSuccess, onCancel }: ServiceFormProps) 
     <Card>
       <CardContent className="p-6">
         <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-4">
-          {service ? 'Edit Service' : 'New Service'}
+          {service ? 'Chỉnh sửa dịch vụ' : 'Thêm dịch vụ'}
         </h3>
         
         {error && (
@@ -89,23 +89,23 @@ export const ServiceForm = ({ service, onSuccess, onCancel }: ServiceFormProps) 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input 
             type="text" 
-            label="Name" 
+            label="Tên dịch vụ" 
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            placeholder="e.g. Classic Massage"
+            placeholder="VD: Massage cổ vai gáy"
           />
           <Input 
             type="text" 
-            label="Description" 
+            label="Mô tả" 
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Optional description"
+            placeholder="Mô tả thêm (không bắt buộc)"
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input 
               type="number" 
-              label="Duration (minutes)" 
+              label="Thời lượng (phút)" 
               value={durationMinutes}
               onChange={(e) => setDurationMinutes(e.target.value)}
               required
@@ -113,7 +113,7 @@ export const ServiceForm = ({ service, onSuccess, onCancel }: ServiceFormProps) 
             />
             <Input 
               type="number" 
-              label="Price (VND)" 
+              label="Giá (VNĐ)" 
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               required
@@ -129,15 +129,15 @@ export const ServiceForm = ({ service, onSuccess, onCancel }: ServiceFormProps) 
               onChange={(e) => setIsActive(e.target.checked)}
               className="w-4 h-4 rounded border-[var(--color-neutral-300)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-500)]"
             />
-            Active Service
+            Dịch vụ đang hoạt động
           </label>
 
           <div className="flex justify-end gap-3 mt-4">
             <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
-              Cancel
+              Hủy
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : (service ? 'Save Changes' : 'Create Service')}
+              {isSubmitting ? 'Đang lưu...' : (service ? 'Lưu thay đổi' : 'Thêm dịch vụ')}
             </Button>
           </div>
         </form>

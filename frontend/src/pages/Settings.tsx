@@ -6,11 +6,14 @@ import { Button } from '../components/ui/Button';
 import { useAuth } from '../app/auth/useAuth';
 import { LogOut, User, ShieldCheck } from 'lucide-react';
 
-const formatRole = (role: string) =>
-  role
+const formatRole = (role: string) => {
+  if (role === 'ROLE_OWNER') return 'Chủ cơ sở';
+  if (role === 'ROLE_STAFF') return 'Nhân viên';
+  return role
     .replace(/^ROLE_/, '')
     .toLowerCase()
     .replace(/^\w/, (c) => c.toUpperCase());
+};
 
 const Settings = () => {
   const { user, logout } = useAuth();
@@ -22,10 +25,10 @@ const Settings = () => {
   };
 
   return (
-    <AppShell title="Settings">
+    <AppShell title="Cài đặt">
       <PageHeader 
-        title="Settings & Account" 
-        description="Manage your account preferences and security." 
+        title="Cài đặt & Tài khoản" 
+        description="Quản lý tùy chọn tài khoản và bảo mật của bạn." 
       />
 
       <div className="max-w-3xl space-y-6">
@@ -36,19 +39,19 @@ const Settings = () => {
               <div className="p-2 bg-[var(--color-brand-50)] text-[var(--color-brand-600)] rounded-lg">
                 <User size={24} />
               </div>
-              <h3 className="text-lg font-semibold text-[var(--color-neutral-900)]">Account Information</h3>
+              <h3 className="text-lg font-semibold text-[var(--color-neutral-900)]">Thông tin tài khoản</h3>
             </div>
             
             <div className="space-y-4">
               <div>
-                <p className="text-sm font-medium text-[var(--color-neutral-500)] mb-1">Username</p>
+                <p className="text-sm font-medium text-[var(--color-neutral-500)] mb-1">Tên đăng nhập</p>
                 <p className="text-base text-[var(--color-neutral-900)] font-medium">
                   {user?.username || 'Unknown User'}
                 </p>
               </div>
               
               <div>
-                <p className="text-sm font-medium text-[var(--color-neutral-500)] mb-1">Role</p>
+                <p className="text-sm font-medium text-[var(--color-neutral-500)] mb-1">Vai trò</p>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {user?.roles?.map((role) => (
                     <span 
@@ -57,7 +60,7 @@ const Settings = () => {
                     >
                       {formatRole(role)}
                     </span>
-                  )) || <span className="text-sm text-[var(--color-neutral-500)]">No roles assigned</span>}
+                  )) || <span className="text-sm text-[var(--color-neutral-500)]">Chưa có vai trò</span>}
                 </div>
               </div>
             </div>
@@ -71,25 +74,25 @@ const Settings = () => {
               <div className="p-2 bg-slate-50 text-slate-600 rounded-lg">
                 <ShieldCheck size={24} />
               </div>
-              <h3 className="text-lg font-semibold text-[var(--color-neutral-900)]">Security & Session</h3>
+              <h3 className="text-lg font-semibold text-[var(--color-neutral-900)]">Bảo mật & Phiên đăng nhập</h3>
             </div>
             
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 rounded-lg bg-[var(--color-neutral-50)] border border-[var(--color-neutral-200)]">
-                  <p className="text-xs font-semibold text-[var(--color-neutral-500)] uppercase tracking-wider mb-1">Authentication</p>
+                  <p className="text-xs font-semibold text-[var(--color-neutral-500)] uppercase tracking-wider mb-1">Xác thực</p>
                   <p className="text-sm text-[var(--color-neutral-900)] font-medium">JWT (JSON Web Token)</p>
                 </div>
                 <div className="p-4 rounded-lg bg-[var(--color-neutral-50)] border border-[var(--color-neutral-200)]">
-                  <p className="text-xs font-semibold text-[var(--color-neutral-500)] uppercase tracking-wider mb-1">Session Model</p>
+                  <p className="text-xs font-semibold text-[var(--color-neutral-500)] uppercase tracking-wider mb-1">Mô hình phiên</p>
                   <p className="text-sm text-[var(--color-neutral-900)] font-medium">Stateless</p>
                 </div>
               </div>
 
               <div className="pt-4 border-t border-[var(--color-neutral-200)]">
-                <h4 className="text-sm font-semibold text-[var(--color-neutral-900)] mb-2">End Session</h4>
+                <h4 className="text-sm font-semibold text-[var(--color-neutral-900)] mb-2">Kết thúc phiên</h4>
                 <p className="text-sm text-[var(--color-neutral-500)] mb-4">
-                  Logging out will securely end your current session and clear your authentication data from this device.
+                  Đăng xuất sẽ kết thúc phiên hiện tại một cách an toàn và xóa dữ liệu xác thực của bạn khỏi thiết bị này.
                 </p>
                 <Button 
                   variant="danger" 
@@ -97,7 +100,7 @@ const Settings = () => {
                   className="flex items-center gap-2"
                 >
                   <LogOut size={18} />
-                  <span>Log Out Securely</span>
+                  <span>Đăng xuất an toàn</span>
                 </Button>
               </div>
             </div>

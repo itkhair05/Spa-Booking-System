@@ -23,12 +23,12 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/bookings', label: 'Bookings', icon: Calendar },
-  { to: '/customers', label: 'Customers', icon: Users },
-  { to: '/services', label: 'Services', icon: Scissors },
-  { to: '/staff', label: 'Staff', icon: UserRound },
-  { to: '/settings', label: 'Settings', icon: SettingsIcon },
+  { to: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+  { to: '/bookings', label: 'Lịch hẹn', icon: Calendar },
+  { to: '/customers', label: 'Khách hàng', icon: Users },
+  { to: '/services', label: 'Dịch vụ', icon: Scissors },
+  { to: '/staff', label: 'Nhân viên', icon: UserRound },
+  { to: '/settings', label: 'Cài đặt', icon: SettingsIcon },
 ];
 
 interface AppShellProps {
@@ -37,11 +37,14 @@ interface AppShellProps {
   title: string;
 }
 
-const formatRole = (role: string) =>
-  role
+const formatRole = (role: string) => {
+  if (role === 'ROLE_OWNER') return 'Chủ cơ sở';
+  if (role === 'ROLE_STAFF') return 'Nhân viên';
+  return role
     .replace(/^ROLE_/, '')
     .toLowerCase()
     .replace(/^\w/, (c) => c.toUpperCase());
+};
 
 /**
  * Authenticated application shell.
@@ -73,7 +76,7 @@ const AppShell = ({ children, title }: AppShellProps) => {
       {/* Sidebar */}
       <aside
         className={`sidebar ${isSidebarOpen ? 'sidebar--open' : ''}`}
-        aria-label="Main navigation"
+        aria-label="Điều hướng chính"
       >
         <div className="sidebar-brand">
           <span className="sidebar-brand-icon" aria-hidden="true">
@@ -85,7 +88,7 @@ const AppShell = ({ children, title }: AppShellProps) => {
             type="button"
             className="sidebar-close-btn lg:hidden"
             onClick={() => setIsSidebarOpen(false)}
-            aria-label="Close menu"
+            aria-label="Đóng menu"
           >
             <X size={24} />
           </button>
@@ -127,7 +130,7 @@ const AppShell = ({ children, title }: AppShellProps) => {
             type="button"
             className="sidebar-logout-btn"
             onClick={handleLogout}
-            aria-label="Log out"
+            aria-label="Đăng xuất"
           >
             <LogOut size={20} />
           </button>
@@ -142,7 +145,7 @@ const AppShell = ({ children, title }: AppShellProps) => {
             type="button"
             className="mobile-menu-btn"
             onClick={toggleSidebar}
-            aria-label="Open menu"
+            aria-label="Mở menu"
             aria-expanded={isSidebarOpen}
           >
             <Menu size={24} />

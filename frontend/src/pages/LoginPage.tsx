@@ -66,13 +66,13 @@ function resolveError(err: unknown): LoginError {
 function errorMessage(err: LoginError): string {
   switch (err.kind) {
     case 'credentials':
-      return 'Username or password is incorrect.';
+      return 'Tên đăng nhập hoặc mật khẩu không đúng.';
     case 'network':
-      return 'Unable to connect to the server. Please try again.';
+      return 'Không thể kết nối đến máy chủ. Vui lòng thử lại.';
     case 'validation':
-      return 'Please enter a valid username and password.';
+      return 'Vui lòng nhập tên đăng nhập và mật khẩu hợp lệ.';
     case 'server':
-      return 'An unexpected error occurred. Please try again later.';
+      return 'Có lỗi xảy ra. Vui lòng thử lại.';
   }
 }
 
@@ -125,7 +125,7 @@ const LoginPage = () => {
           <span className="login-brand-name">Spa Booking</span>
         </div>
 
-        <h1 className="login-heading">Sign in to your account</h1>
+        <h1 className="login-heading">Đăng nhập</h1>
 
         {/* Error banner */}
         {error && (
@@ -147,7 +147,7 @@ const LoginPage = () => {
         >
           <Input
             id={usernameId}
-            label="Username"
+            label="Tên đăng nhập"
             type="text"
             name="username"
             autoComplete="username"
@@ -160,7 +160,7 @@ const LoginPage = () => {
 
           <Input
             id={passwordId}
-            label="Password"
+            label="Mật khẩu"
             type="password"
             name="password"
             autoComplete="current-password"
@@ -178,7 +178,7 @@ const LoginPage = () => {
             className="w-full mt-2"
             size="lg"
           >
-            {isSubmitting ? 'Signing in…' : 'Sign in'}
+            {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </Button>
         </form>
       </div>

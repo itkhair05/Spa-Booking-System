@@ -34,7 +34,7 @@ const Services = () => {
       setServices(data);
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      setError(errorObj.response?.data?.message || 'Failed to load services.');
+      setError(errorObj.response?.data?.message || 'Không thể tải dữ liệu dịch vụ.');
     } finally {
       setIsLoading(false);
     }
@@ -84,15 +84,15 @@ const Services = () => {
       fetchServices();
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      alert(errorObj.response?.data?.message || 'Failed to delete service. It may be in use.');
+      alert(errorObj.response?.data?.message || 'Không thể xóa dịch vụ. Có thể dịch vụ đang được sử dụng.');
       setDeletingId(null);
     }
   };
 
   if (isFormOpen && isOwner) {
     return (
-      <AppShell title="Services">
-        <PageHeader title="Service Management" />
+      <AppShell title="Dịch vụ">
+        <PageHeader title="Quản lý Dịch vụ" />
         <div className="max-w-2xl mx-auto">
           <ServiceForm 
             service={editingService}
@@ -105,11 +105,11 @@ const Services = () => {
   }
 
   return (
-    <AppShell title="Services">
+    <AppShell title="Dịch vụ">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <PageHeader title="Service Management" description="Manage the spa treatments and services you offer." />
+        <PageHeader title="Quản lý Dịch vụ" description="Quản lý các dịch vụ và liệu trình tại spa của bạn." />
         {isOwner && (
-          <Button onClick={() => handleOpenForm()}>New Service</Button>
+          <Button onClick={() => handleOpenForm()}>Thêm dịch vụ</Button>
         )}
       </div>
 
@@ -128,21 +128,21 @@ const Services = () => {
       {error && !isLoading && (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)]" role="alert">
           <AlertCircle className="text-[var(--color-error)] mb-4" size={40} />
-          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Unable to load services</h3>
+          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Không thể tải dữ liệu</h3>
           <p className="text-[var(--color-neutral-500)] mb-6 text-center max-w-md">{error}</p>
-          <Button onClick={fetchServices}>Try Again</Button>
+          <Button onClick={fetchServices}>Thử lại</Button>
         </div>
       )}
 
       {!isLoading && !error && services.length === 0 && (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)] text-center">
           <Scissors className="text-[var(--color-neutral-400)] mb-4" size={40} />
-          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">No services yet</h3>
+          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Chưa có dịch vụ</h3>
           <p className="text-[var(--color-neutral-500)] mb-6">
-            {isOwner ? "Add your first service to get started." : "No services are currently offered."}
+            {isOwner ? "Thêm dịch vụ đầu tiên để bắt đầu." : "Hiện chưa có dịch vụ nào."}
           </p>
           {isOwner && (
-            <Button onClick={() => handleOpenForm()}>New Service</Button>
+            <Button onClick={() => handleOpenForm()}>Thêm dịch vụ</Button>
           )}
         </div>
       )}
@@ -155,7 +155,7 @@ const Services = () => {
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-semibold text-lg text-[var(--color-neutral-900)]">{service.name}</h4>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${service.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-                    {service.isActive ? 'Active' : 'Inactive'}
+                    {service.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
                   </span>
                 </div>
                 
@@ -169,15 +169,15 @@ const Services = () => {
                   <div className="text-sm">
                     <span className="font-bold text-[var(--color-brand-600)]">{formatVND(service.price)}</span>
                     <span className="text-[var(--color-neutral-400)] mx-1">•</span>
-                    <span className="text-[var(--color-neutral-600)]">{service.durationMinutes} min</span>
+                    <span className="text-[var(--color-neutral-600)]">{service.durationMinutes} phút</span>
                   </div>
                   
                   {isOwner && (
                     <div className="flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <Button variant="secondary" size="sm" onClick={() => handleOpenForm(service)}>
-                        Edit
+                        Chỉnh sửa
                       </Button>
-                      <Button variant="danger" size="sm" onClick={() => handleDeleteClick(service.id)} aria-label="Delete service">
+                      <Button variant="danger" size="sm" onClick={() => handleDeleteClick(service.id)} aria-label="Xóa dịch vụ">
                         <Trash2 size={16} />
                       </Button>
                     </div>
@@ -193,13 +193,13 @@ const Services = () => {
       {deletingId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title">
           <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full animate-in fade-in zoom-in duration-200">
-            <h3 id="delete-dialog-title" className="text-lg font-bold text-[var(--color-neutral-900)] mb-2">Delete Service?</h3>
+            <h3 id="delete-dialog-title" className="text-lg font-bold text-[var(--color-neutral-900)] mb-2">Xóa dịch vụ?</h3>
             <p className="text-sm text-[var(--color-neutral-500)] mb-6">
-              Are you sure you want to delete this service? This action cannot be undone and may fail if the service is actively used in bookings.
+              Bạn có chắc chắn muốn xóa dịch vụ này không? Hành động này không thể hoàn tác và có thể thất bại nếu dịch vụ đang được sử dụng trong lịch hẹn.
             </p>
             <div className="flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => setDeletingId(null)}>Cancel</Button>
-              <Button variant="danger" onClick={confirmDelete}>Delete</Button>
+              <Button variant="secondary" onClick={() => setDeletingId(null)}>Hủy</Button>
+              <Button variant="danger" onClick={confirmDelete}>Xóa</Button>
             </div>
           </div>
         </div>

@@ -40,10 +40,10 @@ const Dashboard = () => {
   // Loading State
   if (isLoading) {
     return (
-      <AppShell title="Dashboard">
+      <AppShell title="Tổng quan">
         <PageHeader 
-          title="Overview" 
-          description={`Welcome back, ${user?.username ?? 'User'}. Loading your dashboard...`}
+          title="Tổng quan" 
+          description={`Chào mừng trở lại, ${user?.username ?? 'User'}. Đang tải tổng quan...`}
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse" aria-busy="true">
           {[1, 2, 3, 4].map((i) => (
@@ -61,15 +61,15 @@ const Dashboard = () => {
   // Error State
   if (error) {
     return (
-      <AppShell title="Dashboard">
-        <PageHeader title="Overview" />
+      <AppShell title="Tổng quan">
+        <PageHeader title="Tổng quan" />
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)]" role="alert">
           <AlertCircle className="text-[var(--color-error)] mb-4" size={40} />
-          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Unable to load metrics</h3>
+          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Không thể tải dữ liệu</h3>
           <p className="text-[var(--color-neutral-500)] mb-6 text-center max-w-md">
-            There was a problem connecting to the server. Please try again later.
+            Không thể kết nối đến máy chủ. Vui lòng thử lại sau.
           </p>
-          <Button onClick={fetchMetrics}>Try Again</Button>
+          <Button onClick={fetchMetrics}>Thử lại</Button>
         </div>
       </AppShell>
     );
@@ -87,46 +87,46 @@ const Dashboard = () => {
     metrics.todayExpectedRevenue === 0;
 
   return (
-    <AppShell title="Dashboard">
+    <AppShell title="Tổng quan">
       <PageHeader 
-        title="Overview" 
-        description={`Welcome back, ${user?.username ?? 'User'}. Here is what's happening at your spa today.`}
+        title="Tổng quan" 
+        description={`Chào mừng trở lại, ${user?.username ?? 'User'}. Dưới đây là hoạt động tại spa của bạn hôm nay.`}
       />
       
       {isEmpty ? (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)] text-center">
           <Sparkles className="text-[var(--color-neutral-400)] mb-4" size={40} />
-          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">A fresh start!</h3>
+          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Chưa có dữ liệu</h3>
           <p className="text-[var(--color-neutral-500)]">
-            You don't have any bookings or revenue to show yet.
+            Hiện chưa có lịch hẹn hoặc doanh thu nào để hiển thị.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardContent className="p-6">
-              <p className="text-sm font-medium text-[var(--color-neutral-500)] mb-1">Today's Bookings</p>
+              <p className="text-sm font-medium text-[var(--color-neutral-500)] mb-1">Lịch hẹn hôm nay</p>
               <p className="text-3xl font-bold text-[var(--color-neutral-900)]">{metrics.todayBookingCount}</p>
             </CardContent>
           </Card>
           
           <Card>
             <CardContent className="p-6">
-              <p className="text-sm font-medium text-[var(--color-neutral-500)] mb-1">Pending Confirmations</p>
+              <p className="text-sm font-medium text-[var(--color-neutral-500)] mb-1">Chờ xác nhận</p>
               <p className="text-3xl font-bold text-[var(--color-neutral-900)]">{metrics.pendingBookingCount}</p>
             </CardContent>
           </Card>
           
           <Card>
             <CardContent className="p-6">
-              <p className="text-sm font-medium text-[var(--color-neutral-500)] mb-1">Upcoming (Future)</p>
+              <p className="text-sm font-medium text-[var(--color-neutral-500)] mb-1">Lịch sắp tới</p>
               <p className="text-3xl font-bold text-[var(--color-neutral-900)]">{metrics.upcomingBookingCount}</p>
             </CardContent>
           </Card>
           
           <Card>
             <CardContent className="p-6">
-              <p className="text-sm font-medium text-[var(--color-neutral-500)] mb-1">Expected Revenue Today</p>
+              <p className="text-sm font-medium text-[var(--color-neutral-500)] mb-1">Doanh thu dự kiến hôm nay</p>
               <p className="text-3xl font-bold text-[var(--color-brand-600)]">{formatVND(metrics.todayExpectedRevenue)}</p>
             </CardContent>
           </Card>

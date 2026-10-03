@@ -37,6 +37,7 @@ class DevDataSeederTest {
 
     // Test-only value. Never a real credential.
     private static final String DEMO_PASSWORD = "test-only-dev-password";
+    private static final String DEMO_STAFF_PASSWORD = "test-only-staff-password";
 
     @Autowired
     private WebApplicationContext context;
@@ -62,43 +63,56 @@ class DevDataSeederTest {
 
         // Clean slate for the fixed demo identifiers; rolled back by @Transactional.
         userRepository.findByUsername(DevDataSeeder.DEMO_OWNER_USERNAME).ifPresent(userRepository::delete);
+        userRepository.findByUsername(DevDataSeeder.DEMO_STAFF_USERNAME).ifPresent(userRepository::delete);
         tenantRepository.findBySlug(DevDataSeeder.DEMO_TENANT_SLUG).ifPresent(tenantRepository::delete);
         userRepository.flush();
         tenantRepository.flush();
     }
 
-    private DevDataSeeder seeder(String password) {
-        return new DevDataSeeder(tenantRepository, userRepository, passwordEncoder, password);
+    private DevDataSeeder seeder(String ownerPassword, String staffPassword) {
+        return new DevDataSeeder(tenantRepository, userRepository, passwordEncoder, ownerPassword, staffPassword);
     }
 
     @Test
-    void createsDemoTenantAndOwnerWhenAbsent() {
-        seeder(DEMO_PASSWORD).run();
+    void createsDemoTenantAndOwnerAndStaffWhenAbsent() {
+        seeder(DEMO_PASSWORD, DEMO_STAFF_PASSWORD).run();
 
         Tenant tenant = tenantRepository.findBySlug(DevDataSeeder.DEMO_TENANT_SLUG).orElseThrow();
         User owner = userRepository.findByUsername(DevDataSeeder.DEMO_OWNER_USERNAME).orElseThrow();
+        User staff = userRepository.findByUsername(DevDataSeeder.DEMO_STAFF_USERNAME).orElseThrow();
 
         assertEquals("Demo Spa", tenant.getName());
+        
         assertEquals(UserRole.OWNER, owner.getRole());
         assertNotNull(owner.getTenant());
         assertEquals(tenant.getId(), owner.getTenant().getId());
         assertEquals(Boolean.TRUE, owner.getIsActive());
+        
+        assertEquals(UserRole.STAFF, staff.getRole());
+        assertNotNull(staff.getTenant());
+        assertEquals(tenant.getId(), staff.getTenant().getId());
+        assertEquals(Boolean.TRUE, staff.getIsActive());
     }
 
     @Test
-    void storesOwnerPasswordHashedNotPlaintext() {
-        seeder(DEMO_PASSWORD).run();
+    void storesPasswordsHashedNotPlaintext() {
+        seeder(DEMO_PASSWORD, DEMO_STAFF_PASSWORD).run();
 
         User owner = userRepository.findByUsername(DevDataSeeder.DEMO_OWNER_USERNAME).orElseThrow();
+        User staff = userRepository.findByUsername(DevDataSeeder.DEMO_STAFF_USERNAME).orElseThrow();
 
         assertNotEquals(DEMO_PASSWORD, owner.getPassword());
         assertTrue(owner.getPassword().startsWith("$2"));
         assertTrue(passwordEncoder.matches(DEMO_PASSWORD, owner.getPassword()));
+        
+        assertNotEquals(DEMO_STAFF_PASSWORD, staff.getPassword());
+        assertTrue(staff.getPassword().startsWith("$2"));
+        assertTrue(passwordEncoder.matches(DEMO_STAFF_PASSWORD, staff.getPassword()));
     }
 
     @Test
     void runningTwiceDoesNotCreateDuplicates() {
-        DevDataSeeder seeder = seeder(DEMO_PASSWORD);
+        DevDataSeeder seeder = seeder(DEMO_PASSWORD, DEMO_STAFF_PASSWORD);
         seeder.run();
         seeder.run();
 
@@ -108,23 +122,30 @@ class DevDataSeederTest {
         long owners = userRepository.findAll().stream()
                 .filter(u -> DevDataSeeder.DEMO_OWNER_USERNAME.equals(u.getUsername()))
                 .count();
+        long staffs = userRepository.findAll().stream()
+                .filter(u -> DevDataSeeder.DEMO_STAFF_USERNAME.equals(u.getUsername()))
+                .count();
 
         assertEquals(1, tenants);
         assertEquals(1, owners);
+        assertEquals(1, staffs);
     }
 
     @Test
     void refusesToRunWithoutPassword() {
-        assertThrows(IllegalStateException.class, () -> seeder("   ").run());
-        assertThrows(IllegalStateException.class, () -> seeder(null).run());
+        assertThrows(IllegalStateException.class, () -> seeder("   ", DEMO_STAFF_PASSWORD).run());
+        assertThrows(IllegalStateException.class, () -> seeder(null, DEMO_STAFF_PASSWORD).run());
+        assertThrows(IllegalStateException.class, () -> seeder(DEMO_PASSWORD, "   ").run());
+        assertThrows(IllegalStateException.class, () -> seeder(DEMO_PASSWORD, null).run());
 
         assertTrue(tenantRepository.findBySlug(DevDataSeeder.DEMO_TENANT_SLUG).isEmpty());
         assertTrue(userRepository.findByUsername(DevDataSeeder.DEMO_OWNER_USERNAME).isEmpty());
+        assertTrue(userRepository.findByUsername(DevDataSeeder.DEMO_STAFF_USERNAME).isEmpty());
     }
 
     @Test
     void seededOwnerCanLoginAndAccessProtectedEndpoint() throws Exception {
-        seeder(DEMO_PASSWORD).run();
+        seeder(DEMO_PASSWORD, DEMO_STAFF_PASSWORD).run();
 
         LoginRequest request = new LoginRequest();
         request.setUsername(DevDataSeeder.DEMO_OWNER_USERNAME);

@@ -23,7 +23,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError('Name is required.');
+      setError('Vui lòng nhập tên khách hàng.');
       return;
     }
 
@@ -48,7 +48,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
       onSuccess();
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      setError(errorObj.response?.data?.message || 'An error occurred while saving the customer.');
+      setError(errorObj.response?.data?.message || 'Có lỗi xảy ra khi lưu khách hàng.');
     } finally {
       setIsSubmitting(false);
     }
@@ -58,7 +58,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
     <Card>
       <CardContent className="p-6">
         <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-4">
-          {customer ? 'Edit Customer' : 'New Customer'}
+          {customer ? 'Chỉnh sửa khách hàng' : 'Thêm khách hàng'}
         </h3>
         
         {error && (
@@ -70,42 +70,42 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input 
             type="text" 
-            label="Name" 
+            label="Tên khách hàng" 
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
             minLength={2}
             maxLength={100}
-            placeholder="e.g. John Doe"
+            placeholder="VD: Nguyễn Văn A"
           />
           <Input 
             type="tel" 
-            label="Phone" 
+            label="Số điện thoại" 
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="e.g. 0912345678"
+            placeholder="VD: 0912345678"
           />
           <Input 
             type="email" 
             label="Email" 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="e.g. john@example.com"
+            placeholder="VD: nguyen@example.com"
           />
 
           {customer?.lastVisit && (
             <div className="text-sm text-[var(--color-neutral-500)] mt-2">
-              <span className="font-semibold text-[var(--color-neutral-700)]">Last Visit: </span>
+              <span className="font-semibold text-[var(--color-neutral-700)]">Lần ghé gần nhất: </span>
               {new Date(customer.lastVisit).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' })}
             </div>
           )}
 
           <div className="flex justify-end gap-3 mt-4">
             <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
-              Cancel
+              Hủy
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : (customer ? 'Save Changes' : 'Create Customer')}
+              {isSubmitting ? 'Đang lưu...' : (customer ? 'Lưu thay đổi' : 'Thêm khách hàng')}
             </Button>
           </div>
         </form>

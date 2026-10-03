@@ -46,7 +46,7 @@ export const BookingForm = ({ booking, onSuccess, onCancel }: BookingFormProps) 
         setServices(servData);
         setStaffList(stData);
       } catch {
-        setError('Failed to load related data for booking.');
+        setError('Không thể tải dữ liệu liên quan để tạo lịch hẹn.');
       } finally {
         setIsLoadingData(false);
       }
@@ -57,12 +57,12 @@ export const BookingForm = ({ booking, onSuccess, onCancel }: BookingFormProps) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerId || !serviceId || !staffId || !startTime || !endTime) {
-      setError('All fields are required.');
+      setError('Vui lòng nhập đầy đủ thông tin.');
       return;
     }
 
     if (new Date(startTime) >= new Date(endTime)) {
-      setError('End time must be after start time.');
+      setError('Thời gian kết thúc phải sau thời gian bắt đầu.');
       return;
     }
 
@@ -91,21 +91,21 @@ export const BookingForm = ({ booking, onSuccess, onCancel }: BookingFormProps) 
       onSuccess();
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      setError(errorObj.response?.data?.message || 'An error occurred while saving the booking.');
+      setError(errorObj.response?.data?.message || 'Có lỗi xảy ra khi lưu lịch hẹn.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   if (isLoadingData) {
-    return <div className="p-4 text-center text-sm text-[var(--color-neutral-500)]">Loading form data...</div>;
+    return <div className="p-4 text-center text-sm text-[var(--color-neutral-500)]">Đang tải dữ liệu...</div>;
   }
 
   return (
     <Card>
       <CardContent className="p-6">
         <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-4">
-          {booking ? 'Edit Booking' : 'New Booking'}
+          {booking ? 'Chỉnh sửa lịch hẹn' : 'Tạo lịch hẹn'}
         </h3>
         
         {error && (
@@ -116,21 +116,21 @@ export const BookingForm = ({ booking, onSuccess, onCancel }: BookingFormProps) 
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Select 
-            label="Customer" 
+            label="Khách hàng" 
             value={customerId} 
             onChange={(e) => setCustomerId(e.target.value)}
             options={customers.map(c => ({ value: c.id, label: c.name }))}
             required
           />
           <Select 
-            label="Service" 
+            label="Dịch vụ" 
             value={serviceId} 
             onChange={(e) => setServiceId(e.target.value)}
-            options={services.map(s => ({ value: s.id, label: `${s.name} (${s.durationMinutes} mins)` }))}
+            options={services.map(s => ({ value: s.id, label: `${s.name} (${s.durationMinutes} phút)` }))}
             required
           />
           <Select 
-            label="Staff" 
+            label="Nhân viên" 
             value={staffId} 
             onChange={(e) => setStaffId(e.target.value)}
             options={staffList.map(s => ({ value: s.id, label: s.name }))}
@@ -140,14 +140,14 @@ export const BookingForm = ({ booking, onSuccess, onCancel }: BookingFormProps) 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input 
               type="datetime-local" 
-              label="Start Time" 
+              label="Thời gian bắt đầu" 
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
               required
             />
             <Input 
               type="datetime-local" 
-              label="End Time" 
+              label="Thời gian kết thúc" 
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
               required
@@ -156,10 +156,10 @@ export const BookingForm = ({ booking, onSuccess, onCancel }: BookingFormProps) 
 
           <div className="flex justify-end gap-3 mt-4">
             <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
-              Cancel
+              Hủy
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : (booking ? 'Save Changes' : 'Create Booking')}
+              {isSubmitting ? 'Đang lưu...' : (booking ? 'Lưu thay đổi' : 'Tạo lịch hẹn')}
             </Button>
           </div>
         </form>

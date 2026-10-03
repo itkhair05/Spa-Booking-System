@@ -30,7 +30,7 @@ const Staff = () => {
       setStaffList(data);
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      setError(errorObj.response?.data?.message || 'Failed to load staff.');
+      setError(errorObj.response?.data?.message || 'Không thể tải dữ liệu nhân viên.');
     } finally {
       setIsLoading(false);
     }
@@ -80,15 +80,15 @@ const Staff = () => {
       fetchStaff();
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      alert(errorObj.response?.data?.message || 'Failed to delete staff member.');
+      alert(errorObj.response?.data?.message || 'Không thể xóa nhân viên.');
       setDeletingId(null);
     }
   };
 
   if (isFormOpen && isOwner) {
     return (
-      <AppShell title="Staff">
-        <PageHeader title="Staff Management" />
+      <AppShell title="Nhân viên">
+        <PageHeader title="Quản lý Nhân viên" />
         <div className="max-w-2xl mx-auto">
           <StaffForm 
             staff={editingStaff}
@@ -101,11 +101,11 @@ const Staff = () => {
   }
 
   return (
-    <AppShell title="Staff">
+    <AppShell title="Nhân viên">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <PageHeader title="Staff Management" description="Manage your team members here." />
+        <PageHeader title="Quản lý Nhân viên" description="Quản lý đội ngũ nhân viên của bạn." />
         {isOwner && (
-          <Button onClick={() => handleOpenForm()}>New Staff Member</Button>
+          <Button onClick={() => handleOpenForm()}>Thêm nhân viên</Button>
         )}
       </div>
 
@@ -124,21 +124,21 @@ const Staff = () => {
       {error && !isLoading && (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)]" role="alert">
           <AlertCircle className="text-[var(--color-error)] mb-4" size={40} />
-          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Unable to load staff</h3>
+          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Không thể tải dữ liệu</h3>
           <p className="text-[var(--color-neutral-500)] mb-6 text-center max-w-md">{error}</p>
-          <Button onClick={fetchStaff}>Try Again</Button>
+          <Button onClick={fetchStaff}>Thử lại</Button>
         </div>
       )}
 
       {!isLoading && !error && staffList.length === 0 && (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)] text-center">
           <UserRound className="text-[var(--color-neutral-400)] mb-4" size={40} />
-          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">No staff yet</h3>
+          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Chưa có nhân viên</h3>
           <p className="text-[var(--color-neutral-500)] mb-6">
-            {isOwner ? "Add your first staff member." : "No staff members are currently available."}
+            {isOwner ? "Thêm nhân viên đầu tiên." : "Hiện chưa có nhân viên nào."}
           </p>
           {isOwner && (
-            <Button onClick={() => handleOpenForm()}>New Staff Member</Button>
+            <Button onClick={() => handleOpenForm()}>Thêm nhân viên</Button>
           )}
         </div>
       )}
@@ -151,7 +151,7 @@ const Staff = () => {
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-semibold text-lg text-[var(--color-neutral-900)]">{member.name}</h4>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${member.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-                    {member.isActive ? 'Active' : 'Inactive'}
+                    {member.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
                   </span>
                 </div>
                 
@@ -163,7 +163,7 @@ const Staff = () => {
                   )}
                   {member.phone && (
                     <p>
-                      <strong>Phone:</strong> {member.phone}
+                      <strong>Số điện thoại:</strong> {member.phone}
                     </p>
                   )}
                 </div>
@@ -172,9 +172,9 @@ const Staff = () => {
                   {isOwner && (
                     <div className="flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <Button variant="secondary" size="sm" onClick={() => handleOpenForm(member)}>
-                        Edit
+                        Chỉnh sửa
                       </Button>
-                      <Button variant="danger" size="sm" onClick={() => handleDeleteClick(member.id)} aria-label="Delete staff">
+                      <Button variant="danger" size="sm" onClick={() => handleDeleteClick(member.id)} aria-label="Xóa nhân viên">
                         <Trash2 size={16} />
                       </Button>
                     </div>
@@ -190,13 +190,13 @@ const Staff = () => {
       {deletingId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title">
           <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full animate-in fade-in zoom-in duration-200">
-            <h3 id="delete-dialog-title" className="text-lg font-bold text-[var(--color-neutral-900)] mb-2">Delete Staff?</h3>
+            <h3 id="delete-dialog-title" className="text-lg font-bold text-[var(--color-neutral-900)] mb-2">Xóa nhân viên?</h3>
             <p className="text-sm text-[var(--color-neutral-500)] mb-6">
-              Are you sure you want to delete this staff member? This action cannot be undone and may fail if they are associated with existing bookings.
+              Bạn có chắc chắn muốn xóa nhân viên này không? Hành động này không thể hoàn tác và có thể thất bại nếu nhân viên đã có lịch hẹn.
             </p>
             <div className="flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => setDeletingId(null)}>Cancel</Button>
-              <Button variant="danger" onClick={confirmDelete}>Delete</Button>
+              <Button variant="secondary" onClick={() => setDeletingId(null)}>Hủy</Button>
+              <Button variant="danger" onClick={confirmDelete}>Xóa</Button>
             </div>
           </div>
         </div>
