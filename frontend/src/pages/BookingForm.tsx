@@ -18,6 +18,10 @@ interface BookingFormProps {
   onCancel: () => void;
 }
 
+// The backend stores wall-clock LocalDateTime. Sending a UTC ISO string would
+// shift the displayed time by the browser's offset.
+const toLocalDateTime = (value: string) => (value.length === 16 ? `${value}:00` : value);
+
 export const BookingForm = ({ booking, onSuccess, onCancel }: BookingFormProps) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -74,8 +78,8 @@ export const BookingForm = ({ booking, onSuccess, onCancel }: BookingFormProps) 
           customerId: Number(customerId),
           serviceId: Number(serviceId),
           staffId: Number(staffId),
-          startTime: new Date(startTime).toISOString(),
-          endTime: new Date(endTime).toISOString(),
+          startTime: toLocalDateTime(startTime),
+          endTime: toLocalDateTime(endTime),
         };
         await updateBooking(booking.id, data);
       } else {
@@ -83,8 +87,8 @@ export const BookingForm = ({ booking, onSuccess, onCancel }: BookingFormProps) 
           customerId: Number(customerId),
           serviceId: Number(serviceId),
           staffId: Number(staffId),
-          startTime: new Date(startTime).toISOString(),
-          endTime: new Date(endTime).toISOString(),
+          startTime: toLocalDateTime(startTime),
+          endTime: toLocalDateTime(endTime),
         };
         await createBooking(data);
       }

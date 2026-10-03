@@ -73,11 +73,7 @@ public class BookingService {
     @Transactional
     public Booking create(CreateBookingRequest request) {
         Long tenantId = TenantContext.requireTenantId();
-        
-        if (request.getEndTime().compareTo(request.getStartTime()) <= 0) {
-            throw new IllegalArgumentException("End time must be after start time");
-        }
-        
+
         // Lock ordering: Customer -> Staff
         Customer customer = customerRepository.findByIdAndTenantIdAndIsActiveTrueForUpdate(request.getCustomerId(), tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
@@ -91,7 +87,10 @@ public class BookingService {
             throw new IllegalArgumentException("Service must be active");
         }
 
-        checkOverlaps(tenantId, staff.getId(), customer.getId(), request.getStartTime(), request.getEndTime(), null);
+        // endTime is derived from the service duration; any client-supplied value is ignored.
+        LocalDateTime endTime = request.getStartTime().plusMinutes(service.getDurationMinutes());
+
+        checkOverlaps(tenantId, staff.getId(), customer.getId(), request.getStartTime(), endTime, null);
 
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
@@ -102,7 +101,7 @@ public class BookingService {
         booking.setStaff(staff);
         booking.setService(service);
         booking.setStartTime(request.getStartTime());
-        booking.setEndTime(request.getEndTime());
+        booking.setEndTime(endTime);
         booking.setStatus(BookingStatus.PENDING);
         booking.setPrice(service.getPrice()); // Snapshot price
 
@@ -112,10 +111,6 @@ public class BookingService {
     @Transactional
     public Booking update(Long id, UpdateBookingRequest request) {
         Long tenantId = TenantContext.requireTenantId();
-
-        if (request.getEndTime().compareTo(request.getStartTime()) <= 0) {
-            throw new IllegalArgumentException("End time must be after start time");
-        }
 
         // Lock ordering: Customer -> Staff
         Customer customer = customerRepository.findByIdAndTenantIdAndIsActiveTrueForUpdate(request.getCustomerId(), tenantId)
@@ -138,13 +133,16 @@ public class BookingService {
             throw new IllegalArgumentException("Cannot reschedule a cancelled or completed booking");
         }
 
-        checkOverlaps(tenantId, staff.getId(), customer.getId(), request.getStartTime(), request.getEndTime(), id);
+        // endTime is derived from the (possibly changed) service duration; any client-supplied value is ignored.
+        LocalDateTime endTime = request.getStartTime().plusMinutes(service.getDurationMinutes());
+
+        checkOverlaps(tenantId, staff.getId(), customer.getId(), request.getStartTime(), endTime, id);
 
         existingBooking.setCustomer(customer);
         existingBooking.setStaff(staff);
         existingBooking.setService(service);
         existingBooking.setStartTime(request.getStartTime());
-        existingBooking.setEndTime(request.getEndTime());
+        existingBooking.setEndTime(endTime);
         // Do NOT update price on simple reschedule, it stays historical unless explicit pricing update.
 
         return bookingRepository.save(existingBooking);

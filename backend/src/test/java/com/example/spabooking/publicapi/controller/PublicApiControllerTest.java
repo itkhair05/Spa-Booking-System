@@ -3,6 +3,8 @@ package com.example.spabooking.publicapi.controller;
 import com.example.spabooking.publicapi.dto.CreatePublicBookingRequest;
 import com.example.spabooking.publicapi.service.PublicBookingService;
 import com.example.spabooking.tenant.context.TenantContext;
+import com.example.spabooking.tenant.entity.Tenant;
+import com.example.spabooking.tenant.repository.TenantRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,9 @@ public class PublicApiControllerTest {
     @Autowired
     private WebApplicationContext context;
 
+    @Autowired
+    private TenantRepository tenantRepository;
+
     private ObjectMapper objectMapper;
 
     @BeforeEach
@@ -39,15 +44,28 @@ public class PublicApiControllerTest {
         objectMapper = new ObjectMapper();
         objectMapper.findAndRegisterModules();
         TenantContext.clear();
+        ensureDemoTenantExists();
         mockMvc = MockMvcBuilders
                 .webAppContextSetup(context)
                 .apply(springSecurity())
                 .build();
     }
 
+    // These tests must not depend on a dev-seeded database; the tenant is
+    // created inside the test transaction and rolled back afterwards.
+    private void ensureDemoTenantExists() {
+        if (tenantRepository.findBySlug("demo-spa").isEmpty()) {
+            Tenant tenant = new Tenant();
+            tenant.setName("Demo Spa");
+            tenant.setSlug("demo-spa");
+            tenant.setIsActive(true);
+            tenantRepository.saveAndFlush(tenant);
+        }
+    }
+
     @Test
     public void testGetSpaInfo_Success() throws Exception {
-        // "demo-spa" is inserted by Flyway / DevDataSeeder
+        // "demo-spa" is ensured by the test setup
         mockMvc.perform(get("/api/v1/public/spas/demo-spa"))
                 .andExpect(status().isOk());
     }
