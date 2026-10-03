@@ -2,6 +2,7 @@ import { useState, useId } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../app/auth/useAuth';
 import { Button } from '../components/ui/Button';
+import { Sparkles } from 'lucide-react';
 import { Input } from '../components/ui/Input';
 import type { LoginRequest } from '../types/auth';
 import type { AxiosError } from 'axios';
@@ -120,7 +121,7 @@ const LoginPage = () => {
       <div className="login-card">
         {/* Brand */}
         <div className="login-brand">
-          <span className="login-brand-icon" aria-hidden="true">✦</span>
+          <span className="login-brand-icon" aria-hidden="true"><Sparkles size={24} /></span>
           <span className="login-brand-name">Spa Booking</span>
         </div>
 

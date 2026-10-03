@@ -6,6 +6,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { getDashboardMetrics } from '../lib/api/dashboard';
 import type { DashboardMetrics } from '../types/dashboard';
+import { AlertCircle, Sparkles } from 'lucide-react';
 
 const formatVND = (amount: number) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
@@ -63,7 +64,7 @@ const Dashboard = () => {
       <AppShell title="Dashboard">
         <PageHeader title="Overview" />
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)]" role="alert">
-          <span className="text-4xl mb-4" aria-hidden="true">⚠️</span>
+          <AlertCircle className="text-[var(--color-error)] mb-4" size={40} />
           <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Unable to load metrics</h3>
           <p className="text-[var(--color-neutral-500)] mb-6 text-center max-w-md">
             There was a problem connecting to the server. Please try again later.
@@ -94,7 +95,7 @@ const Dashboard = () => {
       
       {isEmpty ? (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)] text-center">
-          <span className="text-4xl mb-4" aria-hidden="true">🌱</span>
+          <Sparkles className="text-[var(--color-neutral-400)] mb-4" size={40} />
           <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">A fresh start!</h3>
           <p className="text-[var(--color-neutral-500)]">
             You don't have any bookings or revenue to show yet.

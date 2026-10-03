@@ -132,7 +132,7 @@ const Customers = () => {
           <Users className="text-[var(--color-neutral-400)] mb-4" size={40} />
           <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">No customers yet</h3>
           <p className="text-[var(--color-neutral-500)] mb-6">
-            {isOwner ? "Add your first customer." : "No customers are currently available."}
+            Add your first customer.
           </p>
           <Button onClick={() => handleOpenForm()}>New Customer</Button>
         </div>
