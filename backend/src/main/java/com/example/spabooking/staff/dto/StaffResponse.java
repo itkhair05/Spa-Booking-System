@@ -12,6 +12,7 @@ public class StaffResponse {
     private String email;
     private String username;
     private Boolean isActive;
+    private String avatarUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -27,10 +28,14 @@ public class StaffResponse {
         response.setEmail(staff.getEmail());
         response.setUsername(username);
         response.setIsActive(staff.getIsActive());
+        response.setAvatarUrl(staff.getAvatarUrl());
         response.setCreatedAt(staff.getCreatedAt());
         response.setUpdatedAt(staff.getUpdatedAt());
         return response;
     }
+
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 
     // Getters and Setters
     public Long getId() { return id; }

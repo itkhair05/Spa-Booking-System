@@ -1,6 +1,7 @@
 import api from './axios';
 import type { 
-  Booking, 
+  Booking,
+  BookingDetail,
   BookingFilterParams, 
   CreateBookingRequest, 
   UpdateBookingRequest, 
@@ -12,8 +13,8 @@ export const getBookings = async (params?: BookingFilterParams): Promise<Booking
   return response.data;
 };
 
-export const getBookingById = async (id: number): Promise<Booking> => {
-  const response = await api.get<Booking>(`/bookings/${id}`);
+export const getBookingById = async (id: number): Promise<BookingDetail> => {
+  const response = await api.get<BookingDetail>(`/bookings/${id}`);
   return response.data;
 };
 
@@ -29,5 +30,10 @@ export const updateBooking = async (id: number, data: UpdateBookingRequest): Pro
 
 export const updateBookingStatus = async (id: number, data: UpdateBookingStatusRequest): Promise<Booking> => {
   const response = await api.patch<Booking>(`/bookings/${id}/status`, data);
+  return response.data;
+};
+
+export const assignBookingStaff = async (id: number, staffId: number): Promise<Booking> => {
+  const response = await api.patch<Booking>(`/bookings/${id}/assign`, { staffId });
   return response.data;
 };

@@ -46,9 +46,28 @@ const Customers = () => {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchCustomers();
-  }, [fetchCustomers]);
+    if (isOwner) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchCustomers();
+    }
+  }, [fetchCustomers, isOwner]);
+
+  if (!isOwner) {
+    return (
+      <AppShell title="Khách hàng">
+        <div className="max-w-2xl mx-auto py-16 text-center px-4">
+          <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center mx-auto mb-4 border border-amber-200">
+            <Users className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl font-serif-title font-semibold text-stone-900 mb-2">Quyền truy cập dành cho Chủ cơ sở</h2>
+          <p className="text-stone-600 text-sm leading-relaxed mb-6">
+            Khu vực quản lý danh bạ khách hàng toàn cơ sở chỉ dành cho vai trò Quản trị viên (OWNER).
+            Nhân viên (STAFF) có thể xem thông tin liên hệ của khách hàng trực tiếp trên từng lịch hẹn được phân công.
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
 
   const handleOpenForm = (customer?: Customer) => {
     setEditingCustomer(customer);

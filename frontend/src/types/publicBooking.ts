@@ -13,11 +13,13 @@ export interface PublicServiceResponse {
   description: string | null;
   durationMinutes: number;
   price: number;
+  imageUrl?: string | null;
 }
 
 export interface PublicStaffResponse {
   id: number;
   name: string;
+  avatarUrl?: string | null;
 }
 
 export interface CreatePublicBookingRequest {
@@ -30,7 +32,8 @@ export interface CreatePublicBookingRequest {
 }
 
 export interface PublicBookingResponse {
-  id: number;
+  id?: number;
+  bookingCode: string;
   serviceId: number;
   serviceName: string;
   staffId: number;
@@ -39,4 +42,18 @@ export interface PublicBookingResponse {
   endTime: string;
   status: string;
   price: number;
+}
+
+export interface PublicBookingDetailResponse {
+  bookingCode: string;
+  status: string;
+  serviceName: string;
+  durationMinutes: number;
+  price: number;
+  startTime: string;
+  endTime: string;
+  staffName: string;
+  spaName: string;
+  spaPhone: string;
+  spaAddress: string;
 }

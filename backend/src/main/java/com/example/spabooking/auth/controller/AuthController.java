@@ -16,16 +16,24 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.example.spabooking.auth.dto.ChangePasswordRequest;
+import com.example.spabooking.auth.service.AuthService;
+import org.springframework.security.access.prepost.PreAuthorize;
+
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
+    private final AuthService authService;
 
-    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils) {
+    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, AuthService authService) {
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
+        this.authService = authService;
     }
 
     @PostMapping("/login")
@@ -43,5 +51,12 @@ public class AuthController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(new LoginResponse(jwt, userDetails.getUsername(), roles));
+    }
+
+    @PostMapping("/change-password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, String>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(request);
+        return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công"));
     }
 }

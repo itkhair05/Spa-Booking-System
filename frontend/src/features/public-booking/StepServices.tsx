@@ -103,18 +103,27 @@ export function StepServices() {
                   <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
                 </span>
               )}
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-medium text-stone-900 pr-4">{service.name}</h3>
-                <span className="font-medium text-stone-900 shrink-0">
-                  {formatCurrency(service.price)}
-                </span>
-              </div>
-              {service.description && (
-                <p className="text-sm text-stone-500 mb-4 line-clamp-2">{service.description}</p>
-              )}
-              <div className="flex items-center text-sm text-stone-500 bg-white px-2 py-1 rounded-md border border-stone-100 w-fit">
-                <Clock className="w-4 h-4 mr-1.5" aria-hidden="true" />
-                {service.durationMinutes} phút
+              <div className="flex gap-3 items-start">
+                {service.imageUrl && (
+                  <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-stone-100 border border-stone-200">
+                    <img src={service.imageUrl} alt={service.name} className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start mb-1 gap-2">
+                    <h3 className="font-medium text-stone-900 truncate">{service.name}</h3>
+                    <span className="font-medium text-stone-900 shrink-0 text-sm">
+                      {formatCurrency(service.price)}
+                    </span>
+                  </div>
+                  {service.description && (
+                    <p className="text-xs text-stone-500 mb-2 line-clamp-2">{service.description}</p>
+                  )}
+                  <div className="flex items-center text-xs text-stone-500 bg-white px-2 py-0.5 rounded-md border border-stone-100 w-fit">
+                    <Clock className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
+                    {service.durationMinutes} phút
+                  </div>
+                </div>
               </div>
             </button>
           );

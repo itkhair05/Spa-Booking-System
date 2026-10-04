@@ -17,6 +17,8 @@ public class UpdateStaffRequest {
 
     private Boolean isActive;
 
+    private String avatarUrl;
+
     // Getters and Setters
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -29,4 +31,7 @@ public class UpdateStaffRequest {
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 }

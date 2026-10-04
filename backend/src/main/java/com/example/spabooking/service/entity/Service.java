@@ -32,6 +32,9 @@ public class Service {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @Column(name = "image_url", length = 512)
+    private String imageUrl;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -71,6 +74,9 @@ public class Service {
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean active) { isActive = active; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

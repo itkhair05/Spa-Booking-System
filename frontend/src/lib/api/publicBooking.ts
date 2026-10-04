@@ -5,6 +5,7 @@ import type {
   PublicStaffResponse,
   CreatePublicBookingRequest,
   PublicBookingResponse,
+  PublicBookingDetailResponse,
 } from '../../types/publicBooking';
 
 export const getPublicSpaInfo = async (slug: string): Promise<PublicSpaInfoResponse> => {
@@ -45,6 +46,16 @@ export const createPublicBooking = async (
   const { data } = await publicAxios.post<PublicBookingResponse>(
     `/public/spas/${slug}/bookings`,
     request
+  );
+  return data;
+};
+
+export const getPublicBookingByCode = async (
+  slug: string,
+  bookingCode: string
+): Promise<PublicBookingDetailResponse> => {
+  const { data } = await publicAxios.get<PublicBookingDetailResponse>(
+    `/public/spas/${slug}/bookings/${encodeURIComponent(bookingCode)}`
   );
   return data;
 };

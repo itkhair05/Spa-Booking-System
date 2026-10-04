@@ -123,11 +123,12 @@ function App() {
             }
           />
 
-          {/* Default: / → /dashboard (will be caught by ProtectedRoute → /login if unauth) */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {/* Public landing on root and tra-cuu */}
+          <Route path="/" element={<PublicBooking />} />
+          <Route path="/tra-cuu" element={<PublicBooking />} />
 
           {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

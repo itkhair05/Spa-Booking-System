@@ -28,7 +28,7 @@ public class CustomerController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<List<CustomerResponse>> getAllCustomers() {
         List<Customer> customers = customerService.findAll();
         List<CustomerResponse> response = customers.stream()
@@ -38,7 +38,7 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Long id) {
         Customer customer = customerService.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
@@ -46,7 +46,7 @@ public class CustomerController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<CustomerResponse> createCustomer(@Valid @RequestBody CreateCustomerRequest request) {
         Customer customer = new Customer();
         customer.setName(request.getName());
@@ -58,7 +58,7 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<CustomerResponse> updateCustomer(
             @PathVariable Long id,
             @Valid @RequestBody UpdateCustomerRequest request) {

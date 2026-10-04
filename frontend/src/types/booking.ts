@@ -2,6 +2,7 @@ export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
 
 export interface Booking {
   id: number;
+  bookingCode?: string;
   customerId: number;
   customerName: string;
   serviceId: number;
@@ -16,6 +17,42 @@ export interface Booking {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface BookingDetail {
+  id: number;
+  bookingCode?: string;
+  status: BookingStatus;
+  startTime: string;
+  endTime: string;
+  durationMinutes?: number;
+  price: number;
+  isReminded: boolean;
+  createdAt: string;
+  updatedAt: string;
+
+  // Customer
+  customerId: number;
+  customerName: string;
+  customerPhone?: string;
+  customerEmail?: string;
+
+  // Service
+  serviceId: number;
+  serviceName: string;
+  serviceDuration?: number;
+  servicePrice?: number;
+
+  // Staff
+  staffId?: number;
+  staffName?: string;
+  staffPhone?: string;
+  staffEmail?: string;
+}
+
+export interface AssignBookingRequest {
+  staffId: number;
+}
+
 
 export interface BookingFilterParams {
   staffId?: number;

@@ -344,18 +344,19 @@ public class DashboardAndBookingQueryTest {
 
     @Test
     void testDashboardMetricsPopulated() throws Exception {
-        // Today we have: 1 PENDING, 1 CONFIRMED, 1 COMPLETED, 1 CANCELLED
-        // Revenue should be PENDING + CONFIRMED = 300,000 + 300,000 = 600,000
-        // Upcoming is anything >= NOW. Since they are hardcoded to +10h, +12h, etc., some might be past depending on test runtime.
-        // Let's just check the ones we know are stable.
+        // Today we have: 1 PENDING (300k), 1 CONFIRMED (300k), 1 COMPLETED (300k), 1 CANCELLED (300k)
+        // Today active booking count excludes CANCELLED: 3
+        // Realized revenue from COMPLETED: 300,000
+        // Expected revenue from CONFIRMED: 300,000
         
         mockMvc.perform(get("/api/v1/dashboard/metrics")
                         .header("Authorization", "Bearer " + ownerJwt))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.todayBookingCount", is(4)))
+                .andExpect(jsonPath("$.todayBookingCount", is(3)))
                 .andExpect(jsonPath("$.pendingBookingCount", is(2))) // 1 today, 1 tomorrow
                 .andExpect(jsonPath("$.confirmedBookingCount", is(1)))
-                .andExpect(jsonPath("$.todayExpectedRevenue", is(600000.0))); // PENDING + CONFIRMED for today
+                .andExpect(jsonPath("$.todayExpectedRevenue", is(300000.0)))
+                .andExpect(jsonPath("$.todayCompletedRevenue", is(300000.0)));
     }
 
     @Test

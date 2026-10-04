@@ -8,17 +8,25 @@ public class DashboardMetricsResponse {
     private long pendingBookingCount;
     private long confirmedBookingCount;
     private BigDecimal todayExpectedRevenue;
+    private BigDecimal todayCompletedRevenue;
 
     public DashboardMetricsResponse() {}
 
     public DashboardMetricsResponse(long todayBookingCount, long upcomingBookingCount,
                                     long pendingBookingCount, long confirmedBookingCount,
                                     BigDecimal todayExpectedRevenue) {
+        this(todayBookingCount, upcomingBookingCount, pendingBookingCount, confirmedBookingCount, todayExpectedRevenue, BigDecimal.ZERO);
+    }
+
+    public DashboardMetricsResponse(long todayBookingCount, long upcomingBookingCount,
+                                    long pendingBookingCount, long confirmedBookingCount,
+                                    BigDecimal todayExpectedRevenue, BigDecimal todayCompletedRevenue) {
         this.todayBookingCount = todayBookingCount;
         this.upcomingBookingCount = upcomingBookingCount;
         this.pendingBookingCount = pendingBookingCount;
         this.confirmedBookingCount = confirmedBookingCount;
         this.todayExpectedRevenue = todayExpectedRevenue;
+        this.todayCompletedRevenue = todayCompletedRevenue;
     }
 
     public long getTodayBookingCount() { return todayBookingCount; }
@@ -35,4 +43,7 @@ public class DashboardMetricsResponse {
 
     public BigDecimal getTodayExpectedRevenue() { return todayExpectedRevenue; }
     public void setTodayExpectedRevenue(BigDecimal todayExpectedRevenue) { this.todayExpectedRevenue = todayExpectedRevenue; }
+
+    public BigDecimal getTodayCompletedRevenue() { return todayCompletedRevenue; }
+    public void setTodayCompletedRevenue(BigDecimal todayCompletedRevenue) { this.todayCompletedRevenue = todayCompletedRevenue; }
 }

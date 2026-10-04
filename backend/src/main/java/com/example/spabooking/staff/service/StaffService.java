@@ -80,6 +80,9 @@ public class StaffService {
         existingStaff.setName(updatedDetails.getName());
         existingStaff.setPhone(updatedDetails.getPhone());
         existingStaff.setEmail(updatedDetails.getEmail());
+        if (updatedDetails.getAvatarUrl() != null) {
+            existingStaff.setAvatarUrl(updatedDetails.getAvatarUrl());
+        }
 
         if (updatedDetails.getIsActive() != null) {
             existingStaff.setIsActive(updatedDetails.getIsActive());

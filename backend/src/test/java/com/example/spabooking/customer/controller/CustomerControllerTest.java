@@ -132,12 +132,10 @@ public class CustomerControllerTest {
     }
 
     @Test
-    void testStaffGetCustomers() throws Exception {
+    void testStaffCannotGetCustomers() throws Exception {
         mockMvc.perform(get("/api/v1/customers")
                         .header("Authorization", "Bearer " + staffJwt))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name", is("Alice")));
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -166,7 +164,7 @@ public class CustomerControllerTest {
     }
 
     @Test
-    void testStaffCanCreateCustomer() throws Exception {
+    void testStaffCannotCreateCustomer() throws Exception {
         String requestJson = """
                 {
                     "name": "Charlie",
@@ -179,8 +177,24 @@ public class CustomerControllerTest {
                         .header("Authorization", "Bearer " + staffJwt)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name", is("Charlie")));
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testStaffCannotUpdateCustomer() throws Exception {
+        String requestJson = """
+                {
+                    "name": "Alice Updated",
+                    "email": "alice.updated@example.com",
+                    "phone": "123456789"
+                }
+                """;
+
+        mockMvc.perform(put("/api/v1/customers/" + customerA.getId())
+                        .header("Authorization", "Bearer " + staffJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isForbidden());
     }
 
     @Test

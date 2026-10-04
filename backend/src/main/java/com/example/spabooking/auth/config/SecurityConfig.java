@@ -55,6 +55,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/login").permitAll()
                 .requestMatchers("/api/v1/public/**").permitAll()
+                .requestMatchers("/api/v1/uploads/**").permitAll()
                 .anyRequest().authenticated()
             );
 

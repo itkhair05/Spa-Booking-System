@@ -27,6 +27,8 @@ const INITIAL_STATE: BookingState = {
     email: '',
   },
   bookingId: null,
+  bookingCode: null,
+  bookingStatus: null,
 };
 
 export function SpaBookingFlow({ slug, spa }: SpaBookingFlowProps) {

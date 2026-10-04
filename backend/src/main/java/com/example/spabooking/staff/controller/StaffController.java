@@ -14,6 +14,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.spabooking.auth.security.CustomUserDetails;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 
 @RestController
@@ -21,16 +27,26 @@ import java.util.List;
 public class StaffController {
 
     private final StaffService staffService;
+    private final com.example.spabooking.common.storage.FileStorageService fileStorageService;
 
     @Autowired
-    public StaffController(StaffService staffService) {
+    public StaffController(StaffService staffService,
+                           com.example.spabooking.common.storage.FileStorageService fileStorageService) {
         this.staffService = staffService;
+        this.fileStorageService = fileStorageService;
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
     public ResponseEntity<List<StaffResponse>> getAllStaff() {
         return ResponseEntity.ok(staffService.findAllWithAccounts());
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<StaffResponse> getMyProfile() {
+        Long staffId = getCurrentStaffId();
+        return ResponseEntity.ok(staffService.findResponseById(staffId));
     }
 
     @GetMapping("/{id}")
@@ -46,6 +62,7 @@ public class StaffController {
         staff.setName(request.getName());
         staff.setPhone(request.getPhone());
         staff.setEmail(request.getEmail());
+        staff.setAvatarUrl(request.getAvatarUrl());
         if (request.getIsActive() != null) {
             staff.setIsActive(request.getIsActive());
         }
@@ -63,6 +80,7 @@ public class StaffController {
         staffDetails.setName(request.getName());
         staffDetails.setPhone(request.getPhone());
         staffDetails.setEmail(request.getEmail());
+        staffDetails.setAvatarUrl(request.getAvatarUrl());
         if (request.getIsActive() != null) {
             staffDetails.setIsActive(request.getIsActive());
         }
@@ -85,5 +103,69 @@ public class StaffController {
             @Valid @RequestBody CreateStaffAccountRequest request) {
         StaffAccountResponse response = staffService.createStaffAccount(id, request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/me/avatar")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<StaffResponse> uploadMyAvatar(@RequestParam("file") MultipartFile file) {
+        Long staffId = getCurrentStaffId();
+        String fileUrl = fileStorageService.storeFile(file, "avatars");
+
+        Staff staff = staffService.findById(staffId)
+                .orElseThrow(() -> new AccessDeniedException("Không tìm thấy thông tin nhân viên"));
+        staff.setAvatarUrl(fileUrl);
+        Staff updatedStaff = staffService.update(staffId, staff);
+
+        return ResponseEntity.ok(staffService.toResponse(updatedStaff));
+    }
+
+    @DeleteMapping("/me/avatar")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<Void> deleteMyAvatar() {
+        Long staffId = getCurrentStaffId();
+        Staff staff = staffService.findById(staffId)
+                .orElseThrow(() -> new AccessDeniedException("Không tìm thấy thông tin nhân viên"));
+        if (staff.getAvatarUrl() != null) {
+            fileStorageService.deleteFileByUrl(staff.getAvatarUrl());
+            staff.setAvatarUrl(null);
+            staffService.update(staffId, staff);
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/avatar")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<StaffResponse> uploadStaffAvatar(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        String fileUrl = fileStorageService.storeFile(file, "avatars");
+        Staff staff = staffService.findById(id)
+                .orElseThrow(() -> new com.example.spabooking.common.exception.ResourceNotFoundException("Staff not found"));
+        staff.setAvatarUrl(fileUrl);
+        Staff updatedStaff = staffService.update(id, staff);
+        return ResponseEntity.ok(staffService.toResponse(updatedStaff));
+    }
+
+    @DeleteMapping("/{id}/avatar")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<Void> deleteStaffAvatar(@PathVariable Long id) {
+        Staff staff = staffService.findById(id)
+                .orElseThrow(() -> new com.example.spabooking.common.exception.ResourceNotFoundException("Staff not found"));
+        if (staff.getAvatarUrl() != null) {
+            fileStorageService.deleteFileByUrl(staff.getAvatarUrl());
+            staff.setAvatarUrl(null);
+            staffService.update(id, staff);
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    private Long getCurrentStaffId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof CustomUserDetails userDetails) {
+            if (userDetails.isStaff() && userDetails.getStaffId() != null) {
+                return userDetails.getStaffId();
+            }
+        }
+        throw new AccessDeniedException("Chỉ tài khoản nhân viên mới có thể thực hiện thao tác này");
     }
 }

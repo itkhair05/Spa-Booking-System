@@ -13,6 +13,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.web.multipart.MultipartFile;
+import com.example.spabooking.common.storage.FileStorageService;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,10 +24,12 @@ import java.util.stream.Collectors;
 public class ServiceController {
 
     private final ServiceService serviceService;
+    private final FileStorageService fileStorageService;
 
     @Autowired
-    public ServiceController(ServiceService serviceService) {
+    public ServiceController(ServiceService serviceService, FileStorageService fileStorageService) {
         this.serviceService = serviceService;
+        this.fileStorageService = fileStorageService;
     }
 
     @GetMapping
@@ -53,6 +58,7 @@ public class ServiceController {
         service.setDescription(request.getDescription());
         service.setDurationMinutes(request.getDurationMinutes());
         service.setPrice(request.getPrice());
+        service.setImageUrl(request.getImageUrl());
         if (request.getIsActive() != null) {
             service.setIsActive(request.getIsActive());
         }
@@ -71,6 +77,7 @@ public class ServiceController {
         serviceDetails.setDescription(request.getDescription());
         serviceDetails.setDurationMinutes(request.getDurationMinutes());
         serviceDetails.setPrice(request.getPrice());
+        serviceDetails.setImageUrl(request.getImageUrl());
         if (request.getIsActive() != null) {
             serviceDetails.setIsActive(request.getIsActive());
         }
@@ -83,6 +90,32 @@ public class ServiceController {
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<Void> deleteService(@PathVariable Long id) {
         serviceService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/image")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<ServiceResponse> uploadServiceImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        String fileUrl = fileStorageService.storeFile(file, "services");
+        Service service = serviceService.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
+        service.setImageUrl(fileUrl);
+        Service updated = serviceService.update(id, service);
+        return ResponseEntity.ok(ServiceResponse.fromEntity(updated));
+    }
+
+    @DeleteMapping("/{id}/image")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<Void> deleteServiceImage(@PathVariable Long id) {
+        Service service = serviceService.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
+        if (service.getImageUrl() != null) {
+            fileStorageService.deleteFileByUrl(service.getImageUrl());
+            service.setImageUrl(null);
+            serviceService.update(id, service);
+        }
         return ResponseEntity.noContent().build();
     }
 }

@@ -164,8 +164,17 @@ const Services = () => {
       {!isLoading && !error && services.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {services.map((service) => (
-            <Card key={service.id}>
-              <CardContent className="p-4 sm:p-5 flex flex-col h-full">
+            <Card key={service.id} className="overflow-hidden flex flex-col justify-between border-[#e7e2d8] hover:border-[#c6d8c9] transition-all">
+              {service.imageUrl && (
+                <div className="h-36 w-full overflow-hidden bg-stone-100">
+                  <img
+                    src={service.imageUrl}
+                    alt={service.name}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+              )}
+              <CardContent className="p-4 sm:p-5 flex flex-col h-full grow">
                 <div className="flex justify-between items-start gap-2 mb-2">
                   <h4 className="font-semibold text-base text-[var(--color-neutral-900)]">{service.name}</h4>
                   <Badge tone={service.isActive ? 'success' : 'neutral'}>

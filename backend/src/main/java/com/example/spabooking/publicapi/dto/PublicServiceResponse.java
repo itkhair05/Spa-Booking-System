@@ -9,6 +9,7 @@ public class PublicServiceResponse {
     private String description;
     private Integer durationMinutes;
     private BigDecimal price;
+    private String imageUrl;
 
     public static PublicServiceResponse fromEntity(Service service) {
         PublicServiceResponse resp = new PublicServiceResponse();
@@ -17,6 +18,7 @@ public class PublicServiceResponse {
         resp.setDescription(service.getDescription());
         resp.setDurationMinutes(service.getDurationMinutes());
         resp.setPrice(service.getPrice());
+        resp.setImageUrl(service.getImageUrl());
         return resp;
     }
 
@@ -30,4 +32,6 @@ public class PublicServiceResponse {
     public void setDurationMinutes(Integer durationMinutes) { this.durationMinutes = durationMinutes; }
     public BigDecimal getPrice() { return price; }
     public void setPrice(BigDecimal price) { this.price = price; }
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 }
