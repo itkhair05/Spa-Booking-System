@@ -50,6 +50,9 @@ public class ServiceService {
         existingService.setDescription(updatedDetails.getDescription());
         existingService.setDurationMinutes(updatedDetails.getDurationMinutes());
         existingService.setPrice(updatedDetails.getPrice());
+        if (updatedDetails.getImageUrl() != null) {
+            existingService.setImageUrl(updatedDetails.getImageUrl());
+        }
         
         if (updatedDetails.getIsActive() != null) {
             existingService.setIsActive(updatedDetails.getIsActive());

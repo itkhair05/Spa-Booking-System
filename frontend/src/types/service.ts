@@ -4,6 +4,7 @@ export interface Service {
   description: string | null;
   durationMinutes: number;
   price: number;
+  imageUrl?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -14,6 +15,7 @@ export interface CreateServiceRequest {
   description?: string;
   durationMinutes: number;
   price: number;
+  imageUrl?: string | null;
   isActive?: boolean;
 }
 
@@ -22,5 +24,6 @@ export interface UpdateServiceRequest {
   description?: string;
   durationMinutes: number;
   price: number;
+  imageUrl?: string | null;
   isActive?: boolean;
 }

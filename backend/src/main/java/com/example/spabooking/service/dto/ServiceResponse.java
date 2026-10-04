@@ -13,6 +13,7 @@ public class ServiceResponse {
     private Integer durationMinutes;
     private BigDecimal price;
     private Boolean isActive;
+    private String imageUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -24,10 +25,14 @@ public class ServiceResponse {
         response.setDurationMinutes(service.getDurationMinutes());
         response.setPrice(service.getPrice());
         response.setIsActive(service.getIsActive());
+        response.setImageUrl(service.getImageUrl());
         response.setCreatedAt(service.getCreatedAt());
         response.setUpdatedAt(service.getUpdatedAt());
         return response;
     }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
     // Getters and Setters
     public Long getId() { return id; }

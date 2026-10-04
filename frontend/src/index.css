@@ -5,49 +5,57 @@
    ========================================================= */
 @layer base {
   :root {
-    --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-      Oxygen, Ubuntu, Cantarell, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-serif: 'Playfair Display', Georgia, Cambria, 'Times New Roman', Times, serif;
 
-    /* Brand palette */
-    --color-brand-50:  #f0f9ff;
-    --color-brand-100: #e0f2fe;
-    --color-brand-200: #bae6fd;
-    --color-brand-500: #0ea5e9;
-    --color-brand-600: #0284c7;
-    --color-brand-700: #0369a1;
+    /* TIKEY SPA Muted Sage Green Palette */
+    --color-brand-50:  #f2f6f3;
+    --color-brand-100: #e2ece4;
+    --color-brand-200: #c6d8c9;
+    --color-brand-500: #566f5c;
+    --color-brand-600: #465d4c;
+    --color-brand-700: #374a3c;
+    --color-brand-800: #28362c;
 
-    /* Neutral palette */
-    --color-neutral-50:  #f8fafc;
-    --color-neutral-100: #f1f5f9;
-    --color-neutral-200: #e2e8f0;
-    --color-neutral-300: #cbd5e1;
-    --color-neutral-400: #94a3b8;
-    --color-neutral-500: #64748b;
-    --color-neutral-600: #475569;
-    --color-neutral-700: #334155;
-    --color-neutral-800: #1e293b;
-    --color-neutral-900: #0f172a;
+    /* Champagne & Gold Accents */
+    --color-champagne-50: #fcf9f2;
+    --color-champagne-100: #f6efe2;
+    --color-champagne-500: #b8976c;
+    --color-champagne-600: #9e7d52;
+
+    /* Warm Ivory & Charcoal Neutral Palette */
+    --color-neutral-50:  #faf8f5;
+    --color-neutral-100: #f4f0e8;
+    --color-neutral-200: #e7e2d8;
+    --color-neutral-300: #d8d1c3;
+    --color-neutral-400: #a39b8c;
+    --color-neutral-500: #78716c;
+    --color-neutral-600: #57534e;
+    --color-neutral-700: #44403c;
+    --color-neutral-800: #292524;
+    --color-neutral-900: #1c1917;
 
     /* Semantic */
     --color-error:      #dc2626;
     --color-error-bg:   #fef2f2;
     --color-error-border: #fecaca;
 
-    --color-success:      #047857;
-    --color-success-bg:   #ecfdf5;
-    --color-success-border: #a7f3d0;
+    --color-success:      #2d6a4f;
+    --color-success-bg:   #edf7f2;
+    --color-success-border: #b7e4c7;
 
     --color-warning:      #b45309;
     --color-warning-bg:   #fffbeb;
     --color-warning-border: #fde68a;
 
     /* Layout */
-    --sidebar-width: 240px;
-    --header-height: 60px;
+    --sidebar-width: 256px;
+    --header-height: 64px;
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    /* Restrained Warm Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(28 25 23 / 0.04);
+    --shadow-md: 0 4px 12px -2px rgb(28 25 23 / 0.06), 0 2px 4px -2px rgb(28 25 23 / 0.04);
+    --shadow-lg: 0 10px 24px -4px rgb(28 25 23 / 0.08), 0 4px 8px -2px rgb(28 25 23 / 0.04);
   }
 
   *,
@@ -561,4 +569,30 @@
 
 .step-enter {
   animation: step-enter 0.24s ease-out both;
+}
+
+/* Editorial typography & wellness styling */
+.font-serif-title {
+  font-family: var(--font-serif);
+  letter-spacing: -0.015em;
+}
+
+.wellness-card {
+  background-color: #ffffff;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.wellness-card:hover {
+  border-color: var(--color-neutral-300);
+  box-shadow: var(--shadow-md);
+}
+
+.wellness-glass {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(231, 226, 216, 0.8);
 }

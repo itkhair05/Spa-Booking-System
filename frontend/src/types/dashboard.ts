@@ -3,5 +3,6 @@ export interface DashboardMetrics {
   upcomingBookingCount: number;
   pendingBookingCount: number;
   confirmedBookingCount: number;
+  todayCompletedRevenue: number;
   todayExpectedRevenue: number;
 }

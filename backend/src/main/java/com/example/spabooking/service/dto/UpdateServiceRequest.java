@@ -24,6 +24,8 @@ public class UpdateServiceRequest {
 
     private Boolean isActive;
 
+    private String imageUrl;
+
     // Getters and Setters
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -39,4 +41,7 @@ public class UpdateServiceRequest {
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 }

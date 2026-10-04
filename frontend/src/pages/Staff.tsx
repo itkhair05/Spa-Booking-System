@@ -8,23 +8,35 @@ import { Alert } from '../components/ui/Alert';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
-import { getStaff, deleteStaff } from '../lib/api/staff';
+import { getStaff, deleteStaff, updateStaff, createStaffAccount } from '../lib/api/staff';
 import type { Staff as StaffType } from '../types/staff';
 import { StaffForm } from './StaffForm';
-import { UserRound, Trash2, Plus } from 'lucide-react';
+import { UserRound, Trash2, Plus, KeyRound, ShieldAlert, Check, Phone, Mail } from 'lucide-react';
 import { useAuth } from '../app/auth/useAuth';
 
 const Staff = () => {
   const { user } = useAuth();
-  const isOwner = user?.roles?.includes('ROLE_OWNER');
+  const isOwner = user?.roles?.includes('ROLE_OWNER') ?? false;
 
   const [staffList, setStaffList] = useState<StaffType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state
+  // Form state (add / edit staff profile)
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffType | undefined>(undefined);
+
+  // Account creation state
+  const [accountTarget, setAccountTarget] = useState<StaffType | null>(null);
+  const [accountUsername, setAccountUsername] = useState('');
+  const [accountPassword, setAccountPassword] = useState('');
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [accountSuccess, setAccountSuccess] = useState<string | null>(null);
+
+  // Toggle active confirmation
+  const [toggleTarget, setToggleTarget] = useState<StaffType | null>(null);
+  const [isToggling, setIsToggling] = useState(false);
 
   // Delete state
   const [deletingMember, setDeletingMember] = useState<StaffType | null>(null);
@@ -66,6 +78,61 @@ const Staff = () => {
     fetchStaff();
   };
 
+  // Staff Account creation
+  const handleOpenAccountModal = (member: StaffType) => {
+    setAccountTarget(member);
+    setAccountUsername(member.email || '');
+    setAccountPassword('');
+    setAccountError(null);
+  };
+
+  const handleCreateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accountTarget || !accountUsername.trim() || !accountPassword) return;
+
+    setIsCreatingAccount(true);
+    setAccountError(null);
+    try {
+      await createStaffAccount(accountTarget.id, {
+        username: accountUsername.trim(),
+        password: accountPassword,
+      });
+      setAccountTarget(null);
+      setAccountSuccess(`Đã tạo tài khoản thành công cho nhân viên ${accountTarget.name}.`);
+      setTimeout(() => setAccountSuccess(null), 4000);
+      await fetchStaff();
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { message?: string } } };
+      if (axiosErr.response?.status === 409) {
+        setAccountError('Tên đăng nhập này đã tồn tại trong hệ thống. Vui lòng chọn tên khác.');
+      } else {
+        setAccountError(axiosErr.response?.data?.message || 'Không thể tạo tài khoản cho nhân viên.');
+      }
+    } finally {
+      setIsCreatingAccount(false);
+    }
+  };
+
+  // Toggle active/inactive
+  const handleConfirmToggleActive = async () => {
+    if (!toggleTarget) return;
+    setIsToggling(true);
+    try {
+      await updateStaff(toggleTarget.id, {
+        name: toggleTarget.name,
+        phone: toggleTarget.phone || undefined,
+        email: toggleTarget.email || undefined,
+        isActive: !toggleTarget.isActive,
+      });
+      setToggleTarget(null);
+      await fetchStaff();
+    } catch {
+      // Ignore
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
   const handleDeleteClick = (member: StaffType) => {
     if (!isOwner) return;
     setDeleteError(null);
@@ -91,7 +158,7 @@ const Staff = () => {
   if (isFormOpen && isOwner) {
     return (
       <AppShell title="Nhân viên">
-        <PageHeader title="Quản lý Nhân viên" />
+        <PageHeader title={editingStaff ? 'Chỉnh sửa nhân viên' : 'Thêm nhân viên mới'} />
         <div className="max-w-2xl mx-auto">
           <StaffForm
             staff={editingStaff}
@@ -107,8 +174,8 @@ const Staff = () => {
     <AppShell title="Nhân viên">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <PageHeader
-          title="Quản lý Nhân viên"
-          description="Đội ngũ nhân viên đang làm việc tại spa."
+          title="Đội ngũ Nhân viên TIKEY SPA"
+          description="Quản lý thông tin kỹ thuật viên, trạng thái hoạt động và tài khoản đăng nhập."
         />
         {isOwner && (
           <Button onClick={() => handleOpenForm()}>
@@ -120,7 +187,13 @@ const Staff = () => {
 
       {!isOwner && (
         <Alert tone="info" className="mb-6">
-          Chỉ chủ cơ sở có thể thêm hoặc chỉnh sửa nhân viên.
+          Chỉ chủ cơ sở có thể thêm, chỉnh sửa hoặc cấp tài khoản nhân viên.
+        </Alert>
+      )}
+
+      {accountSuccess && (
+        <Alert tone="success" className="mb-6">
+          {accountSuccess}
         </Alert>
       )}
 
@@ -128,9 +201,7 @@ const Staff = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse" aria-busy="true">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i}>
-              <CardContent className="h-32 bg-[var(--color-neutral-100)] rounded-xl">
-                <div />
-              </CardContent>
+              <CardContent className="h-32 bg-stone-100 rounded-xl" />
             </Card>
           ))}
         </div>
@@ -163,43 +234,102 @@ const Staff = () => {
       {!isLoading && !error && staffList.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {staffList.map((member) => (
-            <Card key={member.id}>
-              <CardContent className="p-4 sm:p-5 flex flex-col h-full">
-                <div className="flex justify-between items-start gap-2 mb-2">
-                  <h4 className="font-semibold text-base text-[var(--color-neutral-900)]">{member.name}</h4>
-                  <Badge tone={member.isActive ? 'success' : 'neutral'}>
-                    {member.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
-                  </Badge>
+            <Card key={member.id} className="border-[#e7e2d8] hover:border-[#c6d8c9] transition-all flex flex-col justify-between">
+              <CardContent className="p-5 flex flex-col h-full">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border border-[#c6d8c9] bg-stone-100 shrink-0 flex items-center justify-center">
+                    {member.avatarUrl ? (
+                      <img
+                        src={member.avatarUrl}
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-[#f2f6f3] text-[#465d4c] font-semibold text-sm">
+                        {member.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex justify-between items-start gap-1">
+                      <h4 className="font-semibold text-base text-stone-900 truncate">{member.name}</h4>
+                      <Badge tone={member.isActive ? 'success' : 'neutral'}>
+                        {member.isActive ? 'Hoạt động' : 'Ngừng'}
+                      </Badge>
+                    </div>
+                    <span className="text-xs text-stone-500">Kỹ thuật viên</span>
+                  </div>
                 </div>
 
-                <div className="text-sm text-[var(--color-neutral-600)] space-y-1 mb-4 grow">
+                <div className="text-xs text-stone-600 space-y-2 mb-4 grow">
                   {member.phone && (
-                    <p>
-                      <span className="text-[var(--color-neutral-500)]">Số điện thoại: </span>
-                      {member.phone}
+                    <p className="flex items-center gap-1.5">
+                      <Phone size={13} className="text-stone-400" />
+                      <span>{member.phone}</span>
                     </p>
                   )}
                   {member.email && (
-                    <p className="break-all">
-                      <span className="text-[var(--color-neutral-500)]">Email: </span>
-                      {member.email}
+                    <p className="flex items-center gap-1.5 break-all">
+                      <Mail size={13} className="text-stone-400" />
+                      <span>{member.email}</span>
                     </p>
                   )}
+
+                  {/* Account Status Badge */}
+                  <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-medium text-stone-500">Tài khoản đăng nhập:</span>
+                    {member.hasUserAccount ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#465d4c] bg-[#edf7f2] border border-[#b7e4c7] px-2 py-0.5 rounded-full">
+                        <Check size={11} />
+                        <span>Đã có tài khoản</span>
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-stone-400">Chưa cấp</span>
+                    )}
+                  </div>
                 </div>
 
                 {isOwner && (
-                  <div className="mt-auto flex items-center justify-end gap-2 pt-3 border-t border-[var(--color-neutral-100)]">
-                    <Button variant="secondary" size="sm" onClick={() => handleOpenForm(member)}>
-                      Chỉnh sửa
-                    </Button>
-                    <Button
-                      variant="danger-outline"
-                      size="sm"
-                      onClick={() => handleDeleteClick(member)}
-                      aria-label={`Xóa nhân viên ${member.name}`}
-                    >
-                      <Trash2 size={16} aria-hidden="true" />
-                    </Button>
+                  <div className="mt-auto flex flex-col gap-2 pt-3 border-t border-stone-100">
+                    {!member.hasUserAccount && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="w-full text-xs justify-center"
+                        onClick={() => handleOpenAccountModal(member)}
+                      >
+                        <KeyRound size={13} className="mr-1.5 text-stone-500" />
+                        Cấp tài khoản đăng nhập
+                      </Button>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setToggleTarget(member)}
+                        className={`text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors ${
+                          member.isActive
+                            ? 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                            : 'border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
+                        }`}
+                      >
+                        {member.isActive ? 'Vô hiệu hóa' : 'Kích hoạt lại'}
+                      </button>
+
+                      <div className="flex items-center gap-1.5">
+                        <Button variant="secondary" size="sm" onClick={() => handleOpenForm(member)}>
+                          Sửa
+                        </Button>
+                        <Button
+                          variant="danger-outline"
+                          size="sm"
+                          onClick={() => handleDeleteClick(member)}
+                          aria-label={`Xóa nhân viên ${member.name}`}
+                        >
+                          <Trash2 size={14} aria-hidden="true" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -208,13 +338,113 @@ const Staff = () => {
         </div>
       )}
 
+      {/* Create Staff Account Modal */}
+      {accountTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl border border-stone-200 max-w-md w-full p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="font-serif-title font-semibold text-lg text-stone-900 mb-1">
+              Cấp tài khoản đăng nhập cho nhân viên
+            </h3>
+            <p className="text-xs text-stone-500 mb-4">
+              Nhân viên <strong>{accountTarget.name}</strong> sẽ dùng tài khoản này để đăng nhập vào Cổng nhân viên TIKEY SPA.
+            </p>
+
+            {accountError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs mb-4 flex items-start gap-2">
+                <ShieldAlert size={15} className="shrink-0 mt-0.5 text-rose-600" />
+                <span>{accountError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateAccount} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
+                  Tên đăng nhập / Email
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={accountUsername}
+                  onChange={(e) => setAccountUsername(e.target.value)}
+                  placeholder="VD: staff@tikey.local hoặc hoa@gmail.com"
+                  className="w-full h-11 px-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c]"
+                  disabled={isCreatingAccount}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
+                  Mật khẩu khởi tạo
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={accountPassword}
+                  onChange={(e) => setAccountPassword(e.target.value)}
+                  placeholder="Mật khẩu tối thiểu 6 ký tự"
+                  minLength={6}
+                  className="w-full h-11 px-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c]"
+                  disabled={isCreatingAccount}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-stone-100">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setAccountTarget(null)}
+                  disabled={isCreatingAccount}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isCreatingAccount || !accountUsername.trim() || !accountPassword}
+                >
+                  {isCreatingAccount ? 'Đang tạo...' : 'Tạo tài khoản'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle Active Confirmation Dialog */}
+      <ConfirmDialog
+        open={toggleTarget !== null}
+        title={toggleTarget?.isActive ? 'Vô hiệu hóa nhân viên?' : 'Kích hoạt lại nhân viên?'}
+        description={
+          toggleTarget && (
+            <>
+              {toggleTarget.isActive ? (
+                <span>
+                  Nhân viên <strong>{toggleTarget.name}</strong> sẽ ngừng hoạt động. Tài khoản đăng nhập
+                  liên kết của nhân viên này sẽ bị vô hiệu hóa tạm thời và không thể nhận thêm lịch hẹn mới.
+                </span>
+              ) : (
+                <span>
+                  Kích hoạt lại nhân viên <strong>{toggleTarget.name}</strong> để họ có thể đăng nhập
+                  và nhận lịch hẹn từ khách hàng.
+                </span>
+              )}
+            </>
+          )
+        }
+        confirmLabel={toggleTarget?.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
+        cancelLabel="Đóng"
+        onConfirm={handleConfirmToggleActive}
+        onCancel={() => setToggleTarget(null)}
+        busy={isToggling}
+      />
+
+      {/* Delete Staff Confirmation Dialog */}
       <ConfirmDialog
         open={deletingMember !== null}
         title="Xóa nhân viên?"
         description={
           <>
-            Nhân viên <strong>{deletingMember?.name}</strong> sẽ bị xóa vĩnh viễn. Thao tác này
-            không thể hoàn tác và sẽ thất bại nếu nhân viên vẫn còn lịch hẹn liên quan.
+            Nhân viên <strong>{deletingMember?.name}</strong> sẽ bị xóa vĩnh viễn khỏi hệ thống.
+            Thao tác này sẽ thất bại nếu nhân viên đang có lịch hẹn đã liên kết trong quá khứ.
           </>
         }
         confirmLabel="Xóa nhân viên"

@@ -42,7 +42,11 @@ export function StepReview() {
 
     try {
       const response = await createPublicBooking(slug, payload);
-      updateState({ bookingId: response.id });
+      updateState({
+        bookingId: response.id,
+        bookingCode: response.bookingCode,
+        bookingStatus: response.status,
+      });
       setStep(6);
     } catch (err: unknown) {
       const e = err as { response?: { status: number } };

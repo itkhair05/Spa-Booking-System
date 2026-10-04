@@ -1,8 +1,13 @@
 import api from './axios';
-import type { Staff, CreateStaffRequest, UpdateStaffRequest } from '../../types/staff';
+import type { Staff, CreateStaffRequest, UpdateStaffRequest, CreateStaffAccountRequest, StaffAccountResponse } from '../../types/staff';
 
 export const getStaff = async (): Promise<Staff[]> => {
   const response = await api.get<Staff[]>('/staff');
+  return response.data;
+};
+
+export const getMyProfile = async (): Promise<Staff> => {
+  const response = await api.get<Staff>('/staff/me');
   return response.data;
 };
 
@@ -23,4 +28,37 @@ export const updateStaff = async (id: number, data: UpdateStaffRequest): Promise
 
 export const deleteStaff = async (id: number): Promise<void> => {
   await api.delete(`/staff/${id}`);
+};
+
+export const createStaffAccount = async (id: number, data: CreateStaffAccountRequest): Promise<StaffAccountResponse> => {
+  const response = await api.post<StaffAccountResponse>(`/staff/${id}/account`, data);
+  return response.data;
+};
+
+export const uploadMyAvatar = async (file: File): Promise<Staff> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post<Staff>('/staff/me/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+export const deleteMyAvatar = async (): Promise<Staff> => {
+  const response = await api.delete<Staff>('/staff/me/avatar');
+  return response.data;
+};
+
+export const uploadStaffAvatar = async (id: number, file: File): Promise<Staff> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post<Staff>(`/staff/${id}/avatar`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+export const deleteStaffAvatar = async (id: number): Promise<Staff> => {
+  const response = await api.delete<Staff>(`/staff/${id}/avatar`);
+  return response.data;
 };

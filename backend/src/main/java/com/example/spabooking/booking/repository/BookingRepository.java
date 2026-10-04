@@ -34,9 +34,20 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("status") BookingStatus status);
 
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.tenant.id = :tenantId " +
-           "AND b.startTime >= :startDate AND b.startTime < :endDate")
+           "AND b.startTime >= :startDate AND b.startTime < :endDate " +
+           "AND b.status != 'CANCELLED'")
     long countTodayBookings(
             @Param("tenantId") Long tenantId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.tenant.id = :tenantId " +
+           "AND b.staff.id = :staffId " +
+           "AND b.startTime >= :startDate AND b.startTime < :endDate " +
+           "AND b.status != 'CANCELLED'")
+    long countTodayBookingsByStaff(
+            @Param("tenantId") Long tenantId,
+            @Param("staffId") Long staffId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
@@ -46,15 +57,46 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("tenantId") Long tenantId,
             @Param("now") LocalDateTime now);
 
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.tenant.id = :tenantId " +
+           "AND b.staff.id = :staffId " +
+           "AND b.startTime >= :now AND b.status != 'CANCELLED'")
+    long countUpcomingBookingsByStaff(
+            @Param("tenantId") Long tenantId,
+            @Param("staffId") Long staffId,
+            @Param("now") LocalDateTime now);
+
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.tenant.id = :tenantId AND b.status = :status")
     long countByTenantIdAndStatus(
             @Param("tenantId") Long tenantId,
             @Param("status") BookingStatus status);
 
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.tenant.id = :tenantId " +
+           "AND b.staff.id = :staffId AND b.status = :status")
+    long countByTenantIdAndStaffIdAndStatus(
+            @Param("tenantId") Long tenantId,
+            @Param("staffId") Long staffId,
+            @Param("status") BookingStatus status);
+
+    @Query("SELECT COALESCE(SUM(b.price), 0) FROM Booking b WHERE b.tenant.id = :tenantId " +
+           "AND b.startTime >= :startDate AND b.startTime < :endDate " +
+           "AND b.status = 'COMPLETED'")
+    java.math.BigDecimal sumCompletedRevenue(
+            @Param("tenantId") Long tenantId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT COALESCE(SUM(b.price), 0) FROM Booking b WHERE b.tenant.id = :tenantId " +
+           "AND b.startTime >= :startDate AND b.startTime < :endDate " +
+           "AND b.status = 'CONFIRMED'")
+    java.math.BigDecimal sumExpectedRevenue(
+            @Param("tenantId") Long tenantId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
     @Query("SELECT COALESCE(SUM(b.price), 0) FROM Booking b WHERE b.tenant.id = :tenantId " +
            "AND b.startTime >= :startDate AND b.startTime < :endDate " +
            "AND b.status IN :statuses")
-    java.math.BigDecimal sumExpectedRevenue(
+    java.math.BigDecimal sumRevenueByStatuses(
             @Param("tenantId") Long tenantId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,

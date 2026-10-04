@@ -7,15 +7,14 @@ import { SpaLanding } from '../features/public-booking/SpaLanding';
 import { AlertCircle } from 'lucide-react';
 
 export default function PublicBooking() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug: paramSlug } = useParams<{ slug: string }>();
+  const slug = paramSlug || 'demo-spa';
 
   const [spa, setSpa] = useState<PublicSpaInfoResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!slug) return;
-
     let isMounted = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);

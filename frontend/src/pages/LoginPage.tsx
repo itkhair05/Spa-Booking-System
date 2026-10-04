@@ -121,12 +121,12 @@ const LoginPage = () => {
       <div className="login-card">
         {/* Brand */}
         <div className="login-brand">
-          <span className="login-brand-icon" aria-hidden="true"><Sparkles size={24} /></span>
-          <span className="login-brand-name">Spa Booking</span>
+          <span className="login-brand-icon" aria-hidden="true"><Sparkles size={24} className="text-[#465d4c]" /></span>
+          <span className="font-serif-title text-2xl font-bold text-[var(--color-champagne-500)] tracking-tight">TIKEY SPA</span>
         </div>
 
-        <h1 className="login-heading">Đăng nhập</h1>
-        <p className="login-subtitle">Dành cho chủ cơ sở và nhân viên</p>
+        <h1 className="login-heading font-serif-title">Đăng nhập hệ thống</h1>
+        <p className="login-subtitle">Cổng quản trị dành cho Chủ cơ sở và Nhân viên</p>
 
         {/* Error banner */}
         {error && (
@@ -182,6 +182,15 @@ const LoginPage = () => {
           >
             {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </Button>
+
+          <div className="text-center pt-2">
+            <a
+              href="/"
+              className="text-xs text-stone-500 hover:text-[#465d4c] transition-colors"
+            >
+              ← Quay lại trang đặt lịch TIKEY SPA
+            </a>
+          </div>
         </form>
       </div>
     </div>

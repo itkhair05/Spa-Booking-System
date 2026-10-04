@@ -13,6 +13,8 @@ export interface BookingState {
     email: string;
   };
   bookingId: number | null; // set after success
+  bookingCode: string | null;
+  bookingStatus?: string | null;
 }
 
 export interface SpaBookingContextType {

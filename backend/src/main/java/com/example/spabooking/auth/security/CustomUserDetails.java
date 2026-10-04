@@ -64,6 +64,10 @@ public class CustomUserDetails implements UserDetails {
         return user;
     }
 
+    public Long getId() {
+        return user != null ? user.getId() : null;
+    }
+
     public Long getStaffId() {
         return user.getStaff() != null ? user.getStaff().getId() : null;
     }
