@@ -7,7 +7,7 @@ import { formatCurrency } from '../../lib/format';
 import type { PublicSpaInfoResponse, PublicServiceResponse, PublicStaffResponse } from '../../types/publicBooking';
 import type { FeedbackType } from '../../types/feedback';
 import { PublicBookingLookup } from './PublicBookingLookup';
-import { TikeyHeroCanvas } from './TikeyHeroCanvas';
+import { HeroAtmosphere } from './HeroAtmosphere';
 import {
   MapPin,
   Phone,
@@ -180,6 +180,18 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
   // Mobile menu toggle
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Header scroll detection for quiet-luxury glass transition
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 15);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Article reading modal state
   const [readingArticle, setReadingArticle] = useState<Article | null>(null);
 
@@ -268,69 +280,80 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
 
   return (
     <div className="min-h-screen bg-[#faf8f5] flex flex-col font-sans text-stone-800 antialiased selection:bg-[#c6d8c9] selection:text-[#25382a]">
-      {/* Top Bar — Restrained Liquid Glass */}
-      <header className="sticky top-0 z-30 bg-[#faf8f5]/85 backdrop-blur-md border-b border-[#e7e2d8]/80 transition-colors">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
+      {/* Top Bar — Restrained Quiet-Luxury Glassmorphism */}
+      <header
+        className={`sticky top-0 z-30 transition-all duration-300 ${
+          isScrolled
+            ? 'bg-[#faf8f5]/80 backdrop-blur-xl border-b border-[#e7e2d8]/80 shadow-[0_4px_24px_-4px_rgba(40,30,20,0.04)]'
+            : 'bg-[#faf8f5]/30 backdrop-blur-md border-b border-white/40'
+        }`}
+        style={{
+          WebkitBackdropFilter: isScrolled
+            ? 'blur(20px) saturate(125%)'
+            : 'blur(12px) saturate(115%)',
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
           {/* Brand */}
-          <a href="#" className="flex items-center gap-2.5 group">
+          <a href="#" className="flex items-center gap-2.5 group shrink-0">
             <span className="w-8 h-8 rounded-full bg-[#f2f6f3] border border-[#c6d8c9] flex items-center justify-center text-[#465d4c] shadow-xs group-hover:scale-105 transition-transform">
               <Sparkles className="w-4 h-4 text-[#b8976c]" aria-hidden="true" />
             </span>
             <div className="flex flex-col">
-              <span className="font-serif-title font-bold text-lg text-[var(--color-champagne-500)] tracking-tight leading-tight">
+              <span className="font-serif-title font-bold text-lg text-[var(--color-champagne-500)] tracking-tight leading-tight whitespace-nowrap">
                 {spa.name}
               </span>
-              <span className="text-[10px] text-stone-500 uppercase tracking-widest font-semibold">
+              <span className="text-[10px] text-stone-500 uppercase tracking-widest font-semibold whitespace-nowrap">
                 Spa & Chăm Sóc Sức Khỏe
               </span>
             </div>
           </a>
 
-          {/* Quick Nav Links — Desktop */}
-          <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-stone-600 uppercase tracking-wider">
-            <a href="#gioi-thieu" className="hover:text-[#465d4c] transition-colors">
+          {/* Quick Nav Links — Desktop (Strictly single-line, whitespace-nowrap) */}
+          <nav className="hidden lg:flex items-center gap-3.5 xl:gap-6 text-xs font-semibold text-stone-600 uppercase tracking-wider flex-nowrap shrink-0">
+            <a href="#gioi-thieu" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
               Giới thiệu
             </a>
             {showServices && (
-              <a href="#dich-vu" className="hover:text-[#465d4c] transition-colors">
+              <a href="#dich-vu" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
                 Dịch vụ
               </a>
             )}
             {showStaff && (
-              <a href="#doi-ngu" className="hover:text-[#465d4c] transition-colors">
+              <a href="#doi-ngu" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
                 Đội ngũ
               </a>
             )}
-            <a href="#goc-cham-soc" className="hover:text-[#465d4c] transition-colors">
-              Góc chăm sóc
+            <a href="#goc-cham-soc" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
+              Bài viết
             </a>
-            <a href="#danh-gia" className="hover:text-[#465d4c] transition-colors">
+            <a href="#danh-gia" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
               Đánh giá
             </a>
-            <a href="#phan-hoi" className="hover:text-[#465d4c] transition-colors">
+            <a href="#phan-hoi" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
               Phản hồi
             </a>
-            <a href="#tra-cuu" className="hover:text-[#465d4c] transition-colors">
+            <a href="#tra-cuu" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
               Tra cứu
             </a>
           </nav>
 
           {/* Header Action Buttons */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <Link
               to="/login"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-stone-600 hover:text-stone-900 rounded-lg hover:bg-stone-100 transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-stone-600 hover:text-stone-900 rounded-lg hover:bg-black/5 transition-colors whitespace-nowrap"
               title="Cổng nhân viên & Quản trị"
             >
               <LogIn className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Đăng nhập</span>
+              <span className="whitespace-nowrap">Đăng nhập</span>
             </Link>
 
             <a
               href="#booking"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#465d4c] hover:bg-[#374a3c] text-white text-xs sm:text-sm font-medium rounded-xl transition-colors shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-[#465d4c] hover:bg-[#374a3c] text-white text-xs sm:text-sm font-medium rounded-xl transition-all shadow-xs hover:shadow-sm whitespace-nowrap"
             >
-              <span>Đặt lịch ngay</span>
+              <span className="whitespace-nowrap">Đặt lịch ngay</span>
               <ArrowRight className="w-4 h-4" aria-hidden="true" />
             </a>
 
@@ -348,12 +371,12 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
 
         {/* Mobile dropdown navigation */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden bg-[#faf8f5] border-b border-[#e7e2d8] px-4 py-4 space-y-3 shadow-lg">
-            <div className="flex flex-col space-y-2 text-sm font-medium text-stone-700">
+          <div className="lg:hidden bg-[#faf8f5]/95 backdrop-blur-xl border-b border-[#e7e2d8] px-4 py-4 space-y-2 shadow-lg">
+            <div className="flex flex-col space-y-1.5 text-sm font-medium text-stone-700">
               <a
                 href="#gioi-thieu"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="py-1.5 px-2 hover:bg-stone-100 rounded-lg"
+                className="whitespace-nowrap py-2 px-3 hover:bg-black/5 rounded-xl transition-colors"
               >
                 Giới thiệu
               </a>
@@ -361,7 +384,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                 <a
                   href="#dich-vu"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="py-1.5 px-2 hover:bg-stone-100 rounded-lg"
+                  className="whitespace-nowrap py-2 px-3 hover:bg-black/5 rounded-xl transition-colors"
                 >
                   Dịch vụ nổi bật
                 </a>
@@ -370,7 +393,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                 <a
                   href="#doi-ngu"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="py-1.5 px-2 hover:bg-stone-100 rounded-lg"
+                  className="whitespace-nowrap py-2 px-3 hover:bg-black/5 rounded-xl transition-colors"
                 >
                   Đội ngũ chuyên viên
                 </a>
@@ -378,57 +401,53 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               <a
                 href="#goc-cham-soc"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="py-1.5 px-2 hover:bg-stone-100 rounded-lg"
+                className="whitespace-nowrap py-2 px-3 hover:bg-black/5 rounded-xl transition-colors"
               >
                 Góc chăm sóc (Bài viết)
               </a>
               <a
                 href="#danh-gia"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="py-1.5 px-2 hover:bg-stone-100 rounded-lg"
+                className="whitespace-nowrap py-2 px-3 hover:bg-black/5 rounded-xl transition-colors"
               >
                 Đánh giá khách hàng
               </a>
               <a
                 href="#phan-hoi"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="py-1.5 px-2 hover:bg-stone-100 rounded-lg text-[#b8976c] font-semibold"
+                className="whitespace-nowrap py-2 px-3 hover:bg-black/5 rounded-xl transition-colors text-[#b8976c] font-semibold"
               >
                 Phản hồi & Khiếu nại
               </a>
               <a
                 href="#tra-cuu"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="py-1.5 px-2 hover:bg-stone-100 rounded-lg"
+                className="whitespace-nowrap py-2 px-3 hover:bg-black/5 rounded-xl transition-colors"
               >
                 Tra cứu lịch hẹn
               </a>
               <Link
                 to="/login"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="py-1.5 px-2 text-stone-500 hover:text-stone-900 border-t border-stone-200 pt-2 flex items-center gap-2"
+                className="whitespace-nowrap py-2 px-3 text-stone-500 hover:text-stone-900 border-t border-stone-200/80 pt-2.5 flex items-center gap-2"
               >
                 <LogIn className="w-4 h-4" />
-                <span>Đăng nhập Quản trị / Nhân viên</span>
+                <span className="whitespace-nowrap">Đăng nhập Quản trị / Nhân viên</span>
               </Link>
             </div>
           </div>
         )}
       </header>
 
-      {/* 1. HERO SECTION WITH 3D BLOOMING FLOWER SCULPTURE */}
+      {/* 1. HERO SECTION WITH LIGHTWEIGHT ORGANIC ATMOSPHERE */}
       <section className="relative overflow-hidden pt-12 sm:pt-20 pb-16 sm:pb-24 border-b border-[#e7e2d8]">
-        {/* Blooming 3D Flower Sculpture */}
-        <TikeyHeroCanvas />
-
-        {/* Ambient Organic Auras */}
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#e2ece4]/40 rounded-full blur-3xl pointer-events-none -z-10" />
-        <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-[#f6efe2]/50 rounded-full blur-3xl pointer-events-none -z-10" />
+        {/* Lightweight Pure CSS Organic Wellness Atmosphere (Zero Three.js/WebGL) */}
+        <HeroAtmosphere />
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/75 backdrop-blur-md border border-white/60 shadow-xs text-[#374a3c] text-xs font-semibold uppercase tracking-wider mb-5">
             <Sparkles className="w-3.5 h-3.5 text-[#b8976c]" aria-hidden="true" />
-            <span>Nghệ thuật chăm sóc sức khỏe & sắc đẹp</span>
+            <span className="whitespace-nowrap">Nghệ thuật chăm sóc sức khỏe & sắc đẹp</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif-title font-medium tracking-tight text-stone-900 max-w-3xl mx-auto mb-6 leading-tight">
