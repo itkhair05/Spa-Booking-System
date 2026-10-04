@@ -46,12 +46,12 @@ public class StaffServiceTest {
         TenantContext.setTenantId(10L);
         Staff mockStaff = new Staff();
         mockStaff.setId(1L);
-        when(staffRepository.findAllByTenantIdAndIsActiveTrue(10L)).thenReturn(Collections.singletonList(mockStaff));
+        when(staffRepository.findAllByTenantIdAndIsActiveTrueAndIsDeletedFalse(10L)).thenReturn(Collections.singletonList(mockStaff));
 
         List<Staff> result = staffService.findAll();
         assertEquals(1, result.size());
         assertEquals(1L, result.get(0).getId());
-        verify(staffRepository, times(1)).findAllByTenantIdAndIsActiveTrue(10L);
+        verify(staffRepository, times(1)).findAllByTenantIdAndIsActiveTrueAndIsDeletedFalse(10L);
     }
 
     @Test
@@ -59,22 +59,22 @@ public class StaffServiceTest {
         TenantContext.setTenantId(20L);
         Staff mockStaff = new Staff();
         mockStaff.setId(2L);
-        when(staffRepository.findByIdAndTenantIdAndIsActiveTrue(2L, 20L)).thenReturn(Optional.of(mockStaff));
+        when(staffRepository.findByIdAndTenantIdAndIsActiveTrueAndIsDeletedFalse(2L, 20L)).thenReturn(Optional.of(mockStaff));
 
         Optional<Staff> result = staffService.findById(2L);
         assertTrue(result.isPresent());
         assertEquals(2L, result.get().getId());
-        verify(staffRepository, times(1)).findByIdAndTenantIdAndIsActiveTrue(2L, 20L);
+        verify(staffRepository, times(1)).findByIdAndTenantIdAndIsActiveTrueAndIsDeletedFalse(2L, 20L);
     }
 
     @Test
     void testFindByIdCrossTenantDenied() {
         TenantContext.setTenantId(30L);
-        when(staffRepository.findByIdAndTenantIdAndIsActiveTrue(3L, 30L)).thenReturn(Optional.empty());
+        when(staffRepository.findByIdAndTenantIdAndIsActiveTrueAndIsDeletedFalse(3L, 30L)).thenReturn(Optional.empty());
 
         Optional<Staff> result = staffService.findById(3L);
         assertFalse(result.isPresent(), "Cross-tenant access should return empty Optional (Not Found)");
-        verify(staffRepository, times(1)).findByIdAndTenantIdAndIsActiveTrue(3L, 30L);
+        verify(staffRepository, times(1)).findByIdAndTenantIdAndIsActiveTrueAndIsDeletedFalse(3L, 30L);
     }
 
     @Test
@@ -82,7 +82,7 @@ public class StaffServiceTest {
         assertThrows(IllegalStateException.class, () -> staffService.findAll(), "Expected requireTenantId to throw exception");
         assertThrows(IllegalStateException.class, () -> staffService.findById(1L), "Expected requireTenantId to throw exception");
         
-        verify(staffRepository, never()).findAllByTenantIdAndIsActiveTrue(any());
-        verify(staffRepository, never()).findByIdAndTenantIdAndIsActiveTrue(any(), any());
+        verify(staffRepository, never()).findAllByTenantIdAndIsActiveTrueAndIsDeletedFalse(any());
+        verify(staffRepository, never()).findByIdAndTenantIdAndIsActiveTrueAndIsDeletedFalse(any(), any());
     }
 }

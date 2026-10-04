@@ -7,6 +7,7 @@ export interface AuthContextProps {
   isLoading: boolean;
   login: (data: LoginRequest) => Promise<void>;
   logout: () => void;
+  updateUser?: (user: { username: string; roles: string[] }, token?: string) => void;
 }
 
 export const AuthContext = createContext<AuthContextProps | undefined>(undefined);

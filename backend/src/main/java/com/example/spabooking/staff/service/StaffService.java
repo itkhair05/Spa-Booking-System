@@ -4,15 +4,21 @@ import com.example.spabooking.auth.entity.User;
 import com.example.spabooking.auth.enums.UserRole;
 import com.example.spabooking.auth.repository.UserRepository;
 import com.example.spabooking.common.exception.ResourceNotFoundException;
+import com.example.spabooking.auth.security.CustomUserDetails;
+import com.example.spabooking.auth.security.JwtUtils;
+import com.example.spabooking.booking.repository.BookingRepository;
 import com.example.spabooking.staff.dto.CreateStaffAccountRequest;
 import com.example.spabooking.staff.dto.StaffAccountResponse;
 import com.example.spabooking.staff.dto.StaffResponse;
+import com.example.spabooking.staff.dto.UpdateStaffSelfProfileRequest;
 import com.example.spabooking.staff.entity.Staff;
 import com.example.spabooking.staff.repository.StaffRepository;
 import com.example.spabooking.tenant.context.TenantContext;
 import com.example.spabooking.tenant.entity.Tenant;
 import com.example.spabooking.tenant.repository.TenantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,22 +36,28 @@ public class StaffService {
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtils jwtUtils;
+    private final BookingRepository bookingRepository;
 
     @Autowired
     public StaffService(StaffRepository staffRepository,
                         TenantRepository tenantRepository,
                         UserRepository userRepository,
-                        PasswordEncoder passwordEncoder) {
+                        PasswordEncoder passwordEncoder,
+                        JwtUtils jwtUtils,
+                        BookingRepository bookingRepository) {
         this.staffRepository = staffRepository;
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtUtils = jwtUtils;
+        this.bookingRepository = bookingRepository;
     }
 
     public List<StaffResponse> findAllWithAccounts() {
         Long tenantId = TenantContext.requireTenantId();
-        // Return all staff for tenant so OWNER can see inactive staff and reactivate them
-        List<Staff> staffList = staffRepository.findAllByTenantId(tenantId);
+        // Return non-deleted staff for tenant so OWNER can see active & inactive staff, but not deleted
+        List<Staff> staffList = staffRepository.findAllByTenantIdAndIsDeletedFalse(tenantId);
         if (staffList.isEmpty()) {
             return List.of();
         }
@@ -61,16 +73,17 @@ public class StaffService {
 
     public List<Staff> findAll() {
         Long tenantId = TenantContext.requireTenantId();
-        return staffRepository.findAllByTenantIdAndIsActiveTrue(tenantId);
+        return staffRepository.findAllByTenantIdAndIsActiveTrueAndIsDeletedFalse(tenantId);
     }
 
     public Optional<Staff> findById(Long id) {
         Long tenantId = TenantContext.requireTenantId();
-        return staffRepository.findByIdAndTenantIdAndIsActiveTrue(id, tenantId);
+        return staffRepository.findByIdAndTenantIdAndIsActiveTrueAndIsDeletedFalse(id, tenantId);
     }
 
     public StaffResponse findResponseById(Long id) {
-        Staff staff = findById(id)
+        Long tenantId = TenantContext.requireTenantId();
+        Staff staff = staffRepository.findByIdAndTenantIdAndIsDeletedFalse(id, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
         return toResponse(staff);
     }
@@ -81,19 +94,25 @@ public class StaffService {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
         staff.setTenant(tenant);
+        staff.setIsDeleted(false);
         return staffRepository.save(staff);
     }
 
     @Transactional
     public Staff update(Long id, Staff updatedDetails) {
         Long tenantId = TenantContext.requireTenantId();
-        // Use findByIdAndTenantId (without isActive filter) so OWNER can reactivate inactive staff
-        Staff existingStaff = staffRepository.findByIdAndTenantId(id, tenantId)
+        Staff existingStaff = staffRepository.findByIdAndTenantIdAndIsDeletedFalse(id, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
 
-        existingStaff.setName(updatedDetails.getName());
-        existingStaff.setPhone(updatedDetails.getPhone());
-        existingStaff.setEmail(updatedDetails.getEmail());
+        if (updatedDetails.getName() != null) {
+            existingStaff.setName(updatedDetails.getName());
+        }
+        if (updatedDetails.getPhone() != null) {
+            existingStaff.setPhone(updatedDetails.getPhone());
+        }
+        if (updatedDetails.getEmail() != null) {
+            existingStaff.setEmail(updatedDetails.getEmail());
+        }
         if (updatedDetails.getAvatarUrl() != null) {
             existingStaff.setAvatarUrl(updatedDetails.getAvatarUrl());
         }
@@ -113,9 +132,11 @@ public class StaffService {
     @Transactional
     public void delete(Long id) {
         Long tenantId = TenantContext.requireTenantId();
-        Staff existingStaff = staffRepository.findByIdAndTenantIdAndIsActiveTrue(id, tenantId)
+        Staff existingStaff = staffRepository.findByIdAndTenantIdAndIsDeletedFalse(id, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
 
+        // Archive / soft-delete staff: preserve historical bookings and foreign key integrity
+        existingStaff.setIsDeleted(true);
         existingStaff.setIsActive(false);
         staffRepository.save(existingStaff);
 
@@ -124,6 +145,57 @@ public class StaffService {
             user.setIsActive(false);
             userRepository.save(user);
         });
+    }
+
+    @Transactional
+    public StaffResponse updateMyProfile(Long staffId, UpdateStaffSelfProfileRequest request) {
+        Long tenantId = TenantContext.requireTenantId();
+        Staff staff = staffRepository.findByIdAndTenantIdAndIsDeletedFalse(staffId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
+
+        if (request.getName() != null && !request.getName().isBlank()) {
+            staff.setName(request.getName().trim());
+        }
+        if (request.getPhone() != null) {
+            staff.setPhone(request.getPhone().trim());
+        }
+        if (request.getAvatarUrl() != null) {
+            staff.setAvatarUrl(request.getAvatarUrl());
+        }
+
+        String newAccessToken = null;
+        Optional<User> linkedUserOpt = userRepository.findByStaffIdAndTenantId(staffId, tenantId);
+
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            String newEmail = request.getEmail().trim().toLowerCase();
+            staff.setEmail(newEmail);
+
+            if (linkedUserOpt.isPresent()) {
+                User user = linkedUserOpt.get();
+                if (!newEmail.equalsIgnoreCase(user.getUsername())) {
+                    // Check if new email is already taken by another user
+                    Optional<User> existingUser = userRepository.findByUsername(newEmail);
+                    if (existingUser.isPresent() && !existingUser.get().getId().equals(user.getId())) {
+                        throw new IllegalArgumentException("Email / Tên đăng nhập này đã được sử dụng");
+                    }
+                    user.setUsername(newEmail);
+                    userRepository.save(user);
+
+                    // Generate fresh token with the new username so session remains valid
+                    CustomUserDetails userDetails = new CustomUserDetails(user);
+                    Authentication auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    newAccessToken = jwtUtils.generateJwtToken(auth);
+                }
+            }
+        }
+
+        Staff savedStaff = staffRepository.save(staff);
+        User user = linkedUserOpt.orElse(null);
+        StaffResponse response = toResponse(savedStaff, user);
+        if (newAccessToken != null) {
+            response.setAccessToken(newAccessToken);
+        }
+        return response;
     }
 
     @Transactional

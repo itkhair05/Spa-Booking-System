@@ -455,8 +455,8 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
           </h1>
 
           <p className="text-stone-600 text-base sm:text-lg max-w-2xl mx-auto mb-10 leading-relaxed font-light">
-            Không gian quiet luxury giao hòa cùng thảo mộc tự nhiên Việt Nam. Trải nghiệm các liệu pháp massage,
-            trị liệu da và phục hồi năng lượng được thiết kế riêng cho bạn — đặt lịch chỉ trong 2 phút.
+            Không gian yên tĩnh giao hòa cùng thảo mộc tự nhiên Việt Nam. Trải nghiệm các liệu pháp massage,
+            trị liệu da và phục hồi năng lượng được thiết kế riêng cho bạn
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-14">
@@ -859,7 +859,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
           <div className="text-center max-w-2xl mx-auto mb-12">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f2f6f3] border border-[#c6d8c9] text-[#465d4c] text-xs font-semibold mb-3">
               <Sparkles className="w-3 h-3 text-[#b8976c]" />
-              <span>Trải nghiệm khách hàng mẫu (Demo Showroom)</span>
+              <span>Đánh giá từ khách hàng</span>
             </div>
             <h2 id="testimonials-heading" className="text-2xl sm:text-4xl font-serif-title font-medium text-stone-900 mt-1 mb-3">
               Khách hàng nói gì về chúng tôi

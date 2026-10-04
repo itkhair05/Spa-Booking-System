@@ -49,6 +49,14 @@ public class StaffController {
         return ResponseEntity.ok(staffService.findResponseById(staffId));
     }
 
+    @PutMapping("/me")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<StaffResponse> updateMyProfile(
+            @Valid @RequestBody com.example.spabooking.staff.dto.UpdateStaffSelfProfileRequest request) {
+        Long staffId = getCurrentStaffId();
+        return ResponseEntity.ok(staffService.updateMyProfile(staffId, request));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
     public ResponseEntity<StaffResponse> getStaffById(@PathVariable Long id) {

@@ -1,5 +1,12 @@
 import api from './axios';
-import type { Staff, CreateStaffRequest, UpdateStaffRequest, CreateStaffAccountRequest, StaffAccountResponse } from '../../types/staff';
+import type {
+  Staff,
+  CreateStaffRequest,
+  UpdateStaffRequest,
+  CreateStaffAccountRequest,
+  StaffAccountResponse,
+  UpdateStaffSelfProfileRequest,
+} from '../../types/staff';
 
 export const getStaff = async (): Promise<Staff[]> => {
   const response = await api.get<Staff[]>('/staff');
@@ -8,6 +15,11 @@ export const getStaff = async (): Promise<Staff[]> => {
 
 export const getMyProfile = async (): Promise<Staff> => {
   const response = await api.get<Staff>('/staff/me');
+  return response.data;
+};
+
+export const updateMyProfile = async (data: UpdateStaffSelfProfileRequest): Promise<Staff> => {
+  const response = await api.put<Staff>('/staff/me', data);
   return response.data;
 };
 

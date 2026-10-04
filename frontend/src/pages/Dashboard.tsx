@@ -9,7 +9,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { getDashboardMetrics } from '../lib/api/dashboard';
 import { getBookings } from '../lib/api/bookings';
-import { downloadExport, type ExportKind } from '../lib/api/exports';
+import { downloadExport, downloadMonthlyRevenueExport, type ExportKind } from '../lib/api/exports';
 import type { DashboardMetrics } from '../types/dashboard';
 import type { Booking, BookingStatus } from '../types/booking';
 import { formatCurrency, formatDateLongFromYMD, formatTimeRange } from '../lib/format';
@@ -84,6 +84,9 @@ const Dashboard = () => {
   const [error, setError] = useState<Error | null>(null);
   const [exporting, setExporting] = useState<ExportKind | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+  const [isExportingMonthly, setIsExportingMonthly] = useState(false);
 
   const handleExport = async (kind: ExportKind) => {
     if (exporting) return;
@@ -95,6 +98,19 @@ const Dashboard = () => {
       setExportError('Không thể xuất báo cáo. Vui lòng thử lại.');
     } finally {
       setExporting(null);
+    }
+  };
+
+  const handleMonthlyExport = async () => {
+    if (isExportingMonthly) return;
+    setIsExportingMonthly(true);
+    setExportError(null);
+    try {
+      await downloadMonthlyRevenueExport(selectedYear, selectedMonth);
+    } catch {
+      setExportError('Không thể xuất báo cáo doanh thu tháng. Vui lòng thử lại.');
+    } finally {
+      setIsExportingMonthly(false);
     }
   };
 
@@ -583,6 +599,48 @@ const Dashboard = () => {
                     </button>
                   ))}
                 </div>
+
+                <div className="pt-3 border-t border-stone-100 space-y-2">
+                  <span className="text-xs font-semibold text-stone-700 block">Doanh thu theo tháng</span>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                      className="flex-1 h-9 px-2.5 rounded-lg border border-stone-200 bg-stone-50 text-xs font-medium text-stone-800 focus:outline-none focus:border-[#465d4c]"
+                      disabled={isExportingMonthly}
+                      aria-label="Chọn tháng xuất doanh thu"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                        <option key={m} value={m}>Tháng {m}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(Number(e.target.value))}
+                      className="w-24 h-9 px-2.5 rounded-lg border border-stone-200 bg-stone-50 text-xs font-medium text-stone-800 focus:outline-none focus:border-[#465d4c]"
+                      disabled={isExportingMonthly}
+                      aria-label="Chọn năm xuất doanh thu"
+                    >
+                      {[2025, 2026, 2027].map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleMonthlyExport}
+                      disabled={isExportingMonthly}
+                      className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-[#465d4c] hover:bg-[#374a3c] text-white text-xs font-semibold transition-colors disabled:opacity-60 whitespace-nowrap cursor-pointer"
+                    >
+                      {isExportingMonthly ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : (
+                        <Download size={13} />
+                      )}
+                      <span>Xuất Excel</span>
+                    </button>
+                  </div>
+                </div>
+
                 {exportError && (
                   <p className="text-xs text-red-600" role="alert">{exportError}</p>
                 )}

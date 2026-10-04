@@ -14,6 +14,7 @@ public class StaffResponse {
     private Boolean accountEnabled;
     private Boolean isActive;
     private String avatarUrl;
+    private String accessToken;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -64,6 +65,9 @@ public class StaffResponse {
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+
+    public String getAccessToken() { return accessToken; }
+    public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

@@ -28,3 +28,26 @@ export async function downloadExport(kind: ExportKind): Promise<void> {
   anchor.remove();
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Downloads OWNER-only monthly revenue .xlsx report.
+ */
+export async function downloadMonthlyRevenueExport(year: number, month: number): Promise<void> {
+  const response = await api.get('/exports/revenue/monthly', {
+    params: { year, month },
+    responseType: 'blob',
+  });
+
+  const disposition: string | undefined = response.headers?.['content-disposition'];
+  const match = disposition?.match(/filename="?([^";]+)"?/);
+  const filename = match?.[1] ?? `doanh-thu-thang-${month}-${year}.xlsx`;
+
+  const url = URL.createObjectURL(response.data as Blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}

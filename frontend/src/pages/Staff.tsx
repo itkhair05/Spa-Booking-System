@@ -422,7 +422,7 @@ const Staff = () => {
         </div>
       )}
 
-      {/* Toggle Active Confirmation Dialog */}
+      {/* Toggle Active Confirmation Dialog (Vô hiệu hóa / Kích hoạt lại) */}
       <ConfirmDialog
         open={toggleTarget !== null}
         title={toggleTarget?.isActive ? 'Vô hiệu hóa nhân viên?' : 'Kích hoạt lại nhân viên?'}
@@ -431,12 +431,13 @@ const Staff = () => {
             <>
               {toggleTarget.isActive ? (
                 <span>
-                  Nhân viên <strong>{toggleTarget.name}</strong> sẽ ngừng hoạt động. Tài khoản đăng nhập
-                  liên kết của nhân viên này sẽ bị vô hiệu hóa tạm thời và không thể nhận thêm lịch hẹn mới.
+                  Nhân viên <strong>{toggleTarget.name}</strong> sẽ được chuyển sang trạng thái <strong>Đã vô hiệu hóa</strong>.
+                  Tài khoản đăng nhập liên kết của nhân viên này sẽ bị tạm khóa và không thể nhận thêm lịch hẹn mới.
+                  Toàn bộ lịch sử đặt hẹn trước đây vẫn được bảo lưu và bạn có thể kích hoạt lại bất kỳ lúc nào.
                 </span>
               ) : (
                 <span>
-                  Kích hoạt lại nhân viên <strong>{toggleTarget.name}</strong> để họ có thể đăng nhập
+                  Kích hoạt lại nhân viên <strong>{toggleTarget.name}</strong> để họ có thể tiếp tục đăng nhập
                   và nhận lịch hẹn từ khách hàng.
                 </span>
               )}
@@ -445,24 +446,26 @@ const Staff = () => {
         }
         confirmLabel={toggleTarget?.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
         cancelLabel="Đóng"
+        tone="primary"
         onConfirm={handleConfirmToggleActive}
         onCancel={() => setToggleTarget(null)}
         busy={isToggling}
       />
 
-      {/* Delete / Deactivate Staff Confirmation Dialog */}
+      {/* Delete / Archive Staff Confirmation Dialog (Xóa) */}
       <ConfirmDialog
         open={deletingMember !== null}
-        title="Vô hiệu hóa nhân viên?"
+        title="Xóa nhân viên?"
         description={
           <>
-            Nhân viên <strong>{deletingMember?.name}</strong> sẽ được chuyển sang trạng thái <strong>Đã vô hiệu hóa</strong>.
-            Tài khoản đăng nhập liên kết (nếu có) sẽ bị tạm khóa và nhân viên không nhận thêm lịch hẹn mới.
-            Toàn bộ lịch sử đặt hẹn trước đây vẫn được lưu trữ nguyên vẹn và bạn có thể kích hoạt lại bất kỳ lúc nào.
+            Nhân viên <strong>{deletingMember?.name}</strong> sẽ bị xóa khỏi danh sách quản lý nhân viên.
+            Toàn bộ lịch sử đặt hẹn và dữ liệu doanh thu trước đây vẫn được lưu trữ nguyên vẹn để đối soát.
+            Hành động này không thể hoàn tác.
           </>
         }
-        confirmLabel="Vô hiệu hóa"
+        confirmLabel="Xóa nhân viên"
         cancelLabel="Đóng"
+        tone="danger"
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeletingMember(null)}
         busy={isDeleting}
