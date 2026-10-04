@@ -18,10 +18,13 @@ import java.util.List;
 public class PublicController {
 
     private final PublicBookingService publicBookingService;
+    private final com.example.spabooking.feedback.service.FeedbackService feedbackService;
 
     @Autowired
-    public PublicController(PublicBookingService publicBookingService) {
+    public PublicController(PublicBookingService publicBookingService,
+                            com.example.spabooking.feedback.service.FeedbackService feedbackService) {
         this.publicBookingService = publicBookingService;
+        this.feedbackService = feedbackService;
     }
 
     @GetMapping
@@ -62,5 +65,13 @@ public class PublicController {
             @PathVariable String slug,
             @PathVariable String bookingCode) {
         return ResponseEntity.ok(publicBookingService.getBookingByCode(bookingCode));
+    }
+
+    @PostMapping("/feedback")
+    public ResponseEntity<com.example.spabooking.feedback.dto.FeedbackResponse> submitFeedback(
+            @PathVariable String slug,
+            @Valid @RequestBody com.example.spabooking.feedback.dto.CreateFeedbackRequest request) {
+        com.example.spabooking.feedback.dto.FeedbackResponse response = feedbackService.submitPublicFeedback(request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 }
