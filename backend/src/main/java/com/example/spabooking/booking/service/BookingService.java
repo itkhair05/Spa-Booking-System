@@ -1,5 +1,7 @@
 package com.example.spabooking.booking.service;
 
+import com.example.spabooking.auth.security.CustomUserDetails;
+import com.example.spabooking.booking.dto.BookingDetailResponse;
 import com.example.spabooking.booking.dto.CreateBookingRequest;
 import com.example.spabooking.booking.dto.UpdateBookingRequest;
 import com.example.spabooking.booking.dto.UpdateBookingStatusRequest;
@@ -17,10 +19,14 @@ import com.example.spabooking.tenant.context.TenantContext;
 import com.example.spabooking.tenant.entity.Tenant;
 import com.example.spabooking.tenant.repository.TenantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,9 +53,22 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
-    public List<Booking> findAll(Long staffId, LocalDateTime startDate, LocalDateTime endDate, BookingStatus status) {
+    public List<Booking> findAll(Long requestedStaffId, LocalDateTime startDate, LocalDateTime endDate, BookingStatus status) {
         Long tenantId = TenantContext.requireTenantId();
-        
+        Long effectiveStaffId = requestedStaffId;
+
+        Optional<CustomUserDetails> userDetailsOpt = getCurrentUserDetails();
+        if (userDetailsOpt.isPresent() && userDetailsOpt.get().isStaff()) {
+            CustomUserDetails userDetails = userDetailsOpt.get();
+            Long linkedStaffId = userDetails.getStaffId();
+            if (linkedStaffId != null) {
+                if (requestedStaffId != null && !requestedStaffId.equals(linkedStaffId)) {
+                    throw new AccessDeniedException("Staff can only view their own bookings");
+                }
+                effectiveStaffId = linkedStaffId;
+            }
+        }
+
         if (startDate != null && endDate != null) {
             if (endDate.isBefore(startDate)) {
                 throw new IllegalArgumentException("endDate must not be before startDate");
@@ -60,24 +79,60 @@ public class BookingService {
         } else if (startDate != null || endDate != null) {
             throw new IllegalArgumentException("Both startDate and endDate must be provided together");
         }
-        
-        return bookingRepository.findAllByFilters(tenantId, staffId, startDate, endDate, status);
+
+        return bookingRepository.findAllByFilters(tenantId, effectiveStaffId, startDate, endDate, status);
     }
 
     @Transactional(readOnly = true)
     public Optional<Booking> findById(Long id) {
         Long tenantId = TenantContext.requireTenantId();
-        return bookingRepository.findByIdAndTenantId(id, tenantId);
+        Optional<Booking> bookingOpt = bookingRepository.findByIdAndTenantId(id, tenantId);
+        if (bookingOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Booking booking = bookingOpt.get();
+        Optional<CustomUserDetails> userDetailsOpt = getCurrentUserDetails();
+        if (userDetailsOpt.isPresent() && userDetailsOpt.get().isStaff()) {
+            CustomUserDetails userDetails = userDetailsOpt.get();
+            Long linkedStaffId = userDetails.getStaffId();
+            if (linkedStaffId != null) {
+                if (booking.getStaff() == null || !linkedStaffId.equals(booking.getStaff().getId())) {
+                    throw new AccessDeniedException("Staff cannot access bookings assigned to another staff member");
+                }
+            }
+        }
+        return Optional.of(booking);
+    }
+
+    @Transactional(readOnly = true)
+    public BookingDetailResponse getBookingDetail(Long id) {
+        Booking booking = findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        boolean isOwner = getCurrentUserDetails().map(CustomUserDetails::isOwner).orElse(false);
+        return BookingDetailResponse.fromEntity(booking, isOwner);
     }
 
     @Transactional
     public Booking create(CreateBookingRequest request) {
         Long tenantId = TenantContext.requireTenantId();
 
+        Optional<CustomUserDetails> userDetailsOpt = getCurrentUserDetails();
+        if (userDetailsOpt.isPresent() && userDetailsOpt.get().isStaff()) {
+            CustomUserDetails userDetails = userDetailsOpt.get();
+            Long linkedStaffId = userDetails.getStaffId();
+            if (linkedStaffId != null) {
+                if (request.getStaffId() != null && !request.getStaffId().equals(linkedStaffId)) {
+                    throw new AccessDeniedException("Staff can only create bookings for themselves");
+                }
+                request.setStaffId(linkedStaffId);
+            }
+        }
+
         // Lock ordering: Customer -> Staff
         Customer customer = customerRepository.findByIdAndTenantIdAndIsActiveTrueForUpdate(request.getCustomerId(), tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
-                
+
         Staff staff = staffRepository.findByIdAndTenantIdAndIsActiveTrueForUpdate(request.getStaffId(), tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
 
@@ -112,10 +167,28 @@ public class BookingService {
     public Booking update(Long id, UpdateBookingRequest request) {
         Long tenantId = TenantContext.requireTenantId();
 
+        Booking existingBooking = bookingRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        Optional<CustomUserDetails> userDetailsOpt = getCurrentUserDetails();
+        if (userDetailsOpt.isPresent() && userDetailsOpt.get().isStaff()) {
+            CustomUserDetails userDetails = userDetailsOpt.get();
+            Long linkedStaffId = userDetails.getStaffId();
+            if (linkedStaffId != null) {
+                if (existingBooking.getStaff() == null || !linkedStaffId.equals(existingBooking.getStaff().getId())) {
+                    throw new AccessDeniedException("Staff cannot update bookings assigned to another staff member");
+                }
+                if (request.getStaffId() != null && !request.getStaffId().equals(linkedStaffId)) {
+                    throw new AccessDeniedException("Staff cannot reassign booking to another staff member");
+                }
+                request.setStaffId(linkedStaffId);
+            }
+        }
+
         // Lock ordering: Customer -> Staff
         Customer customer = customerRepository.findByIdAndTenantIdAndIsActiveTrueForUpdate(request.getCustomerId(), tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
-                
+
         Staff staff = staffRepository.findByIdAndTenantIdAndIsActiveTrueForUpdate(request.getStaffId(), tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
 
@@ -124,9 +197,6 @@ public class BookingService {
         if (!service.getIsActive()) {
             throw new IllegalArgumentException("Service must be active");
         }
-
-        Booking existingBooking = bookingRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
         // Don't modify if terminal
         if (existingBooking.getStatus() == BookingStatus.CANCELLED || existingBooking.getStatus() == BookingStatus.COMPLETED) {
@@ -154,6 +224,17 @@ public class BookingService {
         Booking existingBooking = bookingRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
+        Optional<CustomUserDetails> userDetailsOpt = getCurrentUserDetails();
+        if (userDetailsOpt.isPresent() && userDetailsOpt.get().isStaff()) {
+            CustomUserDetails userDetails = userDetailsOpt.get();
+            Long linkedStaffId = userDetails.getStaffId();
+            if (linkedStaffId != null) {
+                if (existingBooking.getStaff() == null || !linkedStaffId.equals(existingBooking.getStaff().getId())) {
+                    throw new AccessDeniedException("Staff cannot modify status of bookings assigned to another staff member");
+                }
+            }
+        }
+
         BookingStatus current = existingBooking.getStatus();
         BookingStatus target = request.getStatus();
 
@@ -175,6 +256,30 @@ public class BookingService {
         return bookingRepository.save(existingBooking);
     }
 
+    @Transactional
+    public Booking assignStaff(Long id, Long staffId) {
+        Long tenantId = TenantContext.requireTenantId();
+
+        Booking existingBooking = bookingRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        if (existingBooking.getStatus() == BookingStatus.CANCELLED || existingBooking.getStatus() == BookingStatus.COMPLETED) {
+            throw new IllegalArgumentException("Cannot reassign a terminal booking");
+        }
+
+        Staff newStaff = staffRepository.findByIdAndTenantIdAndIsActiveTrueForUpdate(staffId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found or inactive"));
+
+        long staffOverlaps = bookingRepository.countOverlappingStaffBookings(
+                tenantId, newStaff.getId(), existingBooking.getStartTime(), existingBooking.getEndTime(), existingBooking.getId());
+        if (staffOverlaps > 0) {
+            throw new BookingConflictException("Staff member is already booked for this time slot");
+        }
+
+        existingBooking.setStaff(newStaff);
+        return bookingRepository.save(existingBooking);
+    }
+
     private void checkOverlaps(Long tenantId, Long staffId, Long customerId, LocalDateTime start, LocalDateTime end, Long excludeBookingId) {
         long staffOverlaps = bookingRepository.countOverlappingStaffBookings(tenantId, staffId, start, end, excludeBookingId);
         if (staffOverlaps > 0) {
@@ -185,5 +290,13 @@ public class BookingService {
         if (customerOverlaps > 0) {
             throw new BookingConflictException("Customer is already booked for this time slot");
         }
+    }
+
+    private Optional<CustomUserDetails> getCurrentUserDetails() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof CustomUserDetails userDetails) {
+            return Optional.of(userDetails);
+        }
+        return Optional.empty();
     }
 }

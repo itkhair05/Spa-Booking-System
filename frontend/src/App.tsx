@@ -42,7 +42,13 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 const PublicRoute = ({ children }: { children: ReactNode }) => {
   const { user, isLoading } = useAuth();
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="text-slate-500 text-sm">Đang tải...</span>
+      </div>
+    );
+  }
 
   return user ? <Navigate to="/dashboard" replace /> : <>{children}</>;
 };
@@ -62,10 +68,10 @@ function App() {
             }
           />
 
-            <Route
-              path="/spas/:slug"
-              element={<PublicBooking />}
-            />
+          <Route
+            path="/spas/:slug"
+            element={<PublicBooking />}
+          />
 
           {/* Protected */}
           <Route

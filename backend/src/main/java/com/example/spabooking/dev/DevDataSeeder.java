@@ -84,21 +84,38 @@ public class DevDataSeeder implements CommandLineRunner {
             logger.info("Demo owner already exists: {}", DEMO_OWNER_USERNAME);
         }
 
+        seedServices(tenant);
+        seedStaff(tenant);
+
         if (userRepository.findByUsername(DEMO_STAFF_USERNAME).isEmpty()) {
+            Staff demoStaff = staffRepository.findAllByTenantId(tenant.getId()).stream()
+                    .filter(s -> "0901234567".equals(s.getPhone()))
+                    .findFirst()
+                    .orElse(null);
+
             User staff = new User();
             staff.setUsername(DEMO_STAFF_USERNAME);
             staff.setPassword(passwordEncoder.encode(staffPassword));
             staff.setRole(UserRole.STAFF);
             staff.setTenant(tenant);
+            staff.setStaff(demoStaff);
             staff.setIsActive(true);
             userRepository.save(staff);
             logger.info("Demo staff initialized: {}", DEMO_STAFF_USERNAME);
         } else {
+            userRepository.findByUsername(DEMO_STAFF_USERNAME).ifPresent(staffUser -> {
+                if (staffUser.getStaff() == null) {
+                    staffRepository.findAllByTenantId(tenant.getId()).stream()
+                            .filter(s -> "0901234567".equals(s.getPhone()))
+                            .findFirst()
+                            .ifPresent(st -> {
+                                staffUser.setStaff(st);
+                                userRepository.save(staffUser);
+                            });
+                }
+            });
             logger.info("Demo staff already exists: {}", DEMO_STAFF_USERNAME);
         }
-
-        seedServices(tenant);
-        seedStaff(tenant);
     }
 
     private Tenant createDemoTenant() {

@@ -1,7 +1,8 @@
 package com.example.spabooking.staff.controller;
 
-import com.example.spabooking.common.exception.ResourceNotFoundException;
+import com.example.spabooking.staff.dto.CreateStaffAccountRequest;
 import com.example.spabooking.staff.dto.CreateStaffRequest;
+import com.example.spabooking.staff.dto.StaffAccountResponse;
 import com.example.spabooking.staff.dto.StaffResponse;
 import com.example.spabooking.staff.dto.UpdateStaffRequest;
 import com.example.spabooking.staff.entity.Staff;
@@ -14,7 +15,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/staff")
@@ -30,19 +30,13 @@ public class StaffController {
     @GetMapping
     @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
     public ResponseEntity<List<StaffResponse>> getAllStaff() {
-        List<Staff> staffList = staffService.findAll();
-        List<StaffResponse> response = staffList.stream()
-                .map(StaffResponse::fromEntity)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(staffService.findAllWithAccounts());
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
     public ResponseEntity<StaffResponse> getStaffById(@PathVariable Long id) {
-        Staff staff = staffService.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
-        return ResponseEntity.ok(StaffResponse.fromEntity(staff));
+        return ResponseEntity.ok(staffService.findResponseById(id));
     }
 
     @PostMapping
@@ -57,7 +51,7 @@ public class StaffController {
         }
 
         Staff createdStaff = staffService.create(staff);
-        return new ResponseEntity<>(StaffResponse.fromEntity(createdStaff), HttpStatus.CREATED);
+        return new ResponseEntity<>(staffService.toResponse(createdStaff), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
@@ -74,7 +68,7 @@ public class StaffController {
         }
 
         Staff updatedStaff = staffService.update(id, staffDetails);
-        return ResponseEntity.ok(StaffResponse.fromEntity(updatedStaff));
+        return ResponseEntity.ok(staffService.toResponse(updatedStaff));
     }
 
     @DeleteMapping("/{id}")
@@ -82,5 +76,14 @@ public class StaffController {
     public ResponseEntity<Void> deleteStaff(@PathVariable Long id) {
         staffService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/account")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<StaffAccountResponse> createStaffAccount(
+            @PathVariable Long id,
+            @Valid @RequestBody CreateStaffAccountRequest request) {
+        StaffAccountResponse response = staffService.createStaffAccount(id, request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 }

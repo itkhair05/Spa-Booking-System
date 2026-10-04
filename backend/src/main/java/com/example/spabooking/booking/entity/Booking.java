@@ -46,6 +46,9 @@ public class Booking {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
+    @Column(name = "booking_code", nullable = false, unique = true, length = 64)
+    private String bookingCode;
+
     @Column(name = "is_reminded")
     private Boolean isReminded = false;
 
@@ -63,6 +66,9 @@ public class Booking {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (bookingCode == null || bookingCode.isBlank()) {
+            bookingCode = "BK-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
+        }
     }
 
     @PreUpdate
@@ -101,6 +107,9 @@ public class Booking {
 
     public Boolean getIsReminded() { return isReminded; }
     public void setIsReminded(Boolean reminded) { isReminded = reminded; }
+
+    public String getBookingCode() { return bookingCode; }
+    public void setBookingCode(String bookingCode) { this.bookingCode = bookingCode; }
 
     public Long getVersion() { return version; }
     public void setVersion(Long version) { this.version = version; }

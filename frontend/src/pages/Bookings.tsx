@@ -3,20 +3,23 @@ import AppShell from '../components/AppShell';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Alert } from '../components/ui/Alert';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorState } from '../components/ui/ErrorState';
 import { getBookings, updateBookingStatus } from '../lib/api/bookings';
 import type { Booking, BookingStatus } from '../types/booking';
 import { BookingForm } from './BookingForm';
-import { AlertCircle, Calendar } from 'lucide-react';
+import { formatCurrency, formatTimeRange } from '../lib/format';
+import type { BadgeTone } from '../components/ui/Badge';
+import { Calendar, Clock, Plus, UserRound } from 'lucide-react';
 
-const formatVND = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-};
-
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleString('vi-VN', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+const STATUS_CONFIG: Record<BookingStatus, { label: string; tone: BadgeTone }> = {
+  PENDING: { label: 'Chờ xác nhận', tone: 'warning' },
+  CONFIRMED: { label: 'Đã xác nhận', tone: 'info' },
+  COMPLETED: { label: 'Đã hoàn thành', tone: 'success' },
+  CANCELLED: { label: 'Đã hủy', tone: 'neutral' },
 };
 
 const Bookings = () => {
@@ -27,6 +30,14 @@ const Bookings = () => {
   // Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | undefined>(undefined);
+
+  // In-flight status action
+  const [busy, setBusy] = useState<{ id: number; status: BookingStatus } | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // Cancel confirmation
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const fetchBookings = useCallback(async () => {
     setIsLoading(true);
@@ -62,14 +73,33 @@ const Bookings = () => {
     fetchBookings();
   };
 
-  const handleStatusChange = async (id: number, status: BookingStatus) => {
+  const handleStatusChange = async (id: number, status: BookingStatus): Promise<boolean> => {
+    setBusy({ id, status });
+    setActionError(null);
     try {
       await updateBookingStatus(id, { status });
-      // update local state or fetch again
-      fetchBookings();
+      await fetchBookings();
+      return true;
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      alert(errorObj.response?.data?.message || 'Không thể cập nhật trạng thái lịch hẹn.');
+      const message = errorObj.response?.data?.message || 'Không thể cập nhật trạng thái lịch hẹn.';
+      if (status === 'CANCELLED') {
+        setCancelError(message);
+      } else {
+        setActionError(message);
+      }
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget) return;
+    const ok = await handleStatusChange(cancelTarget.id, 'CANCELLED');
+    if (ok) {
+      setCancelTarget(null);
+      setCancelError(null);
     }
   };
 
@@ -91,15 +121,28 @@ const Bookings = () => {
   return (
     <AppShell title="Lịch hẹn">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <PageHeader title="Quản lý Lịch hẹn" description="Quản lý tất cả lịch hẹn tại spa của bạn." />
-        <Button onClick={() => handleOpenForm()}>Tạo lịch hẹn</Button>
+        <PageHeader title="Quản lý Lịch hẹn" description="Theo dõi và xử lý toàn bộ lịch hẹn tại spa." />
+        <Button onClick={() => handleOpenForm()}>
+          <Plus aria-hidden="true" size={16} />
+          Tạo lịch hẹn
+        </Button>
       </div>
+
+      {actionError && (
+        <Alert className="mb-6" actions={
+          <Button variant="secondary" size="sm" onClick={() => setActionError(null)}>
+            Đóng
+          </Button>
+        }>
+          {actionError}
+        </Alert>
+      )}
 
       {isLoading && (
         <div className="grid grid-cols-1 gap-4 animate-pulse" aria-busy="true">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
-              <CardContent className="h-24 bg-[var(--color-neutral-100)] rounded-xl">
+              <CardContent className="h-28 bg-[var(--color-neutral-100)] rounded-xl">
                 <div />
               </CardContent>
             </Card>
@@ -108,87 +151,147 @@ const Bookings = () => {
       )}
 
       {error && !isLoading && (
-        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)]" role="alert">
-          <AlertCircle className="text-[var(--color-error)] mb-4" size={40} />
-          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Không thể tải dữ liệu</h3>
-          <p className="text-[var(--color-neutral-500)] mb-6 text-center max-w-md">{error}</p>
-          <Button onClick={fetchBookings}>Thử lại</Button>
-        </div>
+        <ErrorState message={error} onRetry={fetchBookings} />
       )}
 
       {!isLoading && !error && bookings.length === 0 && (
-        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)] text-center">
-          <Calendar className="text-[var(--color-neutral-400)] mb-4" size={40} />
-          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Chưa có lịch hẹn</h3>
-          <p className="text-[var(--color-neutral-500)] mb-6">
-            Hiện chưa có lịch hẹn nào để hiển thị.
-          </p>
-          <Button onClick={() => handleOpenForm()}>Tạo lịch hẹn</Button>
-        </div>
+        <EmptyState
+          icon={<Calendar aria-hidden="true" size={24} />}
+          title="Chưa có lịch hẹn"
+          description="Lịch hẹn mới từ khách hoặc do bạn tạo sẽ được hiển thị tại đây."
+          action={
+            <Button onClick={() => handleOpenForm()}>
+              <Plus aria-hidden="true" size={16} />
+              Tạo lịch hẹn
+            </Button>
+          }
+        />
       )}
 
       {!isLoading && !error && bookings.length > 0 && (
         <div className="grid grid-cols-1 gap-4">
-          {bookings.map((booking) => (
-            <Card key={booking.id}>
-              <CardContent className="p-4 sm:p-6 flex flex-col md:flex-row gap-4 md:items-center justify-between">
-                <div className="flex-1 space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-[var(--color-neutral-900)]">{booking.customerName}</span>
-                    <span className="text-[var(--color-neutral-400)]">•</span>
-                    <span className="text-[var(--color-brand-600)] font-medium">{booking.serviceName}</span>
-                    <span className="text-[var(--color-neutral-400)]">•</span>
-                    <span className="text-[var(--color-neutral-700)] text-sm">{formatVND(booking.price)}</span>
-                  </div>
-                  
-                  <div className="text-sm text-[var(--color-neutral-600)]">
-                    <p>
-                      <strong>Thời gian:</strong> {formatDate(booking.startTime)} - {formatDate(booking.endTime)}
-                    </p>
-                    <p>
-                      <strong>Nhân viên:</strong> {booking.staffName}
-                    </p>
-                    <p>
-                      <strong>Trạng thái:</strong>{' '}
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--color-neutral-100)] border border-[var(--color-neutral-200)]">
-                        {booking.status === 'PENDING' ? 'Chờ xác nhận' : booking.status === 'CONFIRMED' ? 'Đã xác nhận' : booking.status === 'COMPLETED' ? 'Đã hoàn thành' : booking.status === 'CANCELLED' ? 'Đã hủy' : booking.status}
+          {bookings.map((booking) => {
+            const status = STATUS_CONFIG[booking.status];
+            const isBusy = busy?.id === booking.id;
+            return (
+              <Card key={booking.id}>
+                <CardContent className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                      <span className="font-semibold text-[var(--color-neutral-900)]">
+                        {booking.customerName}
+                      </span>
+                      <Badge tone={status.tone}>{status.label}</Badge>
+                    </div>
+
+                    <p className="mt-1 text-sm font-medium text-[var(--color-brand-700)]">
+                      {booking.serviceName}
+                      <span className="font-normal text-[var(--color-neutral-500)]">
+                        {' '}
+                        · {formatCurrency(booking.price)}
                       </span>
                     </p>
-                  </div>
-                </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => handleOpenForm(booking)}>
-                    Chỉnh sửa
-                  </Button>
-                  
-                  {booking.status === 'PENDING' && (
-                    <>
-                      <Button size="sm" onClick={() => handleStatusChange(booking.id, 'CONFIRMED')}>
-                        Xác nhận
-                      </Button>
-                      <Button variant="danger" size="sm" onClick={() => handleStatusChange(booking.id, 'CANCELLED')}>
-                        Hủy
-                      </Button>
-                    </>
-                  )}
-                  
-                  {booking.status === 'CONFIRMED' && (
-                    <>
-                      <Button size="sm" onClick={() => handleStatusChange(booking.id, 'COMPLETED')}>
-                        Hoàn thành
-                      </Button>
-                      <Button variant="danger" size="sm" onClick={() => handleStatusChange(booking.id, 'CANCELLED')}>
-                        Hủy
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--color-neutral-600)]">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Clock aria-hidden="true" size={15} className="text-[var(--color-neutral-400)]" />
+                        {formatTimeRange(booking.startTime, booking.endTime)}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <UserRound aria-hidden="true" size={15} className="text-[var(--color-neutral-400)]" />
+                        {booking.staffName}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 lg:shrink-0">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleOpenForm(booking)}
+                      disabled={isBusy}
+                    >
+                      Chỉnh sửa
+                    </Button>
+
+                    {booking.status === 'PENDING' && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleStatusChange(booking.id, 'CONFIRMED')}
+                          disabled={isBusy}
+                          aria-busy={busy?.id === booking.id && busy.status === 'CONFIRMED'}
+                        >
+                          {busy?.id === booking.id && busy.status === 'CONFIRMED' ? 'Đang xử lý...' : 'Xác nhận'}
+                        </Button>
+                        <Button
+                          variant="danger-outline"
+                          size="sm"
+                          onClick={() => {
+                            setCancelError(null);
+                            setCancelTarget(booking);
+                          }}
+                          disabled={isBusy}
+                        >
+                          Hủy
+                        </Button>
+                      </>
+                    )}
+
+                    {booking.status === 'CONFIRMED' && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleStatusChange(booking.id, 'COMPLETED')}
+                          disabled={isBusy}
+                          aria-busy={busy?.id === booking.id && busy.status === 'COMPLETED'}
+                        >
+                          {busy?.id === booking.id && busy.status === 'COMPLETED' ? 'Đang xử lý...' : 'Hoàn thành'}
+                        </Button>
+                        <Button
+                          variant="danger-outline"
+                          size="sm"
+                          onClick={() => {
+                            setCancelError(null);
+                            setCancelTarget(booking);
+                          }}
+                          disabled={isBusy}
+                        >
+                          Hủy
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={cancelTarget !== null}
+        title="Hủy lịch hẹn?"
+        description={
+          cancelTarget && (
+            <>
+              Lịch hẹn của <strong className="text-[var(--color-neutral-800)]">{cancelTarget.customerName}</strong>{' '}
+              ({cancelTarget.serviceName}, {formatTimeRange(cancelTarget.startTime, cancelTarget.endTime)}) sẽ
+              được chuyển sang trạng thái <strong className="text-[var(--color-neutral-800)]">Đã hủy</strong>.
+              Thao tác này không thể hoàn tác.
+            </>
+          )
+        }
+        confirmLabel="Hủy lịch hẹn"
+        cancelLabel="Giữ lịch hẹn"
+        onConfirm={handleConfirmCancel}
+        onCancel={() => {
+          setCancelTarget(null);
+          setCancelError(null);
+        }}
+        busy={busy !== null && cancelTarget !== null && busy.id === cancelTarget.id}
+        error={cancelError}
+      />
     </AppShell>
   );
 };

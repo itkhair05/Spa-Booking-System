@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Alert } from '../components/ui/Alert';
 import { createCustomer, updateCustomer } from '../lib/api/customers';
+import { formatDateDMY } from '../lib/format';
 import type { Customer, CreateCustomerRequest, UpdateCustomerRequest } from '../types/customer';
 
 interface CustomerFormProps {
@@ -62,9 +64,9 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
         </h3>
         
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-[var(--color-error-bg)] border border-[var(--color-error-border)] text-[var(--color-error)] text-sm" role="alert">
+          <Alert tone="error" className="mb-4">
             {error}
-          </div>
+          </Alert>
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -96,7 +98,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
           {customer?.lastVisit && (
             <div className="text-sm text-[var(--color-neutral-500)] mt-2">
               <span className="font-semibold text-[var(--color-neutral-700)]">Lần ghé gần nhất: </span>
-              {new Date(customer.lastVisit).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' })}
+              {formatDateDMY(customer.lastVisit)}
             </div>
           )}
 

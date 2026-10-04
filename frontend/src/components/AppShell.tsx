@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../app/auth/useAuth';
@@ -54,6 +54,7 @@ const AppShell = ({ children, title }: AppShellProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleLogout = () => {
     logout();
@@ -62,19 +63,39 @@ const AppShell = ({ children, title }: AppShellProps) => {
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
+  const closeSidebar = () => setIsSidebarOpen(false);
+
+  // Escape closes the mobile sidebar and returns focus to the menu button.
+  useEffect(() => {
+    if (!isSidebarOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeSidebar();
+        menuButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isSidebarOpen]);
+
   return (
     <div className="app-shell">
+      <a href="#main-content" className="skip-link">
+        Bỏ qua điều hướng
+      </a>
+
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div
           className="sidebar-overlay"
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={closeSidebar}
           aria-hidden="true"
         />
       )}
 
       {/* Sidebar */}
       <aside
+        id="app-sidebar"
         className={`sidebar ${isSidebarOpen ? 'sidebar--open' : ''}`}
         aria-label="Điều hướng chính"
       >
@@ -87,7 +108,7 @@ const AppShell = ({ children, title }: AppShellProps) => {
           <button
             type="button"
             className="sidebar-close-btn lg:hidden"
-            onClick={() => setIsSidebarOpen(false)}
+            onClick={closeSidebar}
             aria-label="Đóng menu"
           >
             <X size={24} />
@@ -100,7 +121,7 @@ const AppShell = ({ children, title }: AppShellProps) => {
               <NavLink
                 key={to}
                 to={to}
-                onClick={() => setIsSidebarOpen(false)}
+                onClick={closeSidebar}
                 className={({ isActive }) =>
                   ['sidebar-nav-link', isActive ? 'sidebar-nav-link--active' : ''].join(' ').trim()
                 }
@@ -142,11 +163,13 @@ const AppShell = ({ children, title }: AppShellProps) => {
         {/* Top header */}
         <header className="main-header">
           <button
+            ref={menuButtonRef}
             type="button"
             className="mobile-menu-btn"
             onClick={toggleSidebar}
             aria-label="Mở menu"
             aria-expanded={isSidebarOpen}
+            aria-controls="app-sidebar"
           >
             <Menu size={24} />
           </button>

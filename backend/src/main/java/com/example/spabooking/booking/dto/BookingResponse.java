@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public class BookingResponse {
     
     private Long id;
+    private String bookingCode;
     private Long customerId;
     private String customerName;
     private Long serviceId;
@@ -26,6 +27,7 @@ public class BookingResponse {
     public static BookingResponse fromEntity(Booking booking) {
         BookingResponse response = new BookingResponse();
         response.setId(booking.getId());
+        response.setBookingCode(booking.getBookingCode());
         response.setCustomerId(booking.getCustomer().getId());
         response.setCustomerName(booking.getCustomer().getName());
         response.setServiceId(booking.getService().getId());
@@ -45,6 +47,9 @@ public class BookingResponse {
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public String getBookingCode() { return bookingCode; }
+    public void setBookingCode(String bookingCode) { this.bookingCode = bookingCode; }
 
     public Long getCustomerId() { return customerId; }
     public void setCustomerId(Long customerId) { this.customerId = customerId; }

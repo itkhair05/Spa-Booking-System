@@ -185,4 +185,12 @@ public class PublicBookingService {
         Booking booking = bookingService.create(internalRequest);
         return PublicBookingResponse.fromEntity(booking);
     }
+
+    @Transactional(readOnly = true)
+    public PublicBookingDetailResponse getBookingByCode(String bookingCode) {
+        Long tenantId = TenantContext.requireTenantId();
+        Booking booking = bookingRepository.findByBookingCodeAndTenantId(bookingCode, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        return PublicBookingDetailResponse.fromEntity(booking);
+    }
 }
