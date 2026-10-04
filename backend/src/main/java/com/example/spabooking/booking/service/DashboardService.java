@@ -1,10 +1,14 @@
 package com.example.spabooking.booking.service;
 
+import com.example.spabooking.booking.dto.BookingStatusCount;
+import com.example.spabooking.booking.dto.BookingTrendPoint;
 import com.example.spabooking.booking.dto.DashboardMetricsResponse;
+import com.example.spabooking.booking.dto.PopularServiceCount;
 import com.example.spabooking.booking.enums.BookingStatus;
 import com.example.spabooking.booking.repository.BookingRepository;
 import com.example.spabooking.tenant.context.TenantContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +20,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class DashboardService {
@@ -55,11 +63,11 @@ public class DashboardService {
                         staffUpcoming,
                         0L,
                         staffConfirmed,
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO
+                        new BigDecimal("0.00"),
+                        new BigDecimal("0.00")
                 );
             }
-            return new DashboardMetricsResponse(0L, 0L, 0L, 0L, BigDecimal.ZERO, BigDecimal.ZERO);
+            return new DashboardMetricsResponse(0L, 0L, 0L, 0L, new BigDecimal("0.00"), new BigDecimal("0.00"));
         }
 
         // OWNER metrics for the entire facility
@@ -74,7 +82,35 @@ public class DashboardService {
         // Expected revenue: from confirmed bookings scheduled for today
         BigDecimal todayExpectedRevenue = bookingRepository.sumExpectedRevenue(tenantId, startOfToday, startOfTomorrow);
 
-        return new DashboardMetricsResponse(
+        // Total realized revenue: ALL completed bookings for this tenant, regardless of date
+        BigDecimal totalCompletedRevenue = bookingRepository.sumTotalCompletedRevenue(tenantId);
+
+        // Booking trend for the last 7 days (today included), zero-filled for days without bookings
+        LocalDateTime trendStart = todayDate.minusDays(6).atStartOfDay();
+        Map<LocalDate, Long> trendCounts = bookingRepository
+                .findStartTimesInRange(tenantId, trendStart, startOfTomorrow)
+                .stream()
+                .collect(Collectors.groupingBy(LocalDateTime::toLocalDate, Collectors.counting()));
+        List<BookingTrendPoint> bookingTrend = new ArrayList<>();
+        for (int i = 6; i >= 0; i--) {
+            LocalDate day = todayDate.minusDays(i);
+            bookingTrend.add(new BookingTrendPoint(day, trendCounts.getOrDefault(day, 0L)));
+        }
+
+        // Distribution of booking statuses (only statuses that exist)
+        List<BookingStatusCount> bookingStatusDistribution = bookingRepository.countBookingsByStatus(tenantId)
+                .stream()
+                .map(row -> new BookingStatusCount(((BookingStatus) row[0]).name(), (Long) row[1]))
+                .collect(Collectors.toList());
+
+        // Top 5 most-booked services (cancelled bookings excluded)
+        List<PopularServiceCount> popularServices = bookingRepository
+                .countBookingsByService(tenantId, PageRequest.of(0, 5))
+                .stream()
+                .map(row -> new PopularServiceCount((String) row[0], (Long) row[1]))
+                .collect(Collectors.toList());
+
+        DashboardMetricsResponse response = new DashboardMetricsResponse(
                 todayBookingCount,
                 upcomingBookingCount,
                 pendingBookingCount,
@@ -82,6 +118,11 @@ public class DashboardService {
                 todayExpectedRevenue,
                 todayCompletedRevenue
         );
+        response.setTotalCompletedRevenue(totalCompletedRevenue);
+        response.setBookingTrend(bookingTrend);
+        response.setBookingStatusDistribution(bookingStatusDistribution);
+        response.setPopularServices(popularServices);
+        return response;
     }
 
     private Optional<CustomUserDetails> getCurrentUserDetails() {

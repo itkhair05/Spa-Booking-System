@@ -8,7 +8,7 @@ import { AlertCircle } from 'lucide-react';
 
 export default function PublicBooking() {
   const { slug: paramSlug } = useParams<{ slug: string }>();
-  const slug = paramSlug || 'demo-spa';
+  const slug = paramSlug || 'tikey-spa';
 
   const [spa, setSpa] = useState<PublicSpaInfoResponse | null>(null);
   const [loading, setLoading] = useState(true);

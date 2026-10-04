@@ -12,5 +12,7 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
 
     List<Feedback> findAllByTenantIdOrderByCreatedAtDesc(Long tenantId);
 
+    List<Feedback> findAllByTenantId(Long tenantId);
+
     Optional<Feedback> findByIdAndTenantId(Long id, Long tenantId);
 }

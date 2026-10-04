@@ -18,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,7 +45,17 @@ public class StaffService {
     public List<StaffResponse> findAllWithAccounts() {
         Long tenantId = TenantContext.requireTenantId();
         List<Staff> staffList = staffRepository.findAllByTenantIdAndIsActiveTrue(tenantId);
-        return staffList.stream().map(this::toResponse).collect(Collectors.toList());
+        if (staffList.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, User> usersByStaffId = userRepository
+                .findAllByStaffIdIn(staffList.stream().map(Staff::getId).collect(Collectors.toList()))
+                .stream()
+                .filter(user -> user.getStaff() != null)
+                .collect(Collectors.toMap(user -> user.getStaff().getId(), Function.identity(), (a, b) -> a));
+        return staffList.stream()
+                .map(staff -> toResponse(staff, usersByStaffId.get(staff.getId())))
+                .collect(Collectors.toList());
     }
 
     public List<Staff> findAll() {
@@ -140,9 +152,13 @@ public class StaffService {
     }
 
     public StaffResponse toResponse(Staff staff) {
-        String username = userRepository.findByStaffId(staff.getId())
-                .map(User::getUsername)
-                .orElse(null);
-        return StaffResponse.fromEntity(staff, username);
+        User user = userRepository.findByStaffId(staff.getId()).orElse(null);
+        return toResponse(staff, user);
+    }
+
+    private StaffResponse toResponse(Staff staff, User user) {
+        String username = user != null ? user.getUsername() : null;
+        Boolean accountEnabled = user != null ? user.getIsActive() : null;
+        return StaffResponse.fromEntity(staff, username, accountEnabled);
     }
 }

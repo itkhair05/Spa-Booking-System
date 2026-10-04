@@ -9,9 +9,13 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { getDashboardMetrics } from '../lib/api/dashboard';
 import { getBookings } from '../lib/api/bookings';
+import { downloadExport, type ExportKind } from '../lib/api/exports';
 import type { DashboardMetrics } from '../types/dashboard';
 import type { Booking, BookingStatus } from '../types/booking';
-import { formatCurrency, formatTimeRange } from '../lib/format';
+import { formatCurrency, formatDateLongFromYMD, formatTimeRange } from '../lib/format';
+import { LineAreaChart } from '../components/charts/LineAreaChart';
+import { DonutChart } from '../components/charts/DonutChart';
+import { BarChart } from '../components/charts/BarChart';
 import {
   CalendarDays,
   CalendarRange,
@@ -23,7 +27,9 @@ import {
   UserRound,
   Scissors,
   Calendar,
-  TrendingUp
+  TrendingUp,
+  Download,
+  Loader2
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -41,6 +47,19 @@ const STATUS_BADGES: Record<BookingStatus, { label: string; tone: 'warning' | 'i
   COMPLETED: { label: 'Đã hoàn thành', tone: 'success' },
   CANCELLED: { label: 'Đã hủy', tone: 'neutral' },
 };
+
+const CHART_STATUS_META: Record<string, { label: string; color: string }> = {
+  PENDING: { label: 'Chờ xác nhận', color: '#B8976C' },
+  CONFIRMED: { label: 'Đã xác nhận', color: '#465d4c' },
+  COMPLETED: { label: 'Hoàn thành', color: '#7a9a85' },
+  CANCELLED: { label: 'Đã hủy', color: '#a8a29e' },
+};
+
+const EXPORT_OPTIONS: Array<{ kind: ExportKind; label: string; icon: LucideIcon }> = [
+  { kind: 'bookings', label: 'Báo cáo lịch hẹn', icon: CalendarDays },
+  { kind: 'customers', label: 'Danh sách khách hàng', icon: UserRound },
+  { kind: 'revenue', label: 'Báo cáo doanh thu 30 ngày', icon: Wallet },
+];
 
 const StatTile = ({ icon: Icon, label, value, valueClassName = 'text-stone-900', subtext }: StatTileProps) => (
   <div className="flex flex-col gap-2 bg-white p-5 sm:p-6 transition-colors">
@@ -63,6 +82,21 @@ const Dashboard = () => {
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [exporting, setExporting] = useState<ExportKind | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const handleExport = async (kind: ExportKind) => {
+    if (exporting) return;
+    setExporting(kind);
+    setExportError(null);
+    try {
+      await downloadExport(kind);
+    } catch {
+      setExportError('Không thể xuất báo cáo. Vui lòng thử lại.');
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
@@ -100,7 +134,7 @@ const Dashboard = () => {
         <PageHeader title={isOwner ? 'Tổng quan cơ sở' : 'Lịch làm việc'} description={`${greeting} Đang tải dữ liệu...`} />
         <Card className="overflow-hidden mb-6" aria-busy="true">
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-stone-200 p-0">
-            {Array.from({ length: isOwner ? 4 : 3 }, (_, i) => (
+            {Array.from({ length: isOwner ? 5 : 3 }, (_, i) => (
               <div key={i} className="flex animate-pulse flex-col gap-3 bg-white p-6">
                 <div className="h-4 w-28 rounded bg-stone-100" />
                 <div className="h-8 w-16 rounded bg-stone-100" />
@@ -127,6 +161,28 @@ const Dashboard = () => {
   if (!metrics) return null;
 
   const totalActionable = (metrics.todayBookingCount || 0) + (metrics.pendingBookingCount || 0);
+
+  const trendPoints = (metrics.bookingTrend ?? []).map((p) => {
+    const [, month, day] = p.date.split('-');
+    return {
+      label: `${day}/${month}`,
+      value: p.count,
+      title: `${formatDateLongFromYMD(p.date)}: ${p.count} lịch hẹn`,
+    };
+  });
+
+  const statusSegments = (metrics.bookingStatusDistribution ?? [])
+    .filter((s) => s.count > 0)
+    .map((s) => {
+      const meta = CHART_STATUS_META[s.status] ?? { label: s.status, color: '#a8a29e' };
+      return { label: meta.label, value: s.count, color: meta.color };
+    });
+
+  const popularBars = (metrics.popularServices ?? []).map((s) => ({
+    label: s.serviceName,
+    value: s.bookingCount,
+    title: `${s.serviceName}: ${s.bookingCount} lượt đặt`,
+  }));
 
   return (
     <AppShell title={isOwner ? 'Tổng quan cơ sở' : 'Lịch làm việc'}>
@@ -199,22 +255,94 @@ const Dashboard = () => {
             <>
               <StatTile
                 icon={Wallet}
-                label="Doanh thu thực tế"
+                label="Doanh thu hôm nay"
                 value={formatCurrency(metrics.todayCompletedRevenue ?? 0)}
                 valueClassName="text-[#465d4c]"
-                subtext="Đã hoàn thành hôm nay"
+                subtext="Lịch đã hoàn thành hôm nay"
               />
               <StatTile
                 icon={TrendingUp}
-                label="Doanh thu dự kiến"
-                value={formatCurrency(metrics.todayExpectedRevenue ?? 0)}
-                valueClassName="text-amber-700"
-                subtext="Đã xác nhận hôm nay"
+                label="Tổng doanh thu"
+                value={formatCurrency(metrics.totalCompletedRevenue ?? 0)}
+                valueClassName="text-[#465d4c]"
+                subtext="Tất cả lịch đã hoàn thành"
               />
             </>
           )}
         </CardContent>
       </Card>
+
+      {/* OWNER analytics: real data from the dashboard API */}
+      {isOwner && (
+        <>
+          {/* 7-day booking trend */}
+          <Card className="border-[#e7e2d8] mb-6 shadow-xs">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-semibold text-stone-900">Xu hướng đặt lịch 7 ngày qua</h4>
+                <span className="text-[11px] text-stone-400">Số lượng lịch hẹn theo ngày</span>
+              </div>
+              <LineAreaChart
+                data={trendPoints}
+                ariaLabel="Biểu đồ xu hướng đặt lịch 7 ngày qua"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Status distribution + popular services, side by side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <Card className="border-[#e7e2d8] shadow-xs">
+              <CardContent className="p-5">
+                <h4 className="text-sm font-semibold text-stone-900 mb-4">Phân bổ trạng thái lịch hẹn</h4>
+                {statusSegments.length === 0 ? (
+                  <p className="text-xs text-stone-400 py-10 text-center">Chưa đủ dữ liệu</p>
+                ) : (
+                  <div className="flex flex-col sm:flex-row items-center gap-6">
+                    <DonutChart
+                      segments={statusSegments}
+                      centerLabel="lịch hẹn"
+                      ariaLabel="Biểu đồ phân bổ trạng thái lịch hẹn"
+                    />
+                    <ul className="w-full space-y-2.5">
+                      {statusSegments.map((s) => {
+                        const total = statusSegments.reduce((sum, x) => sum + x.value, 0);
+                        return (
+                          <li key={s.label} className="flex items-center justify-between gap-3 text-xs">
+                            <span className="flex items-center gap-2 text-stone-600 min-w-0">
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                              <span className="truncate">{s.label}</span>
+                            </span>
+                            <span className="font-mono font-semibold text-stone-900 tabular-nums shrink-0">
+                              {s.value}
+                              <span className="text-stone-400 font-normal ml-1.5">
+                                ({total > 0 ? Math.round((s.value / total) * 100) : 0}%)
+                              </span>
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-[#e7e2d8] shadow-xs">
+              <CardContent className="p-5">
+                <h4 className="text-sm font-semibold text-stone-900 mb-4">Dịch vụ được đặt nhiều nhất</h4>
+                {popularBars.length === 0 ? (
+                  <p className="text-xs text-stone-400 py-10 text-center">Chưa đủ dữ liệu</p>
+                ) : (
+                  <BarChart
+                    data={popularBars}
+                    ariaLabel="Biểu đồ top 5 dịch vụ được đặt nhiều nhất"
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
 
       {/* Main Operational Section: Today's Schedule & Quick Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -311,11 +439,12 @@ const Dashboard = () => {
 
         {/* Right Col: Quick Actions & Status Summary */}
         <div className="space-y-6">
-          {/* Status Breakdown card */}
+          {/* Status Breakdown card (STAFF only; OWNER gets the real status chart above) */}
+          {!isOwner && (
           <Card className="border-[#e7e2d8]">
             <CardContent className="p-5">
               <h4 className="text-sm font-semibold text-stone-900 mb-3">
-                {isOwner ? 'Phân bổ trạng thái hôm nay' : 'Trạng thái công việc'}
+                Trạng thái công việc
               </h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs">
@@ -360,6 +489,7 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Quick links card */}
           <Card className="border-[#e7e2d8]">
@@ -404,7 +534,7 @@ const Dashboard = () => {
                 )}
 
                 <a
-                  href="/spas/demo-spa"
+                  href="/spas/tikey-spa"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between p-3 rounded-xl bg-[#f2f6f3] text-[#374a3c] hover:bg-[#e2ece4] text-xs font-medium transition-colors"
@@ -418,6 +548,40 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Report export (OWNER only; backend enforces the same rule) */}
+          {isOwner && (
+            <Card className="border-[#e7e2d8]">
+              <CardContent className="p-5 space-y-3">
+                <h4 className="text-sm font-semibold text-stone-900">Xuất báo cáo (Excel)</h4>
+                <p className="text-xs text-stone-500">Tải dữ liệu của cơ sở dưới dạng tệp .xlsx.</p>
+                <div className="flex flex-col gap-2">
+                  {EXPORT_OPTIONS.map(({ kind, label, icon: Icon }) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      onClick={() => handleExport(kind)}
+                      disabled={exporting !== null}
+                      className="flex items-center justify-between p-3 rounded-xl bg-stone-50 hover:bg-stone-100 disabled:opacity-60 text-stone-800 text-xs font-medium transition-colors"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Icon size={15} className="text-[#465d4c]" />
+                        <span>{label}</span>
+                      </span>
+                      {exporting === kind ? (
+                        <Loader2 size={13} className="animate-spin text-stone-400" />
+                      ) : (
+                        <Download size={13} className="text-stone-400" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {exportError && (
+                  <p className="text-xs text-red-600" role="alert">{exportError}</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </AppShell>

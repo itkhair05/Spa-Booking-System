@@ -54,10 +54,10 @@ public class PublicApiControllerTest {
     // These tests must not depend on a dev-seeded database; the tenant is
     // created inside the test transaction and rolled back afterwards.
     private void ensureDemoTenantExists() {
-        if (tenantRepository.findBySlug("demo-spa").isEmpty()) {
+        if (tenantRepository.findBySlug("tikey-spa").isEmpty()) {
             Tenant tenant = new Tenant();
-            tenant.setName("Demo Spa");
-            tenant.setSlug("demo-spa");
+            tenant.setName("TIKEY SPA");
+            tenant.setSlug("tikey-spa");
             tenant.setIsActive(true);
             tenantRepository.saveAndFlush(tenant);
         }
@@ -65,8 +65,8 @@ public class PublicApiControllerTest {
 
     @Test
     public void testGetSpaInfo_Success() throws Exception {
-        // "demo-spa" is ensured by the test setup
-        mockMvc.perform(get("/api/v1/public/spas/demo-spa"))
+        // "tikey-spa" is ensured by the test setup
+        mockMvc.perform(get("/api/v1/public/spas/tikey-spa"))
                 .andExpect(status().isOk());
     }
 
@@ -78,19 +78,19 @@ public class PublicApiControllerTest {
 
     @Test
     public void testGetServices_Success() throws Exception {
-        mockMvc.perform(get("/api/v1/public/spas/demo-spa/services"))
+        mockMvc.perform(get("/api/v1/public/spas/tikey-spa/services"))
                 .andExpect(status().isOk());
     }
     
     @Test
     public void testGetStaff_Success() throws Exception {
-        mockMvc.perform(get("/api/v1/public/spas/demo-spa/staff"))
+        mockMvc.perform(get("/api/v1/public/spas/tikey-spa/staff"))
                 .andExpect(status().isOk());
     }
     
     @Test
     public void testGetAvailability_NotFoundWhenServiceMissing() throws Exception {
-        mockMvc.perform(get("/api/v1/public/spas/demo-spa/availability")
+        mockMvc.perform(get("/api/v1/public/spas/tikey-spa/availability")
                 .param("serviceId", "1")
                 .param("date", "2026-10-10"))
                 .andExpect(status().isNotFound());
@@ -100,7 +100,7 @@ public class PublicApiControllerTest {
     public void testCreateBooking_ValidationFailed() throws Exception {
         String invalidJson = "{}"; // Missing required fields
         
-        mockMvc.perform(post("/api/v1/public/spas/demo-spa/bookings")
+        mockMvc.perform(post("/api/v1/public/spas/tikey-spa/bookings")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invalidJson))
                 .andExpect(status().isBadRequest());
@@ -124,7 +124,7 @@ public class PublicApiControllerTest {
                 + "}";
 
         // The service should not be found within the resolved tenant context, returning 404
-        mockMvc.perform(post("/api/v1/public/spas/demo-spa/bookings")
+        mockMvc.perform(post("/api/v1/public/spas/tikey-spa/bookings")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(crossTenantJson))
                 .andExpect(status().isNotFound());

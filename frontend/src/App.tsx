@@ -104,6 +104,9 @@ function App() {
             element={<PublicBooking />}
           />
 
+          {/* Legacy slug redirect */}
+          <Route path="/spas/demo-spa" element={<Navigate to="/spas/tikey-spa" replace />} />
+
           {/* Protected */}
           <Route
             path="/dashboard"

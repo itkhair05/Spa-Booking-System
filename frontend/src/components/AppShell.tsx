@@ -156,7 +156,7 @@ const AppShell = ({ children, title }: AppShellProps) => {
         {/* Public view shortcut for previewing customer booking experience */}
         <div className="px-3 pt-2 pb-1 border-t border-[var(--color-neutral-200)] mt-auto">
           <a
-            href="/spas/demo-spa"
+            href="/spas/tikey-spa"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-between px-3 py-2 text-xs font-medium text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors"

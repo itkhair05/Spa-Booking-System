@@ -278,11 +278,24 @@ const Staff = () => {
                   {/* Account Status Badge */}
                   <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
                     <span className="text-[11px] font-medium text-stone-500">Tài khoản đăng nhập:</span>
-                    {member.hasUserAccount ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#465d4c] bg-[#edf7f2] border border-[#b7e4c7] px-2 py-0.5 rounded-full">
-                        <Check size={11} />
-                        <span>Đã có tài khoản</span>
-                      </span>
+                    {member.username ? (
+                      member.accountEnabled === false ? (
+                        <span
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-stone-500 bg-stone-100 border border-stone-200 px-2 py-0.5 rounded-full"
+                          title={`${member.username} — Đã vô hiệu hóa`}
+                        >
+                          <span className="max-w-[110px] truncate">{member.username}</span>
+                          <span className="text-stone-400">— Đã vô hiệu hóa</span>
+                        </span>
+                      ) : (
+                        <span
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#465d4c] bg-[#edf7f2] border border-[#b7e4c7] px-2 py-0.5 rounded-full"
+                          title={member.username}
+                        >
+                          <Check size={11} />
+                          <span className="max-w-[150px] truncate">{member.username}</span>
+                        </span>
+                      )
                     ) : (
                       <span className="text-[11px] text-stone-400">Chưa cấp</span>
                     )}
@@ -291,7 +304,7 @@ const Staff = () => {
 
                 {isOwner && (
                   <div className="mt-auto flex flex-col gap-2 pt-3 border-t border-stone-100">
-                    {!member.hasUserAccount && (
+                    {!member.username && (
                       <Button
                         variant="secondary"
                         size="sm"

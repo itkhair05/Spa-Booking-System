@@ -69,6 +69,9 @@ class DevDataSeederTest {
     @Autowired
     private CustomerRepository customerRepository;
 
+    @Autowired
+    private com.example.spabooking.feedback.repository.FeedbackRepository feedbackRepository;
+
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -89,8 +92,24 @@ class DevDataSeederTest {
             customerRepository.findAllByTenantId(t.getId()).forEach(customerRepository::delete);
             customerRepository.flush();
 
+            feedbackRepository.findAllByTenantId(t.getId()).forEach(feedbackRepository::delete);
+            feedbackRepository.flush();
+
             serviceRepository.findAllByTenantId(t.getId()).forEach(serviceRepository::delete);
+            serviceRepository.flush();
+
+            // Remove any login accounts linked to this tenant's staff before deleting
+            // the staff rows (users.staff_id FK), including accounts created via the UI.
+            java.util.List<Long> staffIds = staffRepository.findAllByTenantId(t.getId()).stream()
+                    .map(Staff::getId)
+                    .collect(java.util.stream.Collectors.toList());
+            if (!staffIds.isEmpty()) {
+                userRepository.findAllByStaffIdIn(staffIds).forEach(userRepository::delete);
+                userRepository.flush();
+            }
+
             staffRepository.findAllByTenantId(t.getId()).forEach(staffRepository::delete);
+            staffRepository.flush();
             tenantRepository.delete(t);
         });
         userRepository.flush();
@@ -111,7 +130,7 @@ class DevDataSeederTest {
         User owner = userRepository.findByUsername(DevDataSeeder.DEMO_OWNER_USERNAME).orElseThrow();
         User staff = userRepository.findByUsername(DevDataSeeder.DEMO_STAFF_USERNAME).orElseThrow();
 
-        assertEquals("Demo Spa", tenant.getName());
+        assertEquals("TIKEY SPA", tenant.getName());
 
         assertEquals(UserRole.OWNER, owner.getRole());
         assertNotNull(owner.getTenant());
@@ -122,6 +141,28 @@ class DevDataSeederTest {
         assertNotNull(staff.getTenant());
         assertEquals(tenant.getId(), staff.getTenant().getId());
         assertEquals(Boolean.TRUE, staff.getIsActive());
+    }
+
+    @Test
+    void renamesLegacyDemoSpaTenantInPlaceWithoutCreatingDuplicate() {
+        Tenant legacy = new Tenant();
+        legacy.setName("Demo Spa");
+        legacy.setSlug(DevDataSeeder.LEGACY_TENANT_SLUG);
+        legacy.setIsActive(true);
+        legacy = tenantRepository.saveAndFlush(legacy);
+        Long legacyId = legacy.getId();
+
+        seeder(DEMO_PASSWORD, DEMO_STAFF_PASSWORD).run();
+
+        Tenant renamed = tenantRepository.findBySlug(DevDataSeeder.DEMO_TENANT_SLUG).orElseThrow();
+        assertEquals(legacyId, renamed.getId());
+        assertEquals("TIKEY SPA", renamed.getName());
+        assertTrue(tenantRepository.findBySlug(DevDataSeeder.LEGACY_TENANT_SLUG).isEmpty());
+
+        long tikeyTenants = tenantRepository.findAll().stream()
+                .filter(t -> DevDataSeeder.DEMO_TENANT_SLUG.equals(t.getSlug()))
+                .count();
+        assertEquals(1, tikeyTenants);
     }
 
     @Test
