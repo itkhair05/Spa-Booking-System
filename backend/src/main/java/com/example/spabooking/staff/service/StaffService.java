@@ -86,7 +86,8 @@ public class StaffService {
     @Transactional
     public Staff update(Long id, Staff updatedDetails) {
         Long tenantId = TenantContext.requireTenantId();
-        Staff existingStaff = staffRepository.findByIdAndTenantIdAndIsActiveTrue(id, tenantId)
+        // Use findByIdAndTenantId (without isActive filter) so OWNER can reactivate inactive staff
+        Staff existingStaff = staffRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
 
         existingStaff.setName(updatedDetails.getName());

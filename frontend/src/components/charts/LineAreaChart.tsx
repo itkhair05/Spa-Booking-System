@@ -14,8 +14,8 @@ interface LineAreaChartProps {
   ariaLabel: string;
 }
 
-const W = 360;
-const H = 170;
+const W = 280; // reduced width for better card fit
+const H = 140; // reduced height for better card fit
 const PAD = { top: 16, right: 12, bottom: 26, left: 30 };
 
 export function LineAreaChart({ data, color = '#465d4c', ariaLabel }: LineAreaChartProps) {
