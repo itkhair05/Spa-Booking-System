@@ -204,7 +204,7 @@ class DevDataSeederTest {
         assertEquals(1, tenants);
         assertEquals(1, owners);
         assertEquals(1, staffs);
-        assertEquals(3, servicesCount);
+        assertEquals(4, servicesCount);
         assertEquals(3, staffRecordsCount);
     }
 
@@ -230,7 +230,7 @@ class DevDataSeederTest {
 
         // 2. Delete one Service and one Staff
         var services = serviceRepository.findAllByTenantId(tenant.getId());
-        Service serviceToDelete = services.stream().filter(s -> s.getName().equals("Relaxing Massage")).findFirst().orElseThrow();
+        Service serviceToDelete = services.stream().filter(s -> s.getName().equals("Massage thư giãn cơ bản")).findFirst().orElseThrow();
         serviceRepository.delete(serviceToDelete);
 
         var staffs = staffRepository.findAllByTenantId(tenant.getId());
@@ -248,8 +248,8 @@ class DevDataSeederTest {
         var servicesAfter = serviceRepository.findAllByTenantId(tenant.getId());
         var staffsAfter = staffRepository.findAllByTenantId(tenant.getId());
 
-        assertEquals(3, servicesAfter.size(), "Should have exactly 3 services after recovery");
-        assertTrue(servicesAfter.stream().anyMatch(s -> s.getName().equals("Relaxing Massage")), "Missing service should be recovered");
+        assertEquals(4, servicesAfter.size(), "Should have exactly 4 services after recovery");
+        assertTrue(servicesAfter.stream().anyMatch(s -> s.getName().equals("Massage thư giãn cơ bản")), "Missing service should be recovered");
 
         assertEquals(3, staffsAfter.size(), "Should have exactly 3 staff records after recovery");
         assertTrue(staffsAfter.stream().anyMatch(s -> "0912345678".equals(s.getPhone())), "Missing staff should be recovered");
@@ -263,7 +263,7 @@ class DevDataSeederTest {
         var services = serviceRepository.findAllByTenantId(tenant.getId());
         var staffs = staffRepository.findAllByTenantId(tenant.getId());
 
-        assertEquals(3, services.size());
+        assertEquals(4, services.size());
         for (Service s : services) {
             assertTrue(s.getIsActive());
             assertEquals(tenant.getId(), s.getTenant().getId());
