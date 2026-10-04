@@ -14,6 +14,7 @@ import {
   Sparkles,
   Settings as SettingsIcon,
   ExternalLink,
+  MessageSquare,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -57,6 +58,7 @@ const AppShell = ({ children, title }: AppShellProps) => {
         { to: '/customers', label: 'Khách hàng', icon: Users },
         { to: '/services', label: 'Dịch vụ', icon: Scissors },
         { to: '/staff', label: 'Nhân viên', icon: UserRound },
+        { to: '/feedback', label: 'Phản hồi khách', icon: MessageSquare },
         { to: '/settings', label: 'Hồ sơ & Cài đặt', icon: SettingsIcon },
       ]
     : [

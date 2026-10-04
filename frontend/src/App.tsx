@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './app/auth/AuthContext';
 import { useAuth } from './app/auth/useAuth';
@@ -8,8 +8,38 @@ import Bookings from './pages/Bookings';
 import Customers from './pages/Customers';
 import Services from './pages/Services';
 import Staff from './pages/Staff';
+import FeedbackPage from './pages/Feedback';
 import Settings from './pages/Settings';
 import PublicBooking from './pages/PublicBooking';
+
+/**
+ * Ensures direct loads, reloads, and page navigation start at the top of the page
+ * unless a specific hash anchor is targeted. Disables browser automatic scroll restoration
+ * to avoid jumping down to lazily measured sections.
+ */
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
+  useEffect(() => {
+    if (hash) {
+      const targetId = hash.replace('#', '');
+      const element = document.getElementById(targetId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+  }, [pathname, hash]);
+
+  return null;
+}
 
 /**
  * Guard for authenticated-only routes.
@@ -57,6 +87,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           {/* Public */}
           <Route
@@ -111,6 +142,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Staff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/feedback"
+            element={
+              <ProtectedRoute>
+                <FeedbackPage />
               </ProtectedRoute>
             }
           />

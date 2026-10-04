@@ -34,7 +34,7 @@ const INITIAL_STATE: BookingState = {
 export function SpaBookingFlow({ slug, spa }: SpaBookingFlowProps) {
   const [state, setState] = useState<BookingState>(INITIAL_STATE);
   const panelRef = useRef<HTMLDivElement>(null);
-  const isFirstRender = useRef(true);
+  const prevStepRef = useRef(state.step);
 
   const setStep = (step: number) => setState((prev) => ({ ...prev, step }));
 
@@ -47,11 +47,11 @@ export function SpaBookingFlow({ slug, spa }: SpaBookingFlowProps) {
   };
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
+    // Only focus the panel when user actively advances to a new step, preventing initial page scroll
+    if (prevStepRef.current !== state.step) {
+      prevStepRef.current = state.step;
+      panelRef.current?.focus({ preventScroll: true });
     }
-    panelRef.current?.focus();
   }, [state.step]);
 
   const contextValue = {
