@@ -230,11 +230,13 @@ public class InactiveStaffSecurityTest {
         String ownerJwt = jwtUtils.generateJwtToken(
                 new UsernamePasswordAuthenticationToken(ownerDetails, null, ownerDetails.getAuthorities()));
 
-        // Deactivate staff via DELETE endpoint (soft delete = isActive=false)
+        // Deactivate staff via PUT endpoint with isActive=false (Vô hiệu hóa)
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                        .delete("/api/v1/staff/" + staff.getId())
-                        .header("Authorization", "Bearer " + ownerJwt))
-                .andExpect(status().isNoContent());
+                        .put("/api/v1/staff/" + staff.getId())
+                        .header("Authorization", "Bearer " + ownerJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("{\"name\":\"%s\",\"isActive\":false}", staff.getName())))
+                .andExpect(status().isOk());
 
         // Staff DB record should still exist but be inactive
         Staff afterDeactivate = staffRepository.findById(staff.getId()).orElseThrow();
@@ -349,9 +351,11 @@ public class InactiveStaffSecurityTest {
 
         // 1. Deactivate
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                        .delete("/api/v1/staff/" + staff.getId())
-                        .header("Authorization", "Bearer " + ownerJwt))
-                .andExpect(status().isNoContent());
+                        .put("/api/v1/staff/" + staff.getId())
+                        .header("Authorization", "Bearer " + ownerJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("{\"name\":\"%s\",\"isActive\":false}", staff.getName())))
+                .andExpect(status().isOk());
 
         // 2. Reactivate
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders

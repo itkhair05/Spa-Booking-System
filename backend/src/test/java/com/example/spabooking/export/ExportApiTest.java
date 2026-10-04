@@ -40,6 +40,7 @@ import static org.hamcrest.Matchers.*;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -259,14 +260,13 @@ public class ExportApiTest {
 
         try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(xlsxBytes(result)))) {
             Sheet sheet = workbook.getSheetAt(0);
-            assertThat(sheet.getRow(0).getCell(0).getStringCellValue(), is("Ngày"));
-            // One completed booking today, plus the "Tổng cộng" total row
+            assertThat(sheet.getRow(0).getCell(0).getStringCellValue(), is("Mã đặt lịch"));
+            // One completed booking today, plus the "TỔNG DOANH THU" total row
             assertThat(sheet.getPhysicalNumberOfRows(), is(3));
 
             Row totalRow = sheet.getRow(sheet.getLastRowNum());
-            assertThat(totalRow.getCell(0).getStringCellValue(), is("Tổng cộng"));
-            assertThat(totalRow.getCell(1).getNumericCellValue(), is(1.0));
-            assertThat(totalRow.getCell(2).getNumericCellValue(), is(300000.0));
+            assertThat(totalRow.getCell(0).getStringCellValue(), is("TỔNG DOANH THU"));
+            assertThat(totalRow.getCell(6).getNumericCellValue(), is(300000.0));
         }
     }
 
@@ -283,6 +283,10 @@ public class ExportApiTest {
         mockMvc.perform(get("/api/v1/exports/revenue")
                         .header("Authorization", "Bearer " + staffJwt))
                 .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/exports/revenue/monthly?year=2026&month=10")
+                        .header("Authorization", "Bearer " + staffJwt))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -294,6 +298,9 @@ public class ExportApiTest {
                 .andExpect(status().isUnauthorized());
 
         mockMvc.perform(get("/api/v1/exports/revenue"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/exports/revenue/monthly?year=2026&month=10"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -358,15 +365,13 @@ public class ExportApiTest {
         try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(xlsxBytes(revenueResult)))) {
             Sheet sheet = workbook.getSheetAt(0);
             assertThat(sheet.getPhysicalNumberOfRows(), is(2));
-            assertThat(sheet.getRow(1).getCell(0).getStringCellValue(), is("Tổng cộng"));
-            assertThat(sheet.getRow(1).getCell(2).getNumericCellValue(), is(0.0));
+            assertThat(sheet.getRow(1).getCell(0).getStringCellValue(), is("TỔNG DOANH THU"));
+            assertThat(sheet.getRow(1).getCell(6).getNumericCellValue(), is(0.0));
         }
     }
 
     @Test
     void revenueExportCoversFullThirtyDayWindow() throws Exception {
-        // This test proves that the 30-day revenue export includes COMPLETED bookings
-        // from across the window, not only today.
         long unique2 = System.currentTimeMillis() + 1;
         Tenant tenantD = new Tenant();
         tenantD.setName("Tenant D");
@@ -430,11 +435,232 @@ public class ExportApiTest {
                     sheet.getPhysicalNumberOfRows(), is(5));
 
             Row totalRow = sheet.getRow(sheet.getLastRowNum());
-            assertThat(totalRow.getCell(0).getStringCellValue(), is("Tổng cộng"));
-            assertThat("Total count should be 3 completed bookings in 30-day window",
-                    totalRow.getCell(1).getNumericCellValue(), is(3.0));
+            assertThat(totalRow.getCell(0).getStringCellValue(), is("TỔNG DOANH THU"));
             assertThat("Grand total must equal sum of 3 × 100000",
-                    totalRow.getCell(2).getNumericCellValue(), is(300000.0));
+                    totalRow.getCell(6).getNumericCellValue(), is(300000.0));
+        }
+    }
+
+    @Test
+    void dashboardAndExportConsistencyWith900k() throws Exception {
+        long unique = System.currentTimeMillis() + 10;
+        Tenant tenant = new Tenant();
+        tenant.setName("Tenant 900k");
+        tenant.setSlug("tenant-900k-" + unique);
+        tenant = tenantRepository.saveAndFlush(tenant);
+
+        User owner = new User();
+        owner.setUsername("owner900k-" + unique);
+        owner.setPassword("encoded");
+        owner.setRole(UserRole.OWNER);
+        owner.setTenant(tenant);
+        owner = userRepository.saveAndFlush(owner);
+
+        String ownerJwtLocal = jwtUtils.generateJwtToken(new UsernamePasswordAuthenticationToken(
+                new CustomUserDetails(owner), null, new CustomUserDetails(owner).getAuthorities()));
+
+        Customer customer = new Customer();
+        customer.setTenant(tenant);
+        customer.setName("Cust 900k");
+        customer.setPhone("0988776655");
+        customer.setIsActive(true);
+        customer = customerRepository.saveAndFlush(customer);
+
+        Staff staff = new Staff();
+        staff.setTenant(tenant);
+        staff.setName("Staff 900k");
+        staff.setIsActive(true);
+        staff = staffRepository.saveAndFlush(staff);
+
+        com.example.spabooking.service.entity.Service svc = new com.example.spabooking.service.entity.Service();
+        svc.setTenant(tenant);
+        svc.setName("Service 300k");
+        svc.setPrice(new BigDecimal("300000.00"));
+        svc.setDurationMinutes(60);
+        svc.setIsActive(true);
+        svc = serviceRepository.saveAndFlush(svc);
+
+        LocalDateTime now = LocalDateTime.now(VIETNAM_ZONE);
+        // 3 completed bookings of 300,000 within 30-day window
+        saveBooking(tenant, customer, staff, svc, now.toLocalDate().atStartOfDay().plusHours(6), BookingStatus.COMPLETED);
+        saveBooking(tenant, customer, staff, svc, now.toLocalDate().atStartOfDay().plusHours(8), BookingStatus.COMPLETED);
+        saveBooking(tenant, customer, staff, svc, now.toLocalDate().atStartOfDay().plusHours(10), BookingStatus.COMPLETED);
+
+        // Dashboard check
+        mockMvc.perform(get("/api/v1/dashboard/metrics")
+                        .header("Authorization", "Bearer " + ownerJwtLocal))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalCompletedRevenue", is(900000.0)));
+
+        // Export check
+        MvcResult result = mockMvc.perform(get("/api/v1/exports/revenue")
+                        .header("Authorization", "Bearer " + ownerJwtLocal))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(xlsxBytes(result)))) {
+            Sheet sheet = workbook.getSheetAt(0);
+            assertThat(sheet.getPhysicalNumberOfRows(), is(5)); // Header + 3 rows + total
+            Row totalRow = sheet.getRow(sheet.getLastRowNum());
+            assertThat(totalRow.getCell(0).getStringCellValue(), is("TỔNG DOANH THU"));
+            assertThat(totalRow.getCell(6).getNumericCellValue(), is(900000.0));
+        }
+    }
+
+    @Test
+    void futureBookingExcludedFrom30DayRevenueExport() throws Exception {
+        long unique = System.currentTimeMillis() + 20;
+        Tenant tenant = new Tenant();
+        tenant.setName("Tenant Future");
+        tenant.setSlug("tenant-future-" + unique);
+        tenant = tenantRepository.saveAndFlush(tenant);
+
+        User owner = new User();
+        owner.setUsername("ownerFuture-" + unique);
+        owner.setPassword("encoded");
+        owner.setRole(UserRole.OWNER);
+        owner.setTenant(tenant);
+        owner = userRepository.saveAndFlush(owner);
+
+        String ownerJwtLocal = jwtUtils.generateJwtToken(new UsernamePasswordAuthenticationToken(
+                new CustomUserDetails(owner), null, new CustomUserDetails(owner).getAuthorities()));
+
+        Customer customer = new Customer();
+        customer.setTenant(tenant);
+        customer.setName("Cust Future");
+        customer.setPhone("0988776654");
+        customer.setIsActive(true);
+        customer = customerRepository.saveAndFlush(customer);
+
+        Staff staff = new Staff();
+        staff.setTenant(tenant);
+        staff.setName("Staff Future");
+        staff.setIsActive(true);
+        staff = staffRepository.saveAndFlush(staff);
+
+        com.example.spabooking.service.entity.Service svc = new com.example.spabooking.service.entity.Service();
+        svc.setTenant(tenant);
+        svc.setName("Service 300k");
+        svc.setPrice(new BigDecimal("300000.00"));
+        svc.setDurationMinutes(60);
+        svc.setIsActive(true);
+        svc = serviceRepository.saveAndFlush(svc);
+
+        LocalDateTime now = LocalDateTime.now(VIETNAM_ZONE);
+        // Completed booking in future (tomorrow)
+        saveBooking(tenant, customer, staff, svc, now.plusDays(1).toLocalDate().atStartOfDay().plusHours(10), BookingStatus.COMPLETED);
+
+        MvcResult result = mockMvc.perform(get("/api/v1/exports/revenue")
+                        .header("Authorization", "Bearer " + ownerJwtLocal))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(xlsxBytes(result)))) {
+            Sheet sheet = workbook.getSheetAt(0);
+            // Header + Total row = 2 rows (no data rows since future is excluded)
+            assertThat(sheet.getPhysicalNumberOfRows(), is(2));
+            Row totalRow = sheet.getRow(sheet.getLastRowNum());
+            assertThat(totalRow.getCell(6).getNumericCellValue(), is(0.0));
+        }
+    }
+
+    @Test
+    void monthlyExportExportsSelectedMonthRevenue() throws Exception {
+        long unique = System.currentTimeMillis() + 30;
+        Tenant tenant = new Tenant();
+        tenant.setName("Tenant Monthly");
+        tenant.setSlug("tenant-monthly-" + unique);
+        tenant = tenantRepository.saveAndFlush(tenant);
+
+        User owner = new User();
+        owner.setUsername("ownerMonthly-" + unique);
+        owner.setPassword("encoded");
+        owner.setRole(UserRole.OWNER);
+        owner.setTenant(tenant);
+        owner = userRepository.saveAndFlush(owner);
+
+        String ownerJwtLocal = jwtUtils.generateJwtToken(new UsernamePasswordAuthenticationToken(
+                new CustomUserDetails(owner), null, new CustomUserDetails(owner).getAuthorities()));
+
+        Customer customer = new Customer();
+        customer.setTenant(tenant);
+        customer.setName("Cust Monthly");
+        customer.setPhone("0988776653");
+        customer.setIsActive(true);
+        customer = customerRepository.saveAndFlush(customer);
+
+        Staff staff = new Staff();
+        staff.setTenant(tenant);
+        staff.setName("Staff Monthly");
+        staff.setIsActive(true);
+        staff = staffRepository.saveAndFlush(staff);
+
+        com.example.spabooking.service.entity.Service svc = new com.example.spabooking.service.entity.Service();
+        svc.setTenant(tenant);
+        svc.setName("Service 250k");
+        svc.setPrice(new BigDecimal("250000.00"));
+        svc.setDurationMinutes(60);
+        svc.setIsActive(true);
+        svc = serviceRepository.saveAndFlush(svc);
+
+        // Booking in October 2026
+        saveBooking(tenant, customer, staff, svc, LocalDateTime.of(2026, 10, 4, 10, 0), BookingStatus.COMPLETED);
+        saveBooking(tenant, customer, staff, svc, LocalDateTime.of(2026, 10, 15, 14, 0), BookingStatus.COMPLETED);
+        // Booking in September 2026 (must be excluded from Oct export)
+        saveBooking(tenant, customer, staff, svc, LocalDateTime.of(2026, 9, 30, 10, 0), BookingStatus.COMPLETED);
+        // CANCELLED booking in Oct 2026 (must be excluded)
+        saveBooking(tenant, customer, staff, svc, LocalDateTime.of(2026, 10, 8, 9, 0), BookingStatus.CANCELLED);
+
+        MvcResult result = mockMvc.perform(get("/api/v1/exports/revenue/monthly")
+                        .param("year", "2026")
+                        .param("month", "10")
+                        .header("Authorization", "Bearer " + ownerJwtLocal))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", containsString("revenue-2026-10.xlsx")))
+                .andReturn();
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(xlsxBytes(result)))) {
+            Sheet sheet = workbook.getSheetAt(0);
+            assertThat(sheet.getSheetName(), is("Doanh thu T10-2026"));
+            // Header + 2 data rows + total row = 4 rows
+            assertThat(sheet.getPhysicalNumberOfRows(), is(4));
+            Row totalRow = sheet.getRow(sheet.getLastRowNum());
+            assertThat(totalRow.getCell(0).getStringCellValue(), is("TỔNG DOANH THU"));
+            assertThat(totalRow.getCell(6).getNumericCellValue(), is(500000.0));
+        }
+    }
+
+    @Test
+    void monthlyExportEmptyMonthProducesZeroTotalReport() throws Exception {
+        long unique = System.currentTimeMillis() + 40;
+        Tenant tenant = new Tenant();
+        tenant.setName("Tenant Empty Month");
+        tenant.setSlug("tenant-empty-month-" + unique);
+        tenant = tenantRepository.saveAndFlush(tenant);
+
+        User owner = new User();
+        owner.setUsername("ownerEmptyMonth-" + unique);
+        owner.setPassword("encoded");
+        owner.setRole(UserRole.OWNER);
+        owner.setTenant(tenant);
+        owner = userRepository.saveAndFlush(owner);
+
+        String ownerJwtLocal = jwtUtils.generateJwtToken(new UsernamePasswordAuthenticationToken(
+                new CustomUserDetails(owner), null, new CustomUserDetails(owner).getAuthorities()));
+
+        MvcResult result = mockMvc.perform(get("/api/v1/exports/revenue/monthly")
+                        .param("year", "2026")
+                        .param("month", "1")
+                        .header("Authorization", "Bearer " + ownerJwtLocal))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(xlsxBytes(result)))) {
+            Sheet sheet = workbook.getSheetAt(0);
+            assertThat(sheet.getPhysicalNumberOfRows(), is(2)); // Header + total
+            Row totalRow = sheet.getRow(1);
+            assertThat(totalRow.getCell(0).getStringCellValue(), is("TỔNG DOANH THU"));
+            assertThat(totalRow.getCell(6).getNumericCellValue(), is(0.0));
         }
     }
 

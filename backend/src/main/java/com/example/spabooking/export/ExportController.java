@@ -44,6 +44,21 @@ public class ExportController {
         return xlsxResponse(exportService.exportRevenue(), "revenue");
     }
 
+    @GetMapping("/revenue/monthly")
+    public ResponseEntity<byte[]> exportMonthlyRevenue(
+            @org.springframework.web.bind.annotation.RequestParam("year") int year,
+            @org.springframework.web.bind.annotation.RequestParam("month") int month) {
+        if (month < 1 || month > 12) {
+            throw new IllegalArgumentException("Tháng phải từ 1 đến 12");
+        }
+        String filename = String.format("revenue-%04d-%02d.xlsx", year, month);
+        ContentDisposition disposition = ContentDisposition.attachment().filename(filename).build();
+        return ResponseEntity.ok()
+                .contentType(XLSX_MEDIA_TYPE)
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .body(exportService.exportMonthlyRevenue(year, month));
+    }
+
     private ResponseEntity<byte[]> xlsxResponse(byte[] body, String exportName) {
         String today = LocalDate.now(VIETNAM_ZONE).toString();
         String filename = exportName + "-" + today + ".xlsx";

@@ -7,8 +7,17 @@ export interface Staff {
   avatarUrl?: string | null;
   username?: string | null;
   accountEnabled?: boolean;
+  accessToken?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface UpdateStaffSelfProfileRequest {
+  name?: string;
+  phone?: string;
+  email?: string;
+  password?: string;
+  avatarUrl?: string | null;
 }
 
 export interface CreateStaffRequest {

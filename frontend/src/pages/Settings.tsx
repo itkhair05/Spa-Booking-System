@@ -8,7 +8,7 @@ import { Badge } from '../components/ui/Badge';
 import { Alert } from '../components/ui/Alert';
 import { useAuth } from '../app/auth/useAuth';
 import { getBusinessProfile, updateBusinessProfile } from '../lib/api/businessProfile';
-import { getMyProfile, uploadMyAvatar, deleteMyAvatar } from '../lib/api/staff';
+import { getMyProfile, updateMyProfile, uploadMyAvatar, deleteMyAvatar } from '../lib/api/staff';
 import { changePassword } from '../lib/api/auth';
 import type { BusinessProfileResponse } from '../types/businessProfile';
 import type { Staff } from '../types/staff';
@@ -37,7 +37,7 @@ const formatRole = (role: string) => {
 };
 
 const Settings = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   const isOwner = user?.roles?.includes('ROLE_OWNER') ?? false;
 
@@ -48,7 +48,7 @@ const Settings = () => {
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
-  // Profile form inputs
+  // Profile form inputs (OWNER)
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -60,6 +60,14 @@ const Settings = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarMessage, setAvatarMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Staff Self-Profile form inputs (STAFF)
+  const [staffName, setStaffName] = useState('');
+  const [staffPhone, setStaffPhone] = useState('');
+  const [staffEmail, setStaffEmail] = useState('');
+  const [staffSaving, setStaffSaving] = useState(false);
+  const [staffSuccess, setStaffSuccess] = useState<string | null>(null);
+  const [staffError, setStaffError] = useState<string | null>(null);
 
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -92,6 +100,9 @@ const Settings = () => {
       getMyProfile()
         .then((data) => {
           setStaffProfile(data);
+          setStaffName(data.name || '');
+          setStaffPhone(data.phone || '');
+          setStaffEmail(data.email || data.username || '');
         })
         .catch(() => {
           // If staff profile fetch fails, handle gracefully
@@ -175,6 +186,45 @@ const Settings = () => {
       setAvatarLoading(false);
     }
   };
+
+  const handleSaveStaffProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!staffName.trim()) {
+      setStaffError('Vui lòng nhập họ và tên.');
+      return;
+    }
+    if (!staffEmail.trim()) {
+      setStaffError('Vui lòng nhập email đăng nhập.');
+      return;
+    }
+
+    setStaffSaving(true);
+    setStaffSuccess(null);
+    setStaffError(null);
+
+    try {
+      const updated = await updateMyProfile({
+        name: staffName.trim(),
+        phone: staffPhone.trim() || undefined,
+        email: staffEmail.trim() || undefined,
+      });
+      setStaffProfile(updated);
+      if (updated.username && updateUser && user) {
+        updateUser(
+          { username: updated.username, roles: user.roles },
+          updated.accessToken || undefined
+        );
+      }
+      setStaffSuccess('Đã cập nhật thông tin hồ sơ cá nhân thành công.');
+      setTimeout(() => setStaffSuccess(null), 3500);
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { message?: string } } };
+      setStaffError(errorObj.response?.data?.message || 'Không thể cập nhật hồ sơ cá nhân.');
+    } finally {
+      setStaffSaving(false);
+    }
+  };
+
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -474,7 +524,7 @@ const Settings = () => {
                 </CardContent>
               </Card>
 
-              {/* STAFF Personal Details */}
+              {/* STAFF Personal Details Form */}
               <Card className="border-[#e7e2d8] shadow-xs">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3 mb-5 pb-4 border-b border-stone-100">
@@ -483,48 +533,89 @@ const Settings = () => {
                     </div>
                     <div>
                       <h3 className="font-serif-title font-semibold text-lg text-stone-900">
-                        Thông tin chuyên môn & liên hệ
+                        Hồ sơ cá nhân & liên hệ
                       </h3>
                       <p className="text-xs text-stone-500">
-                        Hồ sơ kỹ thuật viên được quản lý tập trung bởi TIKEY SPA.
+                        Cập nhật họ tên, số điện thoại và email đăng nhập tài khoản của bạn.
                       </p>
                     </div>
                   </div>
 
-                  <dl className="space-y-4">
+                  {staffSuccess && (
+                    <Alert tone="success" className="mb-4">
+                      {staffSuccess}
+                    </Alert>
+                  )}
+
+                  {staffError && (
+                    <Alert tone="error" className="mb-4">
+                      {staffError}
+                    </Alert>
+                  )}
+
+                  <form onSubmit={handleSaveStaffProfile} className="space-y-4">
                     <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
                         Họ và tên
-                      </dt>
-                      <dd className="text-sm font-semibold text-stone-900">
-                        {staffProfile?.name || 'Kỹ thuật viên'}
-                      </dd>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={staffName}
+                        onChange={(e) => setStaffName(e.target.value)}
+                        placeholder="VD: Trần Linh"
+                        className="w-full h-11 px-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c] focus:bg-white"
+                        disabled={staffSaving}
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <dt className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
                           Số điện thoại
-                        </dt>
-                        <dd className="text-sm font-medium text-stone-800">
-                          {staffProfile?.phone || 'Chưa cập nhật'}
-                        </dd>
+                        </label>
+                        <input
+                          type="text"
+                          value={staffPhone}
+                          onChange={(e) => setStaffPhone(e.target.value)}
+                          placeholder="VD: 0987654321"
+                          className="w-full h-11 px-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c] focus:bg-white"
+                          disabled={staffSaving}
+                        />
                       </div>
 
                       <div>
-                        <dt className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
-                          Email làm việc
-                        </dt>
-                        <dd className="text-sm font-medium text-stone-800 break-all">
-                          {staffProfile?.email || 'Chưa cập nhật'}
-                        </dd>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
+                          Email / Tên đăng nhập
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={staffEmail}
+                          onChange={(e) => setStaffEmail(e.target.value)}
+                          placeholder="linh@tikeyspa.vn"
+                          className="w-full h-11 px-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c] focus:bg-white"
+                          disabled={staffSaving}
+                        />
                       </div>
                     </div>
-                  </dl>
 
-                  <p className="text-xs text-stone-400 mt-5 pt-3 border-t border-stone-100">
-                    * Để thay đổi số điện thoại hoặc email liên hệ làm việc, vui lòng liên hệ Quản lý / Chủ cơ sở.
-                  </p>
+                    <div className="flex justify-end pt-3">
+                      <Button type="submit" disabled={staffSaving || !staffName.trim() || !staffEmail.trim()}>
+                        {staffSaving ? (
+                          <>
+                            <Loader2 size={15} className="mr-1.5 animate-spin" />
+                            <span>Đang lưu...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Save size={15} className="mr-1.5" />
+                            <span>Lưu thay đổi</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </form>
                 </CardContent>
               </Card>
             </>

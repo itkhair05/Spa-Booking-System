@@ -88,34 +88,34 @@ public class DevDataSeeder implements CommandLineRunner {
         seedServices(tenant);
         seedStaff(tenant);
 
-        if (userRepository.findByUsername(DEMO_STAFF_USERNAME).isEmpty()) {
-            Staff demoStaff = staffRepository.findAllByTenantId(tenant.getId()).stream()
-                    .filter(s -> "0901234567".equals(s.getPhone()))
-                    .findFirst()
-                    .orElse(null);
+        Staff demoStaff = staffRepository.findAllByTenantId(tenant.getId()).stream()
+                .filter(s -> "0901234567".equals(s.getPhone()))
+                .findFirst()
+                .orElse(null);
 
-            User staff = new User();
-            staff.setUsername(DEMO_STAFF_USERNAME);
-            staff.setPassword(passwordEncoder.encode(staffPassword));
-            staff.setRole(UserRole.STAFF);
-            staff.setTenant(tenant);
-            staff.setStaff(demoStaff);
-            staff.setIsActive(true);
-            userRepository.save(staff);
-            logger.info("Demo staff initialized: {}", DEMO_STAFF_USERNAME);
+        boolean staffHasUser = demoStaff != null && userRepository.findByStaffId(demoStaff.getId()).isPresent();
+        boolean usernameExists = userRepository.findByUsername(DEMO_STAFF_USERNAME).isPresent();
+
+        if (!staffHasUser && !usernameExists) {
+            if (demoStaff != null && !Boolean.TRUE.equals(demoStaff.getIsDeleted())) {
+                User staff = new User();
+                staff.setUsername(DEMO_STAFF_USERNAME);
+                staff.setPassword(passwordEncoder.encode(staffPassword));
+                staff.setRole(UserRole.STAFF);
+                staff.setTenant(tenant);
+                staff.setStaff(demoStaff);
+                staff.setIsActive(true);
+                userRepository.save(staff);
+                logger.info("Demo staff user initialized: {}", DEMO_STAFF_USERNAME);
+            }
         } else {
             userRepository.findByUsername(DEMO_STAFF_USERNAME).ifPresent(staffUser -> {
-                if (staffUser.getStaff() == null) {
-                    staffRepository.findAllByTenantId(tenant.getId()).stream()
-                            .filter(s -> "0901234567".equals(s.getPhone()))
-                            .findFirst()
-                            .ifPresent(st -> {
-                                staffUser.setStaff(st);
-                                userRepository.save(staffUser);
-                            });
+                if (staffUser.getStaff() == null && demoStaff != null) {
+                    staffUser.setStaff(demoStaff);
+                    userRepository.save(staffUser);
                 }
             });
-            logger.info("Demo staff already exists: {}", DEMO_STAFF_USERNAME);
+            logger.info("Demo staff user already exists or staff already linked to an account");
         }
     }
 
@@ -189,17 +189,20 @@ public class DevDataSeeder implements CommandLineRunner {
     }
 
     private void seedStaffIfAbsent(Tenant tenant, List<Staff> existingStaff, String name, String phone) {
-        boolean exists = existingStaff.stream().anyMatch(s -> s.getPhone() != null && s.getPhone().equals(phone));
+        boolean exists = existingStaff.stream().anyMatch(s ->
+                (s.getPhone() != null && s.getPhone().equals(phone)) ||
+                (s.getName() != null && s.getName().equals(name)));
         if (!exists) {
             Staff st = new Staff();
             st.setTenant(tenant);
             st.setName(name);
             st.setPhone(phone);
             st.setIsActive(true);
+            st.setIsDeleted(false);
             staffRepository.save(st);
             logger.info("Demo staff initialized: {}", name);
         } else {
-            logger.info("Demo staff already exists: {}", name);
+            logger.info("Demo staff already exists (active or archived): {}", name);
         }
     }
 }

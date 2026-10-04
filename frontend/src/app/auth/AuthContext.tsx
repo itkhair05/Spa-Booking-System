@@ -71,8 +71,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(authUser);
   };
 
+  const updateUser = useCallback((updatedUser: { username: string; roles: string[] }, newToken?: string) => {
+    setUser(updatedUser);
+    localStorage.setItem('authUser', JSON.stringify(updatedUser));
+    if (newToken) {
+      setToken(newToken);
+      localStorage.setItem('accessToken', newToken);
+    }
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

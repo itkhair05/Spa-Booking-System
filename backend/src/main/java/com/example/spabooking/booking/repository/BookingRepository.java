@@ -139,11 +139,40 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("SELECT COALESCE(SUM(b.price), 0) FROM Booking b WHERE b.tenant.id = :tenantId AND b.status = 'COMPLETED'")
     java.math.BigDecimal sumTotalCompletedRevenue(@Param("tenantId") Long tenantId);
 
+    @Query("SELECT b FROM Booking b " +
+           "JOIN FETCH b.customer " +
+           "JOIN FETCH b.service " +
+           "LEFT JOIN FETCH b.staff " +
+           "WHERE b.tenant.id = :tenantId " +
+           "AND b.status = 'COMPLETED' " +
+           "AND b.startTime >= :startDate AND b.startTime <= :endDate " +
+           "ORDER BY b.startTime DESC")
+    List<Booking> findCompletedRevenueBookings(
+            @Param("tenantId") Long tenantId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT b FROM Booking b " +
+           "JOIN FETCH b.customer " +
+           "JOIN FETCH b.service " +
+           "LEFT JOIN FETCH b.staff " +
+           "WHERE b.tenant.id = :tenantId " +
+           "AND b.status = 'COMPLETED' " +
+           "AND b.startTime >= :startDate AND b.startTime < :endDate " +
+           "ORDER BY b.startTime DESC")
+    List<Booking> findCompletedRevenueBookingsMonthly(
+            @Param("tenantId") Long tenantId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
     @Query("SELECT b.startTime, b.price FROM Booking b WHERE b.tenant.id = :tenantId " +
            "AND b.status = 'COMPLETED' AND b.startTime >= :startDate AND b.startTime < :endDate")
     List<Object[]> findCompletedRevenueRows(@Param("tenantId") Long tenantId,
                                             @Param("startDate") LocalDateTime startDate,
                                             @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END FROM Booking b WHERE b.staff.id = :staffId")
+    boolean existsByStaffId(@Param("staffId") Long staffId);
 
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.tenant.id = :tenantId " +
            "AND b.staff.id = :staffId " +

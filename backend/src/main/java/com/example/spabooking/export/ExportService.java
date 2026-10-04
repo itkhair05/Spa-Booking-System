@@ -26,16 +26,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.YearMonth;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 @Service
 public class ExportService {
 
     private static final ZoneId VIETNAM_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
-    private static final int REVENUE_WINDOW_DAYS = 30;
 
     private final BookingRepository bookingRepository;
     private final CustomerRepository customerRepository;
@@ -102,50 +99,56 @@ public class ExportService {
 
     public byte[] exportRevenue() {
         Long tenantId = TenantContext.requireTenantId();
-        LocalDate today = LocalDate.now(VIETNAM_ZONE);
-        LocalDateTime windowStart = today.minusDays(REVENUE_WINDOW_DAYS - 1).atStartOfDay();
-        LocalDateTime windowEnd = today.plusDays(1).atStartOfDay();
+        LocalDateTime now = LocalDateTime.now(VIETNAM_ZONE);
+        LocalDateTime windowStart = now.minusDays(30);
+        LocalDateTime windowEnd = now;
 
-        Map<LocalDate, List<Object[]>> rowsByDate = bookingRepository
-                .findCompletedRevenueRows(tenantId, windowStart, windowEnd)
-                .stream()
-                .collect(Collectors.groupingBy(
-                        row -> ((LocalDateTime) row[0]).toLocalDate(),
-                        TreeMap::new,
-                        Collectors.toList()));
+        List<Booking> bookings = bookingRepository.findCompletedRevenueBookings(tenantId, windowStart, windowEnd);
+        return buildRevenueWorkbook(bookings, "Doanh thu 30 ngay");
+    }
 
+    public byte[] exportMonthlyRevenue(int year, int month) {
+        Long tenantId = TenantContext.requireTenantId();
+        YearMonth ym = YearMonth.of(year, month);
+        LocalDateTime monthStart = ym.atDay(1).atStartOfDay();
+        LocalDateTime monthEnd = ym.plusMonths(1).atDay(1).atStartOfDay();
+
+        List<Booking> bookings = bookingRepository.findCompletedRevenueBookingsMonthly(tenantId, monthStart, monthEnd);
+        String sheetName = String.format("Doanh thu T%02d-%d", month, year);
+        return buildRevenueWorkbook(bookings, sheetName);
+    }
+
+    private byte[] buildRevenueWorkbook(List<Booking> bookings, String sheetName) {
         try (Workbook workbook = new XSSFWorkbook()) {
-            Sheet sheet = workbook.createSheet("Doanh thu");
+            Sheet sheet = workbook.createSheet(sheetName);
             Styles styles = new Styles(workbook);
-            String[] headers = {"Ngày", "Số lịch hẹn hoàn thành", "Doanh thu (VNĐ)"};
+            String[] headers = {"Mã đặt lịch", "Ngày", "Khách hàng", "Dịch vụ", "Nhân viên", "Trạng thái", "Số tiền (VNĐ)"};
             headerRow(sheet, headers, styles);
 
             int rowIdx = 1;
-            long totalCount = 0;
             BigDecimal totalRevenue = BigDecimal.ZERO;
-            for (Map.Entry<LocalDate, List<Object[]>> entry : rowsByDate.entrySet()) {
-                List<Object[]> dayRows = entry.getValue();
-                BigDecimal dayRevenue = dayRows.stream()
-                        .map(row -> (BigDecimal) row[1])
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+            for (Booking booking : bookings) {
                 Row row = sheet.createRow(rowIdx++);
-                dateCell(row, 0, entry.getKey(), styles);
-                row.createCell(1).setCellValue(dayRows.size());
-                moneyCell(row, 2, dayRevenue, styles);
-                totalCount += dayRows.size();
-                totalRevenue = totalRevenue.add(dayRevenue);
+                textCell(row, 0, booking.getBookingCode());
+                dateTimeCell(row, 1, booking.getStartTime(), styles);
+                textCell(row, 2, booking.getCustomer() != null ? booking.getCustomer().getName() : "");
+                textCell(row, 3, booking.getService() != null ? booking.getService().getName() : "");
+                textCell(row, 4, booking.getStaff() != null ? booking.getStaff().getName() : "");
+                textCell(row, 5, statusLabel(booking.getStatus()));
+                moneyCell(row, 6, booking.getPrice(), styles);
+                if (booking.getPrice() != null) {
+                    totalRevenue = totalRevenue.add(booking.getPrice());
+                }
             }
 
             Row totalRow = sheet.createRow(rowIdx);
             Cell totalLabel = totalRow.createCell(0);
-            totalLabel.setCellValue("Tổng cộng");
+            totalLabel.setCellValue("TỔNG DOANH THU");
             totalLabel.setCellStyle(styles.bold);
-            Cell totalCountCell = totalRow.createCell(1);
-            totalCountCell.setCellValue(totalCount);
-            totalCountCell.setCellStyle(styles.bold);
-            Cell totalRevenueCell = totalRow.createCell(2);
+
+            Cell totalRevenueCell = totalRow.createCell(6);
             totalRevenueCell.setCellValue(totalRevenue.doubleValue());
-            totalRevenueCell.setCellStyle(styles.bold);
+            totalRevenueCell.setCellStyle(styles.boldMoney);
 
             return toBytes(workbook, sheet, headers.length);
         } catch (IOException e) {
@@ -228,6 +231,7 @@ public class ExportService {
         final CellStyle time;
         final CellStyle dateTime;
         final CellStyle bold;
+        final CellStyle boldMoney;
 
         Styles(Workbook workbook) {
             Font headerFont = workbook.createFont();
@@ -254,6 +258,10 @@ public class ExportService {
             boldFont.setBold(true);
             bold = workbook.createCellStyle();
             bold.setFont(boldFont);
+
+            boldMoney = workbook.createCellStyle();
+            boldMoney.setFont(boldFont);
+            boldMoney.setDataFormat(workbook.createDataFormat().getFormat("#,##0"));
         }
     }
 }
