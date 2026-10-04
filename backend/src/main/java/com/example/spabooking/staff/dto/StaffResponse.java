@@ -11,22 +11,28 @@ public class StaffResponse {
     private String phone;
     private String email;
     private String username;
+    private Boolean accountEnabled;
     private Boolean isActive;
     private String avatarUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public static StaffResponse fromEntity(Staff staff) {
-        return fromEntity(staff, null);
+        return fromEntity(staff, null, null);
     }
 
     public static StaffResponse fromEntity(Staff staff, String username) {
+        return fromEntity(staff, username, null);
+    }
+
+    public static StaffResponse fromEntity(Staff staff, String username, Boolean accountEnabled) {
         StaffResponse response = new StaffResponse();
         response.setId(staff.getId());
         response.setName(staff.getName());
         response.setPhone(staff.getPhone());
         response.setEmail(staff.getEmail());
         response.setUsername(username);
+        response.setAccountEnabled(accountEnabled);
         response.setIsActive(staff.getIsActive());
         response.setAvatarUrl(staff.getAvatarUrl());
         response.setCreatedAt(staff.getCreatedAt());
@@ -52,6 +58,9 @@ public class StaffResponse {
 
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
+
+    public Boolean getAccountEnabled() { return accountEnabled; }
+    public void setAccountEnabled(Boolean accountEnabled) { this.accountEnabled = accountEnabled; }
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }

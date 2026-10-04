@@ -22,10 +22,13 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -140,6 +143,50 @@ public class StaffAccountManagementTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request2)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void staffListExposesLinkedAccountUsernameAndEnabledState() throws Exception {
+        CreateStaffAccountRequest request = new CreateStaffAccountRequest("linh_listed", "password123");
+        mockMvc.perform(post("/api/v1/staff/" + staff.getId() + "/account")
+                        .header("Authorization", "Bearer " + ownerJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/staff")
+                        .header("Authorization", "Bearer " + ownerJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id == " + staff.getId() + ")].username", contains("linh_listed")))
+                .andExpect(jsonPath("$[?(@.id == " + staff.getId() + ")].accountEnabled", contains(true)));
+    }
+
+    @Test
+    void staffListShowsNullUsernameWhenNoAccountExists() throws Exception {
+        mockMvc.perform(get("/api/v1/staff")
+                        .header("Authorization", "Bearer " + ownerJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id == " + staff.getId() + ")].username", contains(nullValue())));
+    }
+
+    @Test
+    void staffListReflectsDisabledLinkedAccount() throws Exception {
+        CreateStaffAccountRequest request = new CreateStaffAccountRequest("linh_disabled", "password123");
+        mockMvc.perform(post("/api/v1/staff/" + staff.getId() + "/account")
+                        .header("Authorization", "Bearer " + ownerJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        User linked = userRepository.findByStaffId(staff.getId()).orElseThrow();
+        linked.setIsActive(false);
+        userRepository.saveAndFlush(linked);
+
+        mockMvc.perform(get("/api/v1/staff")
+                        .header("Authorization", "Bearer " + ownerJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id == " + staff.getId() + ")].username", contains("linh_disabled")))
+                .andExpect(jsonPath("$[?(@.id == " + staff.getId() + ")].accountEnabled", contains(false)));
     }
 
     @Test

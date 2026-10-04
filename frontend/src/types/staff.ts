@@ -5,8 +5,8 @@ export interface Staff {
   email: string | null;
   isActive: boolean;
   avatarUrl?: string | null;
-  hasUserAccount?: boolean;
-  userEmail?: string;
+  username?: string | null;
+  accountEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,6 +1,7 @@
 package com.example.spabooking.booking.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class DashboardMetricsResponse {
     private long todayBookingCount;
@@ -9,6 +10,10 @@ public class DashboardMetricsResponse {
     private long confirmedBookingCount;
     private BigDecimal todayExpectedRevenue;
     private BigDecimal todayCompletedRevenue;
+    private BigDecimal totalCompletedRevenue;
+    private List<BookingTrendPoint> bookingTrend = List.of();
+    private List<BookingStatusCount> bookingStatusDistribution = List.of();
+    private List<PopularServiceCount> popularServices = List.of();
 
     public DashboardMetricsResponse() {}
 
@@ -27,6 +32,10 @@ public class DashboardMetricsResponse {
         this.confirmedBookingCount = confirmedBookingCount;
         this.todayExpectedRevenue = todayExpectedRevenue;
         this.todayCompletedRevenue = todayCompletedRevenue;
+        this.totalCompletedRevenue = new BigDecimal("0.00");
+        this.bookingTrend = List.of();
+        this.bookingStatusDistribution = List.of();
+        this.popularServices = List.of();
     }
 
     public long getTodayBookingCount() { return todayBookingCount; }
@@ -46,4 +55,16 @@ public class DashboardMetricsResponse {
 
     public BigDecimal getTodayCompletedRevenue() { return todayCompletedRevenue; }
     public void setTodayCompletedRevenue(BigDecimal todayCompletedRevenue) { this.todayCompletedRevenue = todayCompletedRevenue; }
+
+    public BigDecimal getTotalCompletedRevenue() { return totalCompletedRevenue; }
+    public void setTotalCompletedRevenue(BigDecimal totalCompletedRevenue) { this.totalCompletedRevenue = totalCompletedRevenue; }
+
+    public List<BookingTrendPoint> getBookingTrend() { return bookingTrend; }
+    public void setBookingTrend(List<BookingTrendPoint> bookingTrend) { this.bookingTrend = bookingTrend; }
+
+    public List<BookingStatusCount> getBookingStatusDistribution() { return bookingStatusDistribution; }
+    public void setBookingStatusDistribution(List<BookingStatusCount> bookingStatusDistribution) { this.bookingStatusDistribution = bookingStatusDistribution; }
+
+    public List<PopularServiceCount> getPopularServices() { return popularServices; }
+    public void setPopularServices(List<PopularServiceCount> popularServices) { this.popularServices = popularServices; }
 }

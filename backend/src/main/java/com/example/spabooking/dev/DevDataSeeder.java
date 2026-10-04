@@ -24,8 +24,9 @@ import java.util.List;
 @Profile("dev")
 public class DevDataSeeder implements CommandLineRunner {
 
-    static final String DEMO_TENANT_NAME = "Demo Spa";
-    static final String DEMO_TENANT_SLUG = "demo-spa";
+    static final String DEMO_TENANT_NAME = "TIKEY SPA";
+    static final String DEMO_TENANT_SLUG = "tikey-spa";
+    static final String LEGACY_TENANT_SLUG = "demo-spa";
     static final String DEMO_OWNER_USERNAME = "owner@demo.local";
     static final String DEMO_STAFF_USERNAME = "staff@demo.local";
 
@@ -69,7 +70,7 @@ public class DevDataSeeder implements CommandLineRunner {
         }
 
         Tenant tenant = tenantRepository.findBySlug(DEMO_TENANT_SLUG)
-                .orElseGet(this::createDemoTenant);
+                .orElseGet(this::findLegacyOrCreateTenant);
 
         if (userRepository.findByUsername(DEMO_OWNER_USERNAME).isEmpty()) {
             User owner = new User();
@@ -116,6 +117,18 @@ public class DevDataSeeder implements CommandLineRunner {
             });
             logger.info("Demo staff already exists: {}", DEMO_STAFF_USERNAME);
         }
+    }
+
+    private Tenant findLegacyOrCreateTenant() {
+        return tenantRepository.findBySlug(LEGACY_TENANT_SLUG)
+                .map(legacy -> {
+                    legacy.setName(DEMO_TENANT_NAME);
+                    legacy.setSlug(DEMO_TENANT_SLUG);
+                    Tenant renamed = tenantRepository.save(legacy);
+                    logger.info("Legacy tenant '{}' renamed to '{}'", LEGACY_TENANT_SLUG, DEMO_TENANT_SLUG);
+                    return renamed;
+                })
+                .orElseGet(this::createDemoTenant);
     }
 
     private Tenant createDemoTenant() {

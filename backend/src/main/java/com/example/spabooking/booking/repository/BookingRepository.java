@@ -118,6 +118,33 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     Optional<Booking> findByBookingCode(String bookingCode);
 
+    @Query("SELECT b.startTime FROM Booking b WHERE b.tenant.id = :tenantId " +
+           "AND b.startTime >= :startDate AND b.startTime < :endDate " +
+           "AND b.status != 'CANCELLED'")
+    List<LocalDateTime> findStartTimesInRange(
+            @Param("tenantId") Long tenantId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT b.status, COUNT(b) FROM Booking b WHERE b.tenant.id = :tenantId GROUP BY b.status")
+    List<Object[]> countBookingsByStatus(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT s.name, COUNT(b) FROM Booking b JOIN b.service s " +
+           "WHERE b.tenant.id = :tenantId AND b.status != 'CANCELLED' " +
+           "GROUP BY s.id, s.name ORDER BY COUNT(b) DESC")
+    List<Object[]> countBookingsByService(
+            @Param("tenantId") Long tenantId,
+            org.springframework.data.domain.Pageable pageable);
+
+    @Query("SELECT COALESCE(SUM(b.price), 0) FROM Booking b WHERE b.tenant.id = :tenantId AND b.status = 'COMPLETED'")
+    java.math.BigDecimal sumTotalCompletedRevenue(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT b.startTime, b.price FROM Booking b WHERE b.tenant.id = :tenantId " +
+           "AND b.status = 'COMPLETED' AND b.startTime >= :startDate AND b.startTime < :endDate")
+    List<Object[]> findCompletedRevenueRows(@Param("tenantId") Long tenantId,
+                                            @Param("startDate") LocalDateTime startDate,
+                                            @Param("endDate") LocalDateTime endDate);
+
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.tenant.id = :tenantId " +
            "AND b.staff.id = :staffId " +
            "AND b.status != 'CANCELLED' " +
