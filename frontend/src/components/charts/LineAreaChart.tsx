@@ -14,9 +14,9 @@ interface LineAreaChartProps {
   ariaLabel: string;
 }
 
-const W = 280; // reduced width for better card fit
-const H = 140; // reduced height for better card fit
-const PAD = { top: 16, right: 12, bottom: 26, left: 30 };
+const W = 560; // 4:1 wide aspect ratio for balanced dashboard fit
+const H = 140;
+const PAD = { top: 18, right: 20, bottom: 28, left: 32 };
 
 export function LineAreaChart({ data, color = '#465d4c', ariaLabel }: LineAreaChartProps) {
   const gradientId = useId();
@@ -34,7 +34,7 @@ export function LineAreaChart({ data, color = '#465d4c', ariaLabel }: LineAreaCh
   const area = `${line} L${x(data.length - 1).toFixed(1)},${(H - PAD.bottom).toFixed(1)} L${PAD.left},${(H - PAD.bottom).toFixed(1)} Z`;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={ariaLabel}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full block" role="img" aria-label={ariaLabel}>
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.22" />
@@ -71,13 +71,13 @@ export function LineAreaChart({ data, color = '#465d4c', ariaLabel }: LineAreaCh
       />
       {data.map((d, i) => (
         <g key={`${d.label}-${i}`}>
-          <circle cx={x(i)} cy={y(d.value)} r={9} fill="transparent">
+          <circle cx={x(i)} cy={y(d.value)} r={10} fill="transparent" className="cursor-pointer">
             <title>{d.title ?? `${d.label}: ${d.value}`}</title>
           </circle>
-          <circle cx={x(i)} cy={y(d.value)} r={3} fill="#fff" stroke={color} strokeWidth={1.5}>
+          <circle cx={x(i)} cy={y(d.value)} r={3.5} fill="#fff" stroke={color} strokeWidth={2}>
             <title>{d.title ?? `${d.label}: ${d.value}`}</title>
           </circle>
-          <text x={x(i)} y={H - 8} fontSize={9} fill="#78716c" textAnchor="middle">
+          <text x={x(i)} y={H - 8} fontSize={9.5} fill="#78716c" textAnchor="middle">
             {d.label}
           </text>
         </g>

@@ -254,7 +254,7 @@ const Staff = () => {
                     <div className="flex justify-between items-start gap-1">
                       <h4 className="font-semibold text-base text-stone-900 truncate">{member.name}</h4>
                       <Badge tone={member.isActive ? 'success' : 'neutral'}>
-                        {member.isActive ? 'Hoạt động' : 'Ngừng'}
+                        {member.isActive ? 'Hoạt động' : 'Đã vô hiệu hóa'}
                       </Badge>
                     </div>
                     <span className="text-xs text-stone-500">Kỹ thuật viên</span>
@@ -450,18 +450,19 @@ const Staff = () => {
         busy={isToggling}
       />
 
-      {/* Delete Staff Confirmation Dialog */}
+      {/* Delete / Deactivate Staff Confirmation Dialog */}
       <ConfirmDialog
         open={deletingMember !== null}
-        title="Xóa nhân viên?"
+        title="Vô hiệu hóa nhân viên?"
         description={
           <>
-            Nhân viên <strong>{deletingMember?.name}</strong> sẽ bị xóa vĩnh viễn khỏi hệ thống.
-            Thao tác này sẽ thất bại nếu nhân viên đang có lịch hẹn đã liên kết trong quá khứ.
+            Nhân viên <strong>{deletingMember?.name}</strong> sẽ được chuyển sang trạng thái <strong>Đã vô hiệu hóa</strong>.
+            Tài khoản đăng nhập liên kết (nếu có) sẽ bị tạm khóa và nhân viên không nhận thêm lịch hẹn mới.
+            Toàn bộ lịch sử đặt hẹn trước đây vẫn được lưu trữ nguyên vẹn và bạn có thể kích hoạt lại bất kỳ lúc nào.
           </>
         }
-        confirmLabel="Xóa nhân viên"
-        cancelLabel="Giữ lại"
+        confirmLabel="Vô hiệu hóa"
+        cancelLabel="Đóng"
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeletingMember(null)}
         busy={isDeleting}

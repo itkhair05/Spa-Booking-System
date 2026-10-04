@@ -44,7 +44,8 @@ public class StaffService {
 
     public List<StaffResponse> findAllWithAccounts() {
         Long tenantId = TenantContext.requireTenantId();
-        List<Staff> staffList = staffRepository.findAllByTenantIdAndIsActiveTrue(tenantId);
+        // Return all staff for tenant so OWNER can see inactive staff and reactivate them
+        List<Staff> staffList = staffRepository.findAllByTenantId(tenantId);
         if (staffList.isEmpty()) {
             return List.of();
         }

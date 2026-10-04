@@ -281,4 +281,94 @@ public class InactiveStaffSecurityTest {
                         .content(objectMapper.writeValueAsString(loginReq)))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void ownerCanSeeInactiveStaffInStaffList() throws Exception {
+        User ownerUser = new User();
+        ownerUser.setUsername("owner_view_inactive_" + System.currentTimeMillis());
+        ownerUser.setPassword(passwordEncoder.encode("ownerPass123"));
+        ownerUser.setRole(UserRole.OWNER);
+        ownerUser.setTenant(tenant);
+        ownerUser.setIsActive(true);
+        ownerUser = userRepository.saveAndFlush(ownerUser);
+
+        CustomUserDetails ownerDetails = new CustomUserDetails(ownerUser);
+        String ownerJwt = jwtUtils.generateJwtToken(
+                new UsernamePasswordAuthenticationToken(ownerDetails, null, ownerDetails.getAuthorities()));
+
+        // Deactivate staff
+        staff.setIsActive(false);
+        staffRepository.saveAndFlush(staff);
+        staffUser.setIsActive(false);
+        userRepository.saveAndFlush(staffUser);
+
+        // OWNER calls GET /api/v1/staff
+        mockMvc.perform(get("/api/v1/staff")
+                        .header("Authorization", "Bearer " + ownerJwt))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$[?(@.id == " + staff.getId() + ")].isActive")
+                        .value(false))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$[?(@.id == " + staff.getId() + ")].accountEnabled")
+                        .value(false));
+    }
+
+    @Test
+    void staffCannotPerformDeactivation() throws Exception {
+        CustomUserDetails staffDetails = new CustomUserDetails(staffUser);
+        String staffJwt = jwtUtils.generateJwtToken(
+                new UsernamePasswordAuthenticationToken(staffDetails, null, staffDetails.getAuthorities()));
+
+        // STAFF tries to DELETE another or their own staff record
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/v1/staff/" + staff.getId())
+                        .header("Authorization", "Bearer " + staffJwt))
+                .andExpect(status().isForbidden());
+
+        // STAFF tries to PUT staff
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .put("/api/v1/staff/" + staff.getId())
+                        .header("Authorization", "Bearer " + staffJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Hacked\",\"isActive\":false}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deactivateReactivatePreservesSingleStaffAndUserRecord() throws Exception {
+        User ownerUser = new User();
+        ownerUser.setUsername("owner_single_rec_" + System.currentTimeMillis());
+        ownerUser.setPassword(passwordEncoder.encode("ownerPass123"));
+        ownerUser.setRole(UserRole.OWNER);
+        ownerUser.setTenant(tenant);
+        ownerUser.setIsActive(true);
+        ownerUser = userRepository.saveAndFlush(ownerUser);
+
+        CustomUserDetails ownerDetails = new CustomUserDetails(ownerUser);
+        String ownerJwt = jwtUtils.generateJwtToken(
+                new UsernamePasswordAuthenticationToken(ownerDetails, null, ownerDetails.getAuthorities()));
+
+        // 1. Deactivate
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/v1/staff/" + staff.getId())
+                        .header("Authorization", "Bearer " + ownerJwt))
+                .andExpect(status().isNoContent());
+
+        // 2. Reactivate
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .put("/api/v1/staff/" + staff.getId())
+                        .header("Authorization", "Bearer " + ownerJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("{\"name\":\"%s\",\"isActive\":true}", staff.getName())))
+                .andExpect(status().isOk());
+
+        // 3. Assert exactly 1 Staff record exists for this staff ID
+        assertEquals(1, staffRepository.findAllByTenantId(tenant.getId()).stream()
+                .filter(s -> s.getId().equals(staff.getId()))
+                .count(), "Exactly one Staff entity must exist");
+
+        // 4. Assert exactly 1 linked User account exists for this staff ID
+        assertEquals(1, userRepository.findAll().stream()
+                .filter(u -> u.getStaff() != null && u.getStaff().getId().equals(staff.getId()))
+                .count(), "Exactly one linked User account must exist");
+    }
 }
