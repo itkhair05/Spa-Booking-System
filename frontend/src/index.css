@@ -238,6 +238,7 @@
   font-weight: 500;
   color: var(--color-neutral-400);
   text-decoration: none;
+  white-space: nowrap;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
@@ -591,8 +592,85 @@
 }
 
 .wellness-glass {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(231, 226, 216, 0.8);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 20px -2px rgba(40, 30, 20, 0.03);
+}
+
+/* =========================================================
+   Lightweight Organic Hero Atmosphere Keyframe Animations
+   ========================================================= */
+@keyframes hero-aura-1 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translate3d(25px, -18px, 0) scale(1.08);
+    opacity: 0.95;
+  }
+}
+
+@keyframes hero-aura-2 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1.05);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate3d(-22px, 18px, 0) scale(0.95);
+    opacity: 0.85;
+  }
+}
+
+@keyframes hero-aura-3 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate3d(18px, 14px, 0) scale(1.1);
+    opacity: 0.75;
+  }
+}
+
+@keyframes hero-zen-breathe {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    opacity: 0.18;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.05) rotate(3deg);
+    opacity: 0.28;
+  }
+}
+
+.animate-hero-aura-1 {
+  animation: hero-aura-1 18s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-hero-aura-2 {
+  animation: hero-aura-2 22s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-hero-aura-3 {
+  animation: hero-aura-3 16s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-hero-zen {
+  animation: hero-zen-breathe 20s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hero-aura-1,
+  .animate-hero-aura-2,
+  .animate-hero-aura-3,
+  .animate-hero-zen {
+    animation: none !important;
+  }
 }
