@@ -145,9 +145,22 @@ public class DevDataSeeder implements CommandLineRunner {
     private void seedServices(Tenant tenant) {
         List<Service> existingServices = serviceRepository.findAllByTenantId(tenant.getId());
 
-        seedServiceIfAbsent(tenant, existingServices, "Facial Basic", "A basic facial treatment for skin health.", 60, new BigDecimal("300000.00"));
-        seedServiceIfAbsent(tenant, existingServices, "Relaxing Massage", "Full body relaxing massage.", 60, new BigDecimal("350000.00"));
-        seedServiceIfAbsent(tenant, existingServices, "Deep Cleansing Facial", "Deep cleansing and exfoliation.", 90, new BigDecimal("450000.00"));
+        seedServiceIfAbsent(tenant, existingServices,
+                "Chăm sóc da mặt cơ bản",
+                "Liệu trình chăm sóc da mặt cơ bản để duy trì sức khỏe làn da.",
+                60, new BigDecimal("300000.00"));
+        seedServiceIfAbsent(tenant, existingServices,
+                "Massage thư giãn cơ bản",
+                "Massage thư giãn toàn thân.",
+                60, new BigDecimal("350000.00"));
+        seedServiceIfAbsent(tenant, existingServices,
+                "Làm sạch sâu da mặt",
+                "Làm sạch sâu và tẩy tế bào chết.",
+                90, new BigDecimal("450000.00"));
+        seedServiceIfAbsent(tenant, existingServices,
+                "Massage toàn thân nâng cao",
+                "Massage thư giãn toàn thân.",
+                60, new BigDecimal("500000.00"));
     }
 
     private void seedServiceIfAbsent(Tenant tenant, List<Service> existingServices, String name, String description, int durationMinutes, BigDecimal price) {
