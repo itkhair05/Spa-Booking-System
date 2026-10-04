@@ -226,345 +226,425 @@ const Settings = () => {
         }
       />
 
-      <div className="max-w-3xl space-y-6">
-        {/* OWNER ONLY: Business Profile Management */}
-        {isOwner && (
-          <Card className="border-[#e7e2d8]">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between gap-3 mb-5 pb-4 border-b border-stone-100">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-[#f2f6f3] text-[#465d4c] rounded-xl border border-[#c6d8c9]" aria-hidden="true">
-                    <Building2 size={20} />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Primary Brand Profile (OWNER) or Staff Avatar & Details (STAFF) */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* OWNER ONLY: Business Profile Management */}
+          {isOwner && (
+            <Card className="border-[#e7e2d8] shadow-xs">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between gap-3 mb-5 pb-4 border-b border-stone-100">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-[#f2f6f3] text-[#465d4c] rounded-xl border border-[#c6d8c9]" aria-hidden="true">
+                      <Building2 size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-serif-title font-semibold text-lg text-stone-900">
+                        Hồ sơ thương hiệu TIKEY SPA
+                      </h3>
+                      <p className="text-xs text-stone-500">
+                        Thông tin hiển thị công khai cho khách hàng khi đặt lịch trực tuyến.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-serif-title font-semibold text-lg text-stone-900">
-                      Hồ sơ thương hiệu TIKEY SPA
-                    </h3>
-                    <p className="text-xs text-stone-500">
-                      Thông tin hiển thị công khai cho khách hàng khi đặt lịch trực tuyến.
-                    </p>
-                  </div>
+
+                  {profile?.slug && (
+                    <a
+                      href={`/spas/${profile.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hidden sm:inline-flex items-center gap-1.5 text-xs text-[#465d4c] hover:underline font-medium"
+                    >
+                      <span>Xem website</span>
+                      <ExternalLink size={13} />
+                    </a>
+                  )}
                 </div>
 
-                {profile?.slug && (
-                  <a
-                    href={`/spas/${profile.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hidden sm:inline-flex items-center gap-1.5 text-xs text-[#465d4c] hover:underline font-medium"
-                  >
-                    <span>Xem website</span>
-                    <ExternalLink size={13} />
-                  </a>
+                {profileSuccess && (
+                  <Alert tone="success" className="mb-4">
+                    {profileSuccess}
+                  </Alert>
                 )}
-              </div>
 
-              {profileSuccess && (
-                <Alert tone="success" className="mb-4">
-                  {profileSuccess}
-                </Alert>
-              )}
+                {profileError && (
+                  <Alert tone="error" className="mb-4">
+                    {profileError}
+                  </Alert>
+                )}
 
-              {profileError && (
-                <Alert tone="error" className="mb-4">
-                  {profileError}
-                </Alert>
-              )}
-
-              {profileLoading ? (
-                <div className="py-8 text-center text-sm text-stone-500 animate-pulse">
-                  Đang tải thông tin hồ sơ...
-                </div>
-              ) : (
-                <form onSubmit={handleSaveProfile} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
-                      Tên Spa / Cơ sở
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="TIKEY SPA"
-                      className="w-full h-11 px-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c] focus:bg-white"
-                      disabled={profileSaving}
-                    />
+                {profileLoading ? (
+                  <div className="py-8 text-center text-sm text-stone-500 animate-pulse">
+                    Đang tải thông tin hồ sơ...
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                ) : (
+                  <form onSubmit={handleSaveProfile} className="space-y-4">
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
-                        Số điện thoại Hotline
+                        Tên Spa / Cơ sở
                       </label>
                       <input
                         type="text"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="VD: 0908888777"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="TIKEY SPA"
                         className="w-full h-11 px-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c] focus:bg-white"
                         disabled={profileSaving}
                       />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
+                          Số điện thoại Hotline
+                        </label>
+                        <input
+                          type="text"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="VD: 0908888777"
+                          className="w-full h-11 px-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c] focus:bg-white"
+                          disabled={profileSaving}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
+                          Email liên hệ
+                        </label>
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="contact@tikeyspa.local"
+                          className="w-full h-11 px-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c] focus:bg-white"
+                          disabled={profileSaving}
+                        />
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
-                        Email liên hệ
+                        Địa chỉ cơ sở
                       </label>
                       <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="contact@tikeyspa.local"
+                        type="text"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="VD: 789 Bến Vân Đồn, Quận 4, TP. Hồ Chí Minh"
                         className="w-full h-11 px-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c] focus:bg-white"
                         disabled={profileSaving}
                       />
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
-                      Địa chỉ cơ sở
-                    </label>
-                    <input
-                      type="text"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="VD: 789 Bến Vân Đồn, Quận 4, TP. Hồ Chí Minh"
-                      className="w-full h-11 px-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c] focus:bg-white"
-                      disabled={profileSaving}
-                    />
-                  </div>
-
-                  {profile && (
-                    <div className="pt-2 text-xs text-stone-400 flex flex-wrap gap-x-4 gap-y-1">
-                      <span>Múi giờ hệ thống: <strong className="text-stone-600">{profile.timezone}</strong></span>
-                      <span>Slug URL: <strong className="text-stone-600">/spas/{profile.slug}</strong></span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-end pt-3">
-                    <Button type="submit" disabled={profileSaving || !name.trim()}>
-                      {profileSaving ? (
-                        <>
-                          <Loader2 size={15} className="mr-1.5 animate-spin" />
-                          <span>Đang lưu...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Save size={15} className="mr-1.5" />
-                          <span>Lưu thay đổi hồ sơ</span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* STAFF ONLY: Avatar Profile Photo */}
-        {!isOwner && (
-          <Card className="border-[#e7e2d8]">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-5 pb-4 border-b border-stone-100">
-                <div className="p-2.5 bg-[#f2f6f3] text-[#465d4c] rounded-xl border border-[#c6d8c9]" aria-hidden="true">
-                  <Camera size={20} />
-                </div>
-                <div>
-                  <h3 className="font-serif-title font-semibold text-lg text-stone-900">
-                    Ảnh đại diện nhân viên
-                  </h3>
-                  <p className="text-xs text-stone-500">
-                    Ảnh đại diện sẽ xuất hiện trên trang đặt lịch công khai của TIKEY SPA để khách hàng nhận diện.
-                  </p>
-                </div>
-              </div>
-
-              {avatarMessage && (
-                <Alert tone={avatarMessage.type} className="mb-4">
-                  {avatarMessage.text}
-                </Alert>
-              )}
-
-              <div className="flex flex-col sm:flex-row items-center gap-6 py-2">
-                {/* Avatar Display / Preview */}
-                <div className="relative group shrink-0">
-                  <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#c6d8c9] shadow-sm bg-stone-100 flex items-center justify-center">
-                    {avatarPreview ? (
-                      <img
-                        src={avatarPreview}
-                        alt="Xem trước ảnh đại diện"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : staffProfile?.avatarUrl ? (
-                      <img
-                        src={staffProfile.avatarUrl}
-                        alt={staffProfile.name || 'Ảnh đại diện'}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-[#f2f6f3] text-[#465d4c] font-serif-title font-semibold text-2xl">
-                        {staffProfile?.name?.charAt(0).toUpperCase() || user?.username?.charAt(0).toUpperCase() || 'S'}
+                    {profile && (
+                      <div className="pt-2 text-xs text-stone-400 flex flex-wrap gap-x-4 gap-y-1">
+                        <span>Múi giờ hệ thống: <strong className="text-stone-600">{profile.timezone}</strong></span>
+                        <span>Slug URL: <strong className="text-stone-600">/spas/{profile.slug}</strong></span>
                       </div>
                     )}
-                  </div>
-                </div>
 
-                {/* Upload & Action Controls */}
-                <div className="flex-1 space-y-3 text-center sm:text-left">
-                  <div>
-                    <p className="text-xs text-stone-600 mb-2">
-                      Định dạng hỗ trợ: <strong>JPG, PNG, WEBP</strong>. Dung lượng tối đa: <strong>5MB</strong>.
-                    </p>
-                    <label className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold cursor-pointer transition-colors border border-stone-200">
-                      <Upload size={14} />
-                      <span>{avatarPreview ? 'Chọn ảnh khác' : 'Tải ảnh mới'}</span>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        onChange={handleAvatarFileSelect}
-                        disabled={avatarLoading}
-                      />
-                    </label>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-                    {avatarPreview && (
-                      <Button
-                        size="sm"
-                        onClick={handleSaveAvatar}
-                        disabled={avatarLoading}
-                        className="bg-[#465d4c] text-white hover:bg-[#374a3c]"
-                      >
-                        {avatarLoading ? (
+                    <div className="flex justify-end pt-3">
+                      <Button type="submit" disabled={profileSaving || !name.trim()}>
+                        {profileSaving ? (
                           <>
-                            <Loader2 size={13} className="mr-1 animate-spin" />
+                            <Loader2 size={15} className="mr-1.5 animate-spin" />
                             <span>Đang lưu...</span>
                           </>
                         ) : (
                           <>
-                            <CheckCircle2 size={13} className="mr-1" />
-                            <span>Lưu ảnh đại diện</span>
+                            <Save size={15} className="mr-1.5" />
+                            <span>Lưu thay đổi hồ sơ</span>
                           </>
                         )}
                       </Button>
-                    )}
+                    </div>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-                    {(staffProfile?.avatarUrl || avatarPreview) && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={handleDeleteAvatar}
-                        disabled={avatarLoading}
-                        className="text-rose-700 hover:bg-rose-50 border-rose-200"
-                      >
-                        <Trash2 size={13} className="mr-1 text-rose-600" />
-                        <span>Xóa ảnh</span>
-                      </Button>
-                    )}
+          {/* STAFF ONLY: Avatar Profile Photo & Details */}
+          {!isOwner && (
+            <>
+              <Card className="border-[#e7e2d8] shadow-xs">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-5 pb-4 border-b border-stone-100">
+                    <div className="p-2.5 bg-[#f2f6f3] text-[#465d4c] rounded-xl border border-[#c6d8c9]" aria-hidden="true">
+                      <Camera size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-serif-title font-semibold text-lg text-stone-900">
+                        Ảnh đại diện nhân viên
+                      </h3>
+                      <p className="text-xs text-stone-500">
+                        Ảnh đại diện sẽ xuất hiện trên trang đặt lịch công khai của TIKEY SPA để khách hàng nhận diện.
+                      </p>
+                    </div>
                   </div>
+
+                  {avatarMessage && (
+                    <Alert tone={avatarMessage.type} className="mb-4">
+                      {avatarMessage.text}
+                    </Alert>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row items-center gap-6 py-2">
+                    {/* Avatar Display / Preview */}
+                    <div className="relative group shrink-0">
+                      <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#c6d8c9] shadow-sm bg-stone-100 flex items-center justify-center">
+                        {avatarPreview ? (
+                          <img
+                            src={avatarPreview}
+                            alt="Xem trước ảnh đại diện"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : staffProfile?.avatarUrl ? (
+                          <img
+                            src={staffProfile.avatarUrl}
+                            alt={staffProfile.name || 'Ảnh đại diện'}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-[#f2f6f3] text-[#465d4c] font-serif-title font-semibold text-2xl">
+                            {staffProfile?.name?.charAt(0).toUpperCase() || user?.username?.charAt(0).toUpperCase() || 'S'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Upload & Action Controls */}
+                    <div className="flex-1 space-y-3 text-center sm:text-left">
+                      <div>
+                        <p className="text-xs text-stone-600 mb-2">
+                          Định dạng hỗ trợ: <strong>JPG, PNG, WEBP</strong>. Dung lượng tối đa: <strong>5MB</strong>.
+                        </p>
+                        <label className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold cursor-pointer transition-colors border border-stone-200">
+                          <Upload size={14} />
+                          <span>{avatarPreview ? 'Chọn ảnh khác' : 'Tải ảnh mới'}</span>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={handleAvatarFileSelect}
+                            disabled={avatarLoading}
+                          />
+                        </label>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                        {avatarPreview && (
+                          <Button
+                            size="sm"
+                            onClick={handleSaveAvatar}
+                            disabled={avatarLoading}
+                            className="bg-[#465d4c] text-white hover:bg-[#374a3c]"
+                          >
+                            {avatarLoading ? (
+                              <>
+                                <Loader2 size={13} className="mr-1 animate-spin" />
+                                <span>Đang lưu...</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 size={13} className="mr-1" />
+                                <span>Lưu ảnh đại diện</span>
+                              </>
+                            )}
+                          </Button>
+                        )}
+
+                        {(staffProfile?.avatarUrl || avatarPreview) && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={handleDeleteAvatar}
+                            disabled={avatarLoading}
+                            className="text-rose-700 hover:bg-rose-50 border-rose-200"
+                          >
+                            <Trash2 size={13} className="mr-1 text-rose-600" />
+                            <span>Xóa ảnh</span>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* STAFF Personal Details */}
+              <Card className="border-[#e7e2d8] shadow-xs">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-5 pb-4 border-b border-stone-100">
+                    <div className="p-2.5 bg-[#f2f6f3] text-[#465d4c] rounded-xl border border-[#c6d8c9]" aria-hidden="true">
+                      <UserRound size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-serif-title font-semibold text-lg text-stone-900">
+                        Thông tin chuyên môn & liên hệ
+                      </h3>
+                      <p className="text-xs text-stone-500">
+                        Hồ sơ kỹ thuật viên được quản lý tập trung bởi TIKEY SPA.
+                      </p>
+                    </div>
+                  </div>
+
+                  <dl className="space-y-4">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
+                        Họ và tên
+                      </dt>
+                      <dd className="text-sm font-semibold text-stone-900">
+                        {staffProfile?.name || 'Kỹ thuật viên'}
+                      </dd>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
+                          Số điện thoại
+                        </dt>
+                        <dd className="text-sm font-medium text-stone-800">
+                          {staffProfile?.phone || 'Chưa cập nhật'}
+                        </dd>
+                      </div>
+
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
+                          Email làm việc
+                        </dt>
+                        <dd className="text-sm font-medium text-stone-800 break-all">
+                          {staffProfile?.email || 'Chưa cập nhật'}
+                        </dd>
+                      </div>
+                    </div>
+                  </dl>
+
+                  <p className="text-xs text-stone-400 mt-5 pt-3 border-t border-stone-100">
+                    * Để thay đổi số điện thoại hoặc email liên hệ làm việc, vui lòng liên hệ Quản lý / Chủ cơ sở.
+                  </p>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+
+        {/* Right Column: Account, Security, Password & Session */}
+        <div className="lg:col-span-5 space-y-6">
+          {/* User Account Details */}
+          <Card className="border-[#e7e2d8] shadow-xs">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-5 pb-4 border-b border-stone-100">
+                <div className="p-2.5 bg-[#f2f6f3] text-[#465d4c] rounded-xl border border-[#c6d8c9]" aria-hidden="true">
+                  <UserRound size={20} />
+                </div>
+                <div>
+                  <h3 className="font-serif-title font-semibold text-lg text-stone-900">
+                    {isOwner ? 'Tài khoản quản trị' : 'Tài khoản nhân viên'}
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    Thông tin phiên làm việc và bảo mật tài khoản.
+                  </p>
                 </div>
               </div>
+
+              <dl className="space-y-4">
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
+                    Tên đăng nhập
+                  </dt>
+                  <dd className="text-base text-stone-900 font-semibold font-mono bg-stone-50 px-3.5 py-2 rounded-xl border border-stone-200/80">
+                    {user?.username || 'Không xác định'}
+                  </dd>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
+                      Vai trò
+                    </dt>
+                    <dd className="mt-1">
+                      {user?.roles?.length ? (
+                        user.roles.map((role) => (
+                          <Badge key={role} tone="info">
+                            {formatRole(role)}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-sm text-stone-500">Chưa có vai trò</span>
+                      )}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
+                      Trạng thái
+                    </dt>
+                    <dd className="mt-1">
+                      <Badge tone="success">Đang hoạt động</Badge>
+                    </dd>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-stone-100">
+                  <dt className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
+                    Cơ sở trực thuộc
+                  </dt>
+                  <dd className="text-xs font-medium text-stone-700">
+                    TIKEY SPA &amp; Wellness Center
+                  </dd>
+                </div>
+              </dl>
             </CardContent>
           </Card>
-        )}
 
-        {/* BOTH: User Account Details */}
-        <Card className="border-[#e7e2d8]">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2.5 bg-[#f2f6f3] text-[#465d4c] rounded-xl border border-[#c6d8c9]" aria-hidden="true">
-                <UserRound size={20} />
-              </div>
-              <div>
-                <h3 className="font-serif-title font-semibold text-lg text-stone-900">
-                  Thông tin tài khoản đăng nhập
-                </h3>
-                <p className="text-xs text-stone-500">
-                  Thông tin bảo mật và vai trò của phiên làm việc hiện tại.
-                </p>
-              </div>
-            </div>
-
-            <dl className="space-y-4">
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
-                  Tên đăng nhập
-                </dt>
-                <dd className="text-base text-stone-900 font-semibold font-mono">
-                  {user?.username || 'Không xác định'}
-                </dd>
+          {/* Change Password */}
+          <Card className="border-[#e7e2d8] shadow-xs">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-5 pb-4 border-b border-stone-100">
+                <div className="p-2.5 bg-[#f2f6f3] text-[#465d4c] rounded-xl border border-[#c6d8c9]" aria-hidden="true">
+                  <KeyRound size={20} />
+                </div>
+                <div>
+                  <h3 className="font-serif-title font-semibold text-lg text-stone-900">
+                    Đổi mật khẩu tài khoản
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    Cập nhật mật khẩu định kỳ để bảo vệ tài khoản.
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
-                  Vai trò phân quyền
-                </dt>
-                <dd className="flex flex-wrap gap-2 mt-1">
-                  {user?.roles?.length ? (
-                    user.roles.map((role) => (
-                      <Badge key={role} tone="info">
-                        {formatRole(role)}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-sm text-stone-500">Chưa có vai trò</span>
-                  )}
-                </dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
+              {passwordSuccess && (
+                <Alert tone="success" className="mb-4">
+                  {passwordSuccess}
+                </Alert>
+              )}
 
-        {/* BOTH: Change Password */}
-        <Card className="border-[#e7e2d8]">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-5 pb-4 border-b border-stone-100">
-              <div className="p-2.5 bg-[#f2f6f3] text-[#465d4c] rounded-xl border border-[#c6d8c9]" aria-hidden="true">
-                <KeyRound size={20} />
-              </div>
-              <div>
-                <h3 className="font-serif-title font-semibold text-lg text-stone-900">
-                  Đổi mật khẩu tài khoản
-                </h3>
-                <p className="text-xs text-stone-500">
-                  Cập nhật mật khẩu định kỳ để nâng cao tính bảo mật cho tài khoản của bạn.
-                </p>
-              </div>
-            </div>
+              {passwordError && (
+                <Alert tone="error" className="mb-4">
+                  {passwordError}
+                </Alert>
+              )}
 
-            {passwordSuccess && (
-              <Alert tone="success" className="mb-4">
-                {passwordSuccess}
-              </Alert>
-            )}
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
+                    Mật khẩu hiện tại
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Nhập mật khẩu đang dùng"
+                    className="w-full h-11 px-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c] focus:bg-white"
+                    disabled={passwordLoading}
+                  />
+                </div>
 
-            {passwordError && (
-              <Alert tone="error" className="mb-4">
-                {passwordError}
-              </Alert>
-            )}
-
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
-                  Mật khẩu hiện tại
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Nhập mật khẩu đang dùng"
-                  className="w-full h-11 px-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c] focus:bg-white"
-                  disabled={passwordLoading}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
                     Mật khẩu mới
@@ -595,42 +675,42 @@ const Settings = () => {
                     disabled={passwordLoading}
                   />
                 </div>
-              </div>
 
-              <div className="flex justify-end pt-2">
-                <Button type="submit" disabled={passwordLoading || !currentPassword || !newPassword}>
-                  {passwordLoading ? (
-                    <>
-                      <Loader2 size={15} className="mr-1.5 animate-spin" />
-                      <span>Đang cập nhật...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck size={15} className="mr-1.5" />
-                      <span>Cập nhật mật khẩu</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                <div className="flex justify-end pt-2">
+                  <Button type="submit" disabled={passwordLoading || !currentPassword || !newPassword}>
+                    {passwordLoading ? (
+                      <>
+                        <Loader2 size={15} className="mr-1.5 animate-spin" />
+                        <span>Đang cập nhật...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck size={15} className="mr-1.5" />
+                        <span>Cập nhật mật khẩu</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
 
-        {/* Session & Logout */}
-        <Card className="border-[#e7e2d8]">
-          <CardContent className="p-6">
-            <h3 className="font-serif-title font-semibold text-base text-stone-900 mb-2">
-              Phiên làm việc & Bảo mật
-            </h3>
-            <p className="text-xs text-stone-500 mb-5">
-              Đăng xuất sẽ kết thúc phiên làm việc hiện tại trên trình duyệt này. Bạn cần đăng nhập lại để tiếp tục quản lý và xem lịch hẹn.
-            </p>
-            <Button variant="secondary" onClick={handleLogout}>
-              <LogOut size={16} aria-hidden="true" />
-              Đăng xuất khỏi hệ thống
-            </Button>
-          </CardContent>
-        </Card>
+          {/* Session & Logout */}
+          <Card className="border-[#e7e2d8] shadow-xs">
+            <CardContent className="p-6">
+              <h3 className="font-serif-title font-semibold text-base text-stone-900 mb-2">
+                Phiên làm việc & Bảo mật
+              </h3>
+              <p className="text-xs text-stone-500 mb-5">
+                Đăng xuất sẽ kết thúc phiên làm việc hiện tại trên trình duyệt này. Bạn cần đăng nhập lại để tiếp tục quản lý và xem lịch hẹn.
+              </p>
+              <Button variant="secondary" onClick={handleLogout} className="w-full sm:w-auto justify-center">
+                <LogOut size={16} aria-hidden="true" />
+                Đăng xuất khỏi hệ thống
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </AppShell>
   );

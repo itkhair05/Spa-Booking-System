@@ -278,14 +278,21 @@ const Dashboard = () => {
           {/* 7-day booking trend */}
           <Card className="border-[#e7e2d8] mb-6 shadow-xs">
             <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-semibold text-stone-900">Xu hướng đặt lịch 7 ngày qua</h4>
-                <span className="text-[11px] text-stone-400">Số lượng lịch hẹn theo ngày</span>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-stone-900">Xu hướng đặt lịch 7 ngày qua</h4>
+                  <p className="text-xs text-stone-500 mt-0.5">Số lượng lịch hẹn theo ngày trong tuần qua</p>
+                </div>
+                <span className="text-[11px] font-medium text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">
+                  7 ngày gần nhất
+                </span>
               </div>
-              <LineAreaChart
-                data={trendPoints}
-                ariaLabel="Biểu đồ xu hướng đặt lịch 7 ngày qua"
-              />
+              <div className="w-full max-w-4xl mx-auto h-36 sm:h-40 md:h-44 pt-1">
+                <LineAreaChart
+                  data={trendPoints}
+                  ariaLabel="Biểu đồ xu hướng đặt lịch 7 ngày qua"
+                />
+              </div>
             </CardContent>
           </Card>
 
