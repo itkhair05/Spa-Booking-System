@@ -363,6 +363,81 @@ public class ExportApiTest {
         }
     }
 
+    @Test
+    void revenueExportCoversFullThirtyDayWindow() throws Exception {
+        // This test proves that the 30-day revenue export includes COMPLETED bookings
+        // from across the window, not only today.
+        long unique2 = System.currentTimeMillis() + 1;
+        Tenant tenantD = new Tenant();
+        tenantD.setName("Tenant D");
+        tenantD.setSlug("tenant-d-rev30-" + unique2);
+        tenantD = tenantRepository.saveAndFlush(tenantD);
+
+        User ownerD = new User();
+        ownerD.setUsername("ownerDRev30-" + unique2);
+        ownerD.setPassword("encoded");
+        ownerD.setRole(UserRole.OWNER);
+        ownerD.setTenant(tenantD);
+        ownerD = userRepository.saveAndFlush(ownerD);
+
+        String ownerDJwt = jwtUtils.generateJwtToken(new UsernamePasswordAuthenticationToken(
+                new CustomUserDetails(ownerD), null, new CustomUserDetails(ownerD).getAuthorities()));
+
+        Customer customerD = new Customer();
+        customerD.setTenant(tenantD);
+        customerD.setName("Dan");
+        customerD.setPhone("0900000099");
+        customerD.setIsActive(true);
+        customerD = customerRepository.saveAndFlush(customerD);
+
+        Staff staffD = new Staff();
+        staffD.setTenant(tenantD);
+        staffD.setName("Dan Staff");
+        staffD.setIsActive(true);
+        staffD = staffRepository.saveAndFlush(staffD);
+
+        com.example.spabooking.service.entity.Service svcD = new com.example.spabooking.service.entity.Service();
+        svcD.setTenant(tenantD);
+        svcD.setName("Svc D");
+        svcD.setPrice(new BigDecimal("100000.00"));
+        svcD.setDurationMinutes(30);
+        svcD.setIsActive(true);
+        svcD = serviceRepository.saveAndFlush(svcD);
+
+        LocalDateTime now = LocalDateTime.now(VIETNAM_ZONE);
+
+        // Booking at day 0 (today)
+        saveBooking(tenantD, customerD, staffD, svcD, now.toLocalDate().atStartOfDay().plusHours(10), BookingStatus.COMPLETED);
+        // Booking at day -10 (within 30-day window)
+        saveBooking(tenantD, customerD, staffD, svcD, now.minusDays(10).toLocalDate().atStartOfDay().plusHours(10), BookingStatus.COMPLETED);
+        // Booking at day -25 (within 30-day window)
+        saveBooking(tenantD, customerD, staffD, svcD, now.minusDays(25).toLocalDate().atStartOfDay().plusHours(10), BookingStatus.COMPLETED);
+        // Booking at day -31 (OUTSIDE window — must be excluded)
+        saveBooking(tenantD, customerD, staffD, svcD, now.minusDays(31).toLocalDate().atStartOfDay().plusHours(10), BookingStatus.COMPLETED);
+        // CANCELLED booking today — must be excluded regardless
+        saveBooking(tenantD, customerD, staffD, svcD, now.toLocalDate().atStartOfDay().plusHours(14), BookingStatus.CANCELLED);
+
+        MvcResult result = mockMvc.perform(get("/api/v1/exports/revenue")
+                        .header("Authorization", "Bearer " + ownerDJwt))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(xlsxBytes(result)))) {
+            Sheet sheet = workbook.getSheetAt(0);
+
+            // Header row (row 0) + 3 data rows (days 0, -10, -25) + 1 total row = 5 rows
+            assertThat("Expected 3 data rows + header + total",
+                    sheet.getPhysicalNumberOfRows(), is(5));
+
+            Row totalRow = sheet.getRow(sheet.getLastRowNum());
+            assertThat(totalRow.getCell(0).getStringCellValue(), is("Tổng cộng"));
+            assertThat("Total count should be 3 completed bookings in 30-day window",
+                    totalRow.getCell(1).getNumericCellValue(), is(3.0));
+            assertThat("Grand total must equal sum of 3 × 100000",
+                    totalRow.getCell(2).getNumericCellValue(), is(300000.0));
+        }
+    }
+
     private Row findRowByCellValue(Sheet sheet, int column, String value) {
         for (int i = 1; i <= sheet.getLastRowNum(); i++) {
             Row row = sheet.getRow(i);

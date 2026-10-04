@@ -213,4 +213,72 @@ public class InactiveStaffSecurityTest {
         assertEquals(staff.getId(), history.getStaff().getId());
         assertEquals(BookingStatus.COMPLETED, history.getStatus());
     }
+
+    @Test
+    void ownerCanReactivateInactiveStaff() throws Exception {
+        // Setup: create an OWNER user
+        User ownerUser = new User();
+        ownerUser.setUsername("owner_reactive_" + System.currentTimeMillis());
+        ownerUser.setPassword(passwordEncoder.encode("ownerPass123"));
+        ownerUser.setRole(UserRole.OWNER);
+        ownerUser.setTenant(tenant);
+        ownerUser.setIsActive(true);
+        ownerUser = userRepository.saveAndFlush(ownerUser);
+
+        com.example.spabooking.auth.security.CustomUserDetails ownerDetails =
+                new com.example.spabooking.auth.security.CustomUserDetails(ownerUser);
+        String ownerJwt = jwtUtils.generateJwtToken(
+                new UsernamePasswordAuthenticationToken(ownerDetails, null, ownerDetails.getAuthorities()));
+
+        // Deactivate staff via DELETE endpoint (soft delete = isActive=false)
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/v1/staff/" + staff.getId())
+                        .header("Authorization", "Bearer " + ownerJwt))
+                .andExpect(status().isNoContent());
+
+        // Staff DB record should still exist but be inactive
+        Staff afterDeactivate = staffRepository.findById(staff.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertFalse(afterDeactivate.getIsActive(),
+                "Staff record should be inactive after soft delete");
+
+        // Staff user should be inactive
+        User linkedUser = userRepository.findByStaffId(staff.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertFalse(linkedUser.getIsActive(),
+                "User account should be disabled when staff is deactivated");
+
+        // Verify inactive staff cannot login
+        LoginRequest loginReq = new LoginRequest();
+        loginReq.setUsername(staffUser.getUsername());
+        loginReq.setPassword(staffPassword);
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginReq)))
+                .andExpect(status().isUnauthorized());
+
+        // Reactivate staff via PUT with isActive=true
+        String reactivateJson = String.format(
+                "{\"name\":\"%s\",\"isActive\":true}", staff.getName());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .put("/api/v1/staff/" + staff.getId())
+                        .header("Authorization", "Bearer " + ownerJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reactivateJson))
+                .andExpect(status().isOk());
+
+        // Staff record should be active again
+        Staff afterReactivate = staffRepository.findById(staff.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertTrue(afterReactivate.getIsActive(),
+                "Staff record should be active after reactivation");
+
+        // User account should also be active again
+        User reactivatedUser = userRepository.findByStaffId(staff.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertTrue(reactivatedUser.getIsActive(),
+                "User account should be enabled after staff reactivation");
+
+        // Reactivated staff can now login
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginReq)))
+                .andExpect(status().isOk());
+    }
 }
