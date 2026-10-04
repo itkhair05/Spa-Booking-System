@@ -3,20 +3,21 @@ import { useParams } from 'react-router-dom';
 import { getPublicSpaInfo } from '../lib/api/publicBooking';
 import type { PublicSpaInfoResponse } from '../types/publicBooking';
 import { SpaBookingFlow } from '../features/public-booking/SpaBookingFlow';
-import { AlertCircle, MapPin, Phone } from 'lucide-react';
+import { SpaLanding } from '../features/public-booking/SpaLanding';
+import { AlertCircle } from 'lucide-react';
 
 export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
-  
+
   const [spa, setSpa] = useState<PublicSpaInfoResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug) return;
-    
+
     let isMounted = true;
-    // eslint-disable-next-line
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(null);
 
@@ -45,22 +46,34 @@ export default function PublicBooking() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="text-slate-500 animate-pulse text-lg">Đang tải thông tin spa...</div>
+      <div className="min-h-screen bg-stone-50 font-sans" aria-busy="true">
+        <div className="border-b border-stone-200 bg-white">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="h-5 w-32 bg-stone-100 rounded animate-pulse" />
+            <div className="h-9 w-24 bg-stone-100 rounded-xl animate-pulse" />
+          </div>
+        </div>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
+          <div className="h-4 w-36 bg-stone-100 rounded animate-pulse mb-5" />
+          <div className="h-10 w-2/3 bg-stone-100 rounded animate-pulse mb-6" />
+          <div className="h-5 w-1/2 bg-stone-100 rounded animate-pulse mb-10" />
+          <div className="h-12 w-40 bg-stone-100 rounded-xl animate-pulse" />
+        </div>
+        <span className="sr-only">Đang tải thông tin spa...</span>
       </div>
     );
   }
 
   if (error || !spa) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center">
-          <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-slate-800 mb-2">Đã xảy ra lỗi</h1>
-          <p className="text-slate-600 mb-6">{error}</p>
+      <div className="min-h-screen bg-stone-50 font-sans flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-stone-200 p-8 text-center">
+          <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" aria-hidden="true" />
+          <h1 className="text-xl font-medium text-stone-900 mb-2">Đã xảy ra lỗi</h1>
+          <p className="text-stone-500 mb-6">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors"
+            className="px-6 py-2.5 bg-stone-900 text-white font-medium rounded-xl hover:bg-stone-800 transition-colors max-sm:min-h-11"
           >
             Thử lại
           </button>
@@ -70,39 +83,8 @@ export default function PublicBooking() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 font-sans text-stone-800">
-      {/* Header */}
-      <header className="bg-white border-b border-stone-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-stone-900">
-            {spa.name}
-          </h1>
-          <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-sm text-stone-500">
-            {spa.address && (
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 shrink-0 text-stone-400" />
-                <span className="truncate">{spa.address}</span>
-              </div>
-            )}
-            {spa.phone && (
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 shrink-0 text-stone-400" />
-                <span>{spa.phone}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <SpaBookingFlow slug={slug!} spa={spa} />
-      </main>
-
-      {/* Footer */}
-      <footer className="mt-auto py-8 text-center text-sm text-stone-400 border-t border-stone-200 bg-white">
-        Powered by Spa Booking System
-      </footer>
-    </div>
+    <SpaLanding slug={slug!} spa={spa}>
+      <SpaBookingFlow slug={slug!} spa={spa} />
+    </SpaLanding>
   );
 }

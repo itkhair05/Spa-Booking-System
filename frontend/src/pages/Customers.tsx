@@ -3,10 +3,15 @@ import AppShell from '../components/AppShell';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorState } from '../components/ui/ErrorState';
 import { getCustomers, deleteCustomer } from '../lib/api/customers';
+import { formatDateDMY } from '../lib/format';
 import type { Customer } from '../types/customer';
 import { CustomerForm } from './CustomerForm';
-import { AlertCircle, Users, Trash2 } from 'lucide-react';
+import { Users, Trash2, Plus } from 'lucide-react';
 import { useAuth } from '../app/auth/useAuth';
 
 const Customers = () => {
@@ -20,7 +25,11 @@ const Customers = () => {
   // Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | undefined>(undefined);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  // Delete state
+  const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchCustomers = useCallback(async () => {
     setIsLoading(true);
@@ -41,16 +50,6 @@ const Customers = () => {
     fetchCustomers();
   }, [fetchCustomers]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && deletingId !== null) {
-        setDeletingId(null);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deletingId]);
-
   const handleOpenForm = (customer?: Customer) => {
     setEditingCustomer(customer);
     setIsFormOpen(true);
@@ -66,21 +65,25 @@ const Customers = () => {
     fetchCustomers();
   };
 
-  const handleDeleteClick = (id: number) => {
+  const handleDeleteClick = (customer: Customer) => {
     if (!isOwner) return;
-    setDeletingId(id);
+    setDeleteError(null);
+    setDeletingCustomer(customer);
   };
 
-  const confirmDelete = async () => {
-    if (!deletingId) return;
+  const handleConfirmDelete = async () => {
+    if (!deletingCustomer) return;
+    setIsDeleting(true);
+    setDeleteError(null);
     try {
-      await deleteCustomer(deletingId);
-      setDeletingId(null);
+      await deleteCustomer(deletingCustomer.id);
+      setDeletingCustomer(null);
       fetchCustomers();
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      alert(errorObj.response?.data?.message || 'Không thể xóa khách hàng. Có thể họ đang có lịch hẹn liên quan.');
-      setDeletingId(null);
+      setDeleteError(errorObj.response?.data?.message || 'Không thể xóa khách hàng.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -89,7 +92,7 @@ const Customers = () => {
       <AppShell title="Khách hàng">
         <PageHeader title="Quản lý Khách hàng" />
         <div className="max-w-2xl mx-auto">
-          <CustomerForm 
+          <CustomerForm
             customer={editingCustomer}
             onSuccess={handleFormSuccess}
             onCancel={handleCloseForm}
@@ -102,13 +105,19 @@ const Customers = () => {
   return (
     <AppShell title="Khách hàng">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <PageHeader title="Quản lý Khách hàng" description="Quản lý khách hàng của spa." />
-        <Button onClick={() => handleOpenForm()}>Thêm khách hàng</Button>
+        <PageHeader
+          title="Quản lý Khách hàng"
+          description="Danh sách khách hàng đã từng sử dụng dịch vụ tại spa."
+        />
+        <Button onClick={() => handleOpenForm()}>
+          <Plus size={16} />
+          Thêm khách hàng
+        </Button>
       </div>
 
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse" aria-busy="true">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i}>
               <CardContent className="h-32 bg-[var(--color-neutral-100)] rounded-xl">
                 <div />
@@ -119,69 +128,72 @@ const Customers = () => {
       )}
 
       {error && !isLoading && (
-        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)]" role="alert">
-          <AlertCircle className="text-[var(--color-error)] mb-4" size={40} />
-          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Không thể tải dữ liệu</h3>
-          <p className="text-[var(--color-neutral-500)] mb-6 text-center max-w-md">{error}</p>
-          <Button onClick={fetchCustomers}>Thử lại</Button>
-        </div>
+        <ErrorState message={error} onRetry={fetchCustomers} />
       )}
 
       {!isLoading && !error && customers.length === 0 && (
-        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-[var(--color-neutral-200)] text-center">
-          <Users className="text-[var(--color-neutral-400)] mb-4" size={40} />
-          <h3 className="text-lg font-semibold text-[var(--color-neutral-900)] mb-2">Chưa có khách hàng</h3>
-          <p className="text-[var(--color-neutral-500)] mb-6">
-            Thêm khách hàng đầu tiên.
-          </p>
-          <Button onClick={() => handleOpenForm()}>Thêm khách hàng</Button>
-        </div>
+        <EmptyState
+          icon={<Users size={22} />}
+          title="Chưa có khách hàng"
+          description="Thêm khách hàng đầu tiên để bắt đầu tạo lịch hẹn cho họ."
+          action={
+            <Button onClick={() => handleOpenForm()}>
+              <Plus size={16} />
+              Thêm khách hàng
+            </Button>
+          }
+        />
       )}
 
       {!isLoading && !error && customers.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {customers.map((customer) => (
             <Card key={customer.id}>
-              <CardContent className="p-4 sm:p-6 flex flex-col h-full relative group">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-semibold text-lg text-[var(--color-neutral-900)]">{customer.name}</h4>
+              <CardContent className="p-4 sm:p-5 flex flex-col h-full">
+                <div className="flex justify-between items-start gap-2 mb-2">
+                  <h4 className="font-semibold text-base text-[var(--color-neutral-900)]">{customer.name}</h4>
                   {customer.isActive !== undefined && (
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${customer.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                    <Badge tone={customer.isActive ? 'success' : 'neutral'}>
                       {customer.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
-                    </span>
+                    </Badge>
                   )}
                 </div>
-                
-                <div className="text-sm text-[var(--color-neutral-600)] space-y-1 mb-4 flex-grow">
-                  {customer.email && (
-                    <p>
-                      <strong>Email:</strong> {customer.email}
-                    </p>
-                  )}
+
+                <div className="text-sm text-[var(--color-neutral-600)] space-y-1 mb-4 grow">
                   {customer.phone && (
                     <p>
-                      <strong>Số điện thoại:</strong> {customer.phone}
+                      <span className="text-[var(--color-neutral-500)]">Số điện thoại: </span>
+                      {customer.phone}
+                    </p>
+                  )}
+                  {customer.email && (
+                    <p className="break-all">
+                      <span className="text-[var(--color-neutral-500)]">Email: </span>
+                      {customer.email}
                     </p>
                   )}
                   {customer.lastVisit && (
                     <p>
-                      <strong>Lần ghé gần nhất:</strong>{' '}
-                      {new Date(customer.lastVisit).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' })}
+                      <span className="text-[var(--color-neutral-500)]">Lần ghé gần nhất: </span>
+                      {formatDateDMY(customer.lastVisit)}
                     </p>
                   )}
                 </div>
-                
-                <div className="mt-auto flex items-center justify-end pt-4 border-t border-[var(--color-neutral-100)]">
-                  <div className="flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                    <Button variant="secondary" size="sm" onClick={() => handleOpenForm(customer)}>
-                      Chỉnh sửa
+
+                <div className="mt-auto flex items-center justify-end gap-2 pt-3 border-t border-[var(--color-neutral-100)]">
+                  <Button variant="secondary" size="sm" onClick={() => handleOpenForm(customer)}>
+                    Chỉnh sửa
+                  </Button>
+                  {isOwner && (
+                    <Button
+                      variant="danger-outline"
+                      size="sm"
+                      onClick={() => handleDeleteClick(customer)}
+                      aria-label={`Xóa khách hàng ${customer.name}`}
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
                     </Button>
-                    {isOwner && (
-                      <Button variant="danger" size="sm" onClick={() => handleDeleteClick(customer.id)} aria-label="Xóa khách hàng">
-                        <Trash2 size={16} />
-                      </Button>
-                    )}
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -189,21 +201,22 @@ const Customers = () => {
         </div>
       )}
 
-      {/* Delete Confirmation UI */}
-      {deletingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title">
-          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full animate-in fade-in zoom-in duration-200">
-            <h3 id="delete-dialog-title" className="text-lg font-bold text-[var(--color-neutral-900)] mb-2">Xóa khách hàng?</h3>
-            <p className="text-sm text-[var(--color-neutral-500)] mb-6">
-              Bạn có chắc chắn muốn xóa khách hàng này không? Hành động này không thể hoàn tác và có thể thất bại nếu khách hàng đã có lịch hẹn.
-            </p>
-            <div className="flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => setDeletingId(null)}>Hủy</Button>
-              <Button variant="danger" onClick={confirmDelete}>Xóa</Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={deletingCustomer !== null}
+        title="Xóa khách hàng?"
+        description={
+          <>
+            Khách hàng <strong>{deletingCustomer?.name}</strong> sẽ bị xóa vĩnh viễn. Thao tác này
+            không thể hoàn tác và sẽ thất bại nếu khách hàng vẫn còn lịch hẹn liên quan.
+          </>
+        }
+        confirmLabel="Xóa khách hàng"
+        cancelLabel="Giữ lại"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeletingCustomer(null)}
+        busy={isDeleting}
+        error={deleteError}
+      />
     </AppShell>
   );
 };

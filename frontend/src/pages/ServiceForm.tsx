@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Alert } from '../components/ui/Alert';
 import { createService, updateService } from '../lib/api/services';
 import type { Service, CreateServiceRequest, UpdateServiceRequest } from '../types/service';
 
@@ -81,9 +82,9 @@ export const ServiceForm = ({ service, onSuccess, onCancel }: ServiceFormProps) 
         </h3>
         
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-[var(--color-error-bg)] border border-[var(--color-error-border)] text-[var(--color-error)] text-sm" role="alert">
+          <Alert tone="error" className="mb-4">
             {error}
-          </div>
+          </Alert>
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

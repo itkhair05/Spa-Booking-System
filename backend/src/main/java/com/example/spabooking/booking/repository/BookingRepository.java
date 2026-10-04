@@ -60,7 +60,21 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("endDate") LocalDateTime endDate,
             @Param("statuses") List<BookingStatus> statuses);
 
-    Optional<Booking> findByIdAndTenantId(Long id, Long tenantId);
+    @Query("SELECT b FROM Booking b " +
+           "JOIN FETCH b.customer " +
+           "JOIN FETCH b.service " +
+           "JOIN FETCH b.staff " +
+           "WHERE b.id = :id AND b.tenant.id = :tenantId")
+    Optional<Booking> findByIdAndTenantId(@Param("id") Long id, @Param("tenantId") Long tenantId);
+
+    @Query("SELECT b FROM Booking b " +
+           "JOIN FETCH b.customer " +
+           "JOIN FETCH b.service " +
+           "JOIN FETCH b.staff " +
+           "WHERE b.bookingCode = :bookingCode AND b.tenant.id = :tenantId")
+    Optional<Booking> findByBookingCodeAndTenantId(@Param("bookingCode") String bookingCode, @Param("tenantId") Long tenantId);
+
+    Optional<Booking> findByBookingCode(String bookingCode);
 
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.tenant.id = :tenantId " +
            "AND b.staff.id = :staffId " +

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SpaBookingContext, type BookingState } from './SpaBookingContext';
 import { StepServices } from './StepServices';
 import { StepStaff } from './StepStaff';
@@ -12,6 +12,8 @@ interface SpaBookingFlowProps {
   slug: string;
   spa: PublicSpaInfoResponse;
 }
+
+const STEP_LABELS = ['Chọn dịch vụ', 'Chọn nhân viên', 'Chọn ngày & giờ', 'Thông tin của bạn', 'Xác nhận'];
 
 const INITIAL_STATE: BookingState = {
   step: 1,
@@ -29,9 +31,11 @@ const INITIAL_STATE: BookingState = {
 
 export function SpaBookingFlow({ slug, spa }: SpaBookingFlowProps) {
   const [state, setState] = useState<BookingState>(INITIAL_STATE);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
 
   const setStep = (step: number) => setState((prev) => ({ ...prev, step }));
-  
+
   const updateState = (updates: Partial<BookingState>) => {
     setState((prev) => ({ ...prev, ...updates }));
   };
@@ -39,6 +43,14 @@ export function SpaBookingFlow({ slug, spa }: SpaBookingFlowProps) {
   const handleRestart = () => {
     setState(INITIAL_STATE);
   };
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    panelRef.current?.focus();
+  }, [state.step]);
 
   const contextValue = {
     slug,
@@ -54,7 +66,7 @@ export function SpaBookingFlow({ slug, spa }: SpaBookingFlowProps) {
       <div className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden">
         {state.step < 6 && (
           <div className="bg-stone-50 border-b border-stone-100 px-6 py-4 flex items-center justify-between">
-            <div className="flex gap-2">
+            <div className="flex gap-2" aria-hidden="true">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div
                   key={i}
@@ -64,17 +76,25 @@ export function SpaBookingFlow({ slug, spa }: SpaBookingFlowProps) {
                 />
               ))}
             </div>
-            <span className="text-sm font-medium text-stone-500">Bước {state.step} / 5</span>
+            <span className="text-sm font-medium text-stone-500">
+              Bước {state.step} / 5 &middot; {STEP_LABELS[state.step - 1]}
+            </span>
           </div>
         )}
-        
-        <div className="p-6 sm:p-8">
-          {state.step === 1 && <StepServices />}
-          {state.step === 2 && <StepStaff />}
-          {state.step === 3 && <StepDateTime />}
-          {state.step === 4 && <StepCustomer />}
-          {state.step === 5 && <StepReview />}
-          {state.step === 6 && <StepSuccess />}
+
+        <div
+          ref={panelRef}
+          tabIndex={-1}
+          className="p-6 sm:p-8 focus:outline-none"
+        >
+          <div key={state.step} className="step-enter">
+            {state.step === 1 && <StepServices />}
+            {state.step === 2 && <StepStaff />}
+            {state.step === 3 && <StepDateTime />}
+            {state.step === 4 && <StepCustomer />}
+            {state.step === 5 && <StepReview />}
+            {state.step === 6 && <StepSuccess />}
+          </div>
         </div>
       </div>
     </SpaBookingContext.Provider>

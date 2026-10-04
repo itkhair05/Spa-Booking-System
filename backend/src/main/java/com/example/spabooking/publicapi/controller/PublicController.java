@@ -56,4 +56,11 @@ public class PublicController {
         PublicBookingResponse response = publicBookingService.createBooking(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
+
+    @GetMapping("/bookings/{bookingCode}")
+    public ResponseEntity<PublicBookingDetailResponse> getBookingByCode(
+            @PathVariable String slug,
+            @PathVariable String bookingCode) {
+        return ResponseEntity.ok(publicBookingService.getBookingByCode(bookingCode));
+    }
 }

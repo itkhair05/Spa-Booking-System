@@ -1,12 +1,13 @@
 package com.example.spabooking.booking.controller;
 
-import com.example.spabooking.booking.dto.CreateBookingRequest;
+import com.example.spabooking.booking.dto.AssignBookingRequest;
+import com.example.spabooking.booking.dto.BookingDetailResponse;
 import com.example.spabooking.booking.dto.BookingResponse;
+import com.example.spabooking.booking.dto.CreateBookingRequest;
 import com.example.spabooking.booking.dto.UpdateBookingRequest;
 import com.example.spabooking.booking.dto.UpdateBookingStatusRequest;
 import com.example.spabooking.booking.entity.Booking;
 import com.example.spabooking.booking.service.BookingService;
-import com.example.spabooking.common.exception.ResourceNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -47,10 +48,9 @@ public class BookingController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
-    public ResponseEntity<BookingResponse> getBookingById(@PathVariable Long id) {
-        Booking booking = bookingService.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
-        return ResponseEntity.ok(BookingResponse.fromEntity(booking));
+    public ResponseEntity<BookingDetailResponse> getBookingById(@PathVariable Long id) {
+        BookingDetailResponse detail = bookingService.getBookingDetail(id);
+        return ResponseEntity.ok(detail);
     }
 
     @PostMapping
@@ -75,6 +75,15 @@ public class BookingController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateBookingStatusRequest request) {
         Booking updatedBooking = bookingService.updateStatus(id, request);
+        return ResponseEntity.ok(BookingResponse.fromEntity(updatedBooking));
+    }
+
+    @PatchMapping("/{id}/assign")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<BookingResponse> assignBooking(
+            @PathVariable Long id,
+            @Valid @RequestBody AssignBookingRequest request) {
+        Booking updatedBooking = bookingService.assignStaff(id, request.getStaffId());
         return ResponseEntity.ok(BookingResponse.fromEntity(updatedBooking));
     }
 }

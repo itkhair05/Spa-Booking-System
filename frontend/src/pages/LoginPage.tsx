@@ -126,6 +126,7 @@ const LoginPage = () => {
         </div>
 
         <h1 className="login-heading">Đăng nhập</h1>
+        <p className="login-subtitle">Dành cho chủ cơ sở và nhân viên</p>
 
         {/* Error banner */}
         {error && (
@@ -152,6 +153,7 @@ const LoginPage = () => {
             name="username"
             autoComplete="username"
             required
+            autoFocus
             disabled={isSubmitting}
             value={username}
             onChange={(e) => setUsername(e.target.value)}

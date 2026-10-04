@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 
 public class PublicBookingResponse {
     private Long id;
+    private String bookingCode;
     private Long serviceId;
     private String serviceName;
     private Long staffId;
@@ -18,6 +19,7 @@ public class PublicBookingResponse {
     public static PublicBookingResponse fromEntity(Booking booking) {
         PublicBookingResponse resp = new PublicBookingResponse();
         resp.setId(booking.getId());
+        resp.setBookingCode(booking.getBookingCode());
         resp.setServiceId(booking.getService().getId());
         resp.setServiceName(booking.getService().getName());
         resp.setStaffId(booking.getStaff().getId());
@@ -31,6 +33,8 @@ public class PublicBookingResponse {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public String getBookingCode() { return bookingCode; }
+    public void setBookingCode(String bookingCode) { this.bookingCode = bookingCode; }
     public Long getServiceId() { return serviceId; }
     public void setServiceId(Long serviceId) { this.serviceId = serviceId; }
     public String getServiceName() { return serviceName; }

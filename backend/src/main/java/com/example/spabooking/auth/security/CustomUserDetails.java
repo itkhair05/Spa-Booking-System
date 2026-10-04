@@ -50,10 +50,29 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return user.getIsActive() != null ? user.getIsActive() : false;
+        boolean userActive = user.getIsActive() != null && user.getIsActive();
+        if (!userActive) {
+            return false;
+        }
+        if (user.getStaff() != null && !Boolean.TRUE.equals(user.getStaff().getIsActive())) {
+            return false;
+        }
+        return true;
     }
 
     public User getUser() {
         return user;
+    }
+
+    public Long getStaffId() {
+        return user.getStaff() != null ? user.getStaff().getId() : null;
+    }
+
+    public boolean isStaff() {
+        return user.getRole() == com.example.spabooking.auth.enums.UserRole.STAFF;
+    }
+
+    public boolean isOwner() {
+        return user.getRole() == com.example.spabooking.auth.enums.UserRole.OWNER;
     }
 }
