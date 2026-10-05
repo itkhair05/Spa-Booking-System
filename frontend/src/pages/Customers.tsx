@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import AppShell from '../components/AppShell';
 import { PageHeader } from '../components/ui/PageHeader';
-import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
@@ -38,12 +37,15 @@ export default function Customers() {
   const isOwner = user?.roles?.includes('ROLE_OWNER');
 
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isFiltering, setIsFiltering] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CustomerCategory>('all');
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -54,30 +56,56 @@ export default function Customers() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const fetchCustomers = useCallback(async (search?: string, category?: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await getCustomers(search, category);
-      setCustomers(data);
-    } catch (err: unknown) {
-      const errorObj = err as { response?: { data?: { message?: string } } };
-      setError(errorObj.response?.data?.message || 'Không thể tải dữ liệu khách hàng.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // 250ms debounce exclusively for typing in search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  // Initial load and whenever search or category changes
+  // Main data synchronization effect
   useEffect(() => {
     if (!isOwner) return;
 
-    const timer = setTimeout(() => {
-      fetchCustomers(searchQuery, selectedCategory);
-    }, 250);
+    let isMounted = true;
 
-    return () => clearTimeout(timer);
-  }, [fetchCustomers, isOwner, searchQuery, selectedCategory]);
+    getCustomers(debouncedSearch, selectedCategory)
+      .then((data) => {
+        if (isMounted) {
+          setCustomers(data);
+          setError(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (isMounted) {
+          const errorObj = err as { response?: { data?: { message?: string } } };
+          setError(errorObj.response?.data?.message || 'Không thể tải dữ liệu khách hàng.');
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsInitialLoading(false);
+          setIsFiltering(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [debouncedSearch, isOwner, refreshKey, selectedCategory]);
+
+  // Immediate category tab selection (no lag, no layout jump)
+  const handleSelectCategory = (cat: CustomerCategory) => {
+    if (cat === selectedCategory) return;
+    setIsFiltering(true);
+    setSelectedCategory(cat);
+  };
+
+  const refreshCustomers = useCallback(() => {
+    setIsFiltering(true);
+    setRefreshKey((k) => k + 1);
+  }, []);
 
   if (!isOwner) {
     return (
@@ -108,7 +136,7 @@ export default function Customers() {
 
   const handleFormSuccess = () => {
     handleCloseForm();
-    fetchCustomers(searchQuery, selectedCategory);
+    refreshCustomers();
   };
 
   const handleDeleteClick = (customer: Customer) => {
@@ -123,7 +151,7 @@ export default function Customers() {
     try {
       await deleteCustomer(deletingCustomer.id);
       setDeletingCustomer(null);
-      fetchCustomers(searchQuery, selectedCategory);
+      refreshCustomers();
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
       setDeleteError(errorObj.response?.data?.message || 'Không thể xóa khách hàng vì còn lịch hẹn liên quan.');
@@ -158,36 +186,42 @@ export default function Customers() {
   return (
     <AppShell title="Khách hàng">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <PageHeader
-          title="Quản lý Khách hàng"
-          description="Hồ sơ khách hàng, lịch sử đặt hẹn và phân nhóm chăm sóc tại TIKEY SPA."
-        />
-        <Button onClick={() => handleOpenForm()}>
-          <Plus size={16} />
-          Thêm khách hàng
-        </Button>
-      </div>
+      <PageHeader
+        title="Quản lý Khách hàng"
+        description="Hồ sơ khách hàng, lịch sử đặt hẹn và phân nhóm chăm sóc tại TIKEY SPA."
+        action={
+          <Button onClick={() => handleOpenForm()}>
+            <Plus size={16} />
+            Thêm khách hàng
+          </Button>
+        }
+      />
 
       {/* Search and Category Filter Section */}
-      <div className="space-y-4 mb-6">
+      <div className="space-y-3.5 mb-6 w-full min-w-0">
         {/* Search Bar */}
-        <div className="relative max-w-xl">
+        <div className="relative w-full max-w-xl min-w-0">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
             <Search size={17} />
           </div>
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setIsFiltering(true);
+            }}
             placeholder="Tìm khách hàng theo tên hoặc số điện thoại..."
             className="w-full pl-10 pr-10 py-2.5 bg-white border border-stone-200 rounded-xl text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#465d4c] focus:ring-1 focus:ring-[#465d4c] transition-all shadow-2xs"
           />
           {searchQuery && (
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-stone-400 hover:text-stone-700"
+              onClick={() => {
+                setSearchQuery('');
+                setIsFiltering(true);
+              }}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-stone-400 hover:text-stone-700 cursor-pointer"
               aria-label="Xóa tìm kiếm"
             >
               <X size={15} />
@@ -195,16 +229,16 @@ export default function Customers() {
           )}
         </div>
 
-        {/* Category Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        {/* Category Filter Tabs - Stable width, no tab jitter */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full w-full min-w-0 no-scrollbar">
           {CATEGORIES.map((cat) => {
             const isActive = selectedCategory === cat.id;
             return (
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                onClick={() => handleSelectCategory(cat.id)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
                   isActive
                     ? 'bg-stone-900 text-white shadow-2xs'
                     : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 hover:text-stone-900'
@@ -212,8 +246,8 @@ export default function Customers() {
                 title={cat.description}
               >
                 <span>{cat.label}</span>
-                {isActive && !isLoading && (
-                  <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded-full">
+                {isActive && (
+                  <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded-full font-mono">
                     {customers.length}
                   </span>
                 )}
@@ -223,26 +257,31 @@ export default function Customers() {
         </div>
       </div>
 
-      {/* Loading State */}
-      {isLoading && (
+      {/* Initial Loading Skeleton */}
+      {isInitialLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse" aria-busy="true">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i}>
-              <CardContent className="h-40 bg-stone-100 rounded-xl p-5">
-                <div />
-              </CardContent>
-            </Card>
+            <div key={i} className="bg-white border border-stone-200 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-stone-100" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="h-4 bg-stone-100 rounded w-24" />
+                  <div className="h-3 bg-stone-100 rounded w-16" />
+                </div>
+              </div>
+              <div className="h-16 bg-stone-50 rounded-xl" />
+            </div>
           ))}
         </div>
       )}
 
       {/* Error State */}
-      {error && !isLoading && (
-        <ErrorState message={error} onRetry={() => fetchCustomers(searchQuery, selectedCategory)} />
+      {error && !isInitialLoading && (
+        <ErrorState message={error} onRetry={refreshCustomers} />
       )}
 
       {/* Empty State - No customers at all */}
-      {!isLoading && !error && customers.length === 0 && !searchQuery && selectedCategory === 'all' && (
+      {!isInitialLoading && !error && customers.length === 0 && !searchQuery && selectedCategory === 'all' && (
         <EmptyState
           icon={<Users size={22} />}
           title="Chưa có khách hàng"
@@ -257,7 +296,7 @@ export default function Customers() {
       )}
 
       {/* Empty State - Search / Filter Returned No Results */}
-      {!isLoading && !error && customers.length === 0 && (searchQuery || selectedCategory !== 'all') && (
+      {!isInitialLoading && !error && customers.length === 0 && (searchQuery || selectedCategory !== 'all') && (
         <div className="bg-white border border-stone-200 rounded-2xl p-10 text-center max-w-md mx-auto my-6 shadow-2xs">
           <Search size={32} className="text-stone-300 mx-auto mb-3" />
           <h3 className="font-serif-title font-semibold text-stone-900 text-base mb-1">
@@ -282,7 +321,7 @@ export default function Customers() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => setSelectedCategory('all')}
+                onClick={() => handleSelectCategory('all')}
               >
                 Xem tất cả
               </Button>
@@ -291,51 +330,145 @@ export default function Customers() {
         </div>
       )}
 
-      {/* Customer List - Mobile-first Responsive Cards */}
-      {!isLoading && !error && customers.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {customers.map((customer) => {
-            const hasBookings = (customer.totalBookings ?? 0) > 0;
-            return (
-              <Card key={customer.id} className="border-stone-200/80 hover:border-stone-300 transition-all shadow-2xs">
-                <CardContent className="p-4 sm:p-5 flex flex-col h-full space-y-3.5">
+      {/* Customer List: Desktop Table + Mobile/Tablet Responsive Cards */}
+      {!isInitialLoading && !error && customers.length > 0 && (
+        <div className={`transition-opacity duration-150 ${isFiltering ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
+          {/* Desktop Table View (>= 1024px) */}
+          <div className="hidden lg:block bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-2xs">
+            <table className="w-full text-left text-sm text-stone-600 border-collapse">
+              <thead className="bg-stone-50/80 border-b border-stone-200 text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+                <tr>
+                  <th className="py-3.5 px-4 font-semibold">Khách hàng</th>
+                  <th className="py-3.5 px-4 font-semibold">Số điện thoại</th>
+                  <th className="py-3.5 px-4 font-semibold">Email</th>
+                  <th className="py-3.5 px-4 font-semibold text-center">Số cuộc hẹn</th>
+                  <th className="py-3.5 px-4 font-semibold">Lần ghé / Lịch gần nhất</th>
+                  <th className="py-3.5 px-4 font-semibold text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {customers.map((customer) => {
+                  const hasBookings = (customer.totalBookings ?? 0) > 0;
+                  return (
+                    <tr key={customer.id} className="hover:bg-stone-50/60 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-stone-100 text-stone-700 font-semibold text-xs flex items-center justify-center shrink-0 border border-stone-200/60">
+                            {getInitials(customer.name)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-stone-900 text-sm truncate max-w-xs">{customer.name}</p>
+                            {customer.isActive !== undefined && (
+                              <span className={`inline-block text-[10px] px-1.5 py-0.2 rounded font-medium mt-0.5 ${
+                                customer.isActive ? 'text-emerald-700 bg-emerald-50' : 'text-stone-500 bg-stone-100'
+                              }`}>
+                                {customer.isActive ? 'Hoạt động' : 'Ngừng'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-xs font-mono">
+                        {customer.phone ? (
+                          <a href={`tel:${customer.phone}`} className="hover:text-stone-900 hover:underline">
+                            {customer.phone}
+                          </a>
+                        ) : (
+                          <span className="text-stone-400 italic">Chưa có</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-xs">
+                        {customer.email ? (
+                          <a href={`mailto:${customer.email}`} className="hover:text-stone-900 truncate block max-w-[200px]" title={customer.email}>
+                            {customer.email}
+                          </a>
+                        ) : (
+                          <span className="text-stone-400 italic">Chưa có</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span className={`inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full ${
+                          hasBookings
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200/60 font-semibold'
+                            : 'bg-stone-100 text-stone-600'
+                        }`}>
+                          {customer.totalBookings ?? 0}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-stone-500">
+                        {customer.lastVisit ? (
+                          <span>{formatDateDMY(customer.lastVisit)}</span>
+                        ) : customer.lastBookingAt ? (
+                          <span>{formatDateDMY(customer.lastBookingAt)}</span>
+                        ) : (
+                          <span className="text-stone-400 italic">—</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="inline-flex items-center gap-1.5">
+                          <Button variant="secondary" size="sm" onClick={() => handleOpenForm(customer)}>
+                            Chỉnh sửa
+                          </Button>
+                          <Button
+                            variant="danger-outline"
+                            size="sm"
+                            onClick={() => handleDeleteClick(customer)}
+                            aria-label={`Xóa khách hàng ${customer.name}`}
+                          >
+                            <Trash2 size={14} aria-hidden="true" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile / Tablet Cards View (< 1024px) */}
+          <div className="block lg:hidden space-y-3 w-full min-w-0">
+            {customers.map((customer) => {
+              const hasBookings = (customer.totalBookings ?? 0) > 0;
+              return (
+                <div
+                  key={customer.id}
+                  className="bg-white border border-stone-200/80 rounded-2xl p-3.5 sm:p-4 shadow-2xs space-y-3 w-full min-w-0"
+                >
                   {/* Card Header: Avatar + Name + Badges */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-700 font-semibold text-xs flex items-center justify-center shrink-0 border border-stone-200/60">
+                  <div className="flex items-start justify-between gap-2.5 min-w-0">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="w-9 h-9 rounded-xl bg-stone-100 text-stone-700 font-semibold text-xs flex items-center justify-center shrink-0 border border-stone-200/60">
                         {getInitials(customer.name)}
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <h4 className="font-semibold text-sm text-stone-900 truncate" title={customer.name}>
                           {customer.name}
                         </h4>
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                           <span className={`inline-flex items-center text-[10px] font-medium px-2 py-0.2 rounded-md ${
                             hasBookings
                               ? 'bg-emerald-50 text-emerald-800 border border-emerald-200/60'
                               : 'bg-stone-100 text-stone-600 border border-stone-200/60'
                           }`}>
-                            {hasBookings
-                              ? `${customer.totalBookings} cuộc hẹn`
-                              : 'Khách mới'}
+                            {hasBookings ? `${customer.totalBookings} cuộc hẹn` : 'Khách mới'}
                           </span>
+                          {customer.isActive !== undefined && (
+                            <Badge tone={customer.isActive ? 'success' : 'neutral'}>
+                              {customer.isActive ? 'Hoạt động' : 'Ngừng'}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
-
-                    {customer.isActive !== undefined && (
-                      <Badge tone={customer.isActive ? 'success' : 'neutral'}>
-                        {customer.isActive ? 'Hoạt động' : 'Ngừng'}
-                      </Badge>
-                    )}
                   </div>
 
                   {/* Contact Info */}
-                  <div className="text-xs text-stone-600 space-y-1.5 bg-stone-50/70 p-3 rounded-xl border border-stone-100 grow">
+                  <div className="text-xs text-stone-600 space-y-1.5 bg-stone-50/70 p-2.5 sm:p-3 rounded-xl border border-stone-100 min-w-0">
                     {customer.phone ? (
-                      <p className="flex items-center gap-2">
+                      <p className="flex items-center gap-2 min-w-0">
                         <Phone size={13} className="text-stone-400 shrink-0" />
-                        <a href={`tel:${customer.phone}`} className="hover:text-stone-900 font-medium">
+                        <a href={`tel:${customer.phone}`} className="hover:text-stone-900 font-medium truncate font-mono">
                           {customer.phone}
                         </a>
                       </p>
@@ -345,24 +478,24 @@ export default function Customers() {
                       </p>
                     )}
 
-                    {customer.email ? (
-                      <p className="flex items-center gap-2 truncate" title={customer.email}>
+                    {customer.email && (
+                      <p className="flex items-center gap-2 min-w-0">
                         <Mail size={13} className="text-stone-400 shrink-0" />
-                        <a href={`mailto:${customer.email}`} className="hover:text-stone-900 truncate">
+                        <a href={`mailto:${customer.email}`} className="hover:text-stone-900 truncate block flex-1" title={customer.email}>
                           {customer.email}
                         </a>
                       </p>
-                    ) : null}
+                    )}
 
                     {customer.lastVisit ? (
                       <p className="flex items-center gap-2 text-[11px] text-stone-500 pt-1 border-t border-stone-200/50">
                         <Clock size={12} className="text-stone-400 shrink-0" />
-                        Lần ghé gần nhất: <strong>{formatDateDMY(customer.lastVisit)}</strong>
+                        Lần ghé gần nhất: <strong className="text-stone-800">{formatDateDMY(customer.lastVisit)}</strong>
                       </p>
                     ) : customer.lastBookingAt ? (
                       <p className="flex items-center gap-2 text-[11px] text-stone-500 pt-1 border-t border-stone-200/50">
                         <CalendarCheck size={12} className="text-stone-400 shrink-0" />
-                        Lịch hẹn gần nhất: <strong>{formatDateDMY(customer.lastBookingAt)}</strong>
+                        Lịch hẹn gần nhất: <strong className="text-stone-800">{formatDateDMY(customer.lastBookingAt)}</strong>
                       </p>
                     ) : (
                       <p className="text-[11px] text-stone-400 pt-1 border-t border-stone-200/50">
@@ -372,7 +505,7 @@ export default function Customers() {
                   </div>
 
                   {/* Actions */}
-                  <div className="mt-auto flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-stone-100">
                     <Button variant="secondary" size="sm" onClick={() => handleOpenForm(customer)}>
                       Chỉnh sửa
                     </Button>
@@ -382,13 +515,13 @@ export default function Customers() {
                       onClick={() => handleDeleteClick(customer)}
                       aria-label={`Xóa khách hàng ${customer.name}`}
                     >
-                      <Trash2 size={15} aria-hidden="true" />
+                      <Trash2 size={14} aria-hidden="true" />
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

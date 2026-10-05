@@ -172,11 +172,6 @@ const ReviewsPage = () => {
                     ))}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {r.isDemo && (
-                      <span className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded font-medium">
-                        Minh họa
-                      </span>
-                    )}
                     <Badge tone={r.isPublished ? 'success' : 'neutral'}>
                       {r.isPublished ? 'Đang hiển thị' : 'Đang ẩn'}
                     </Badge>

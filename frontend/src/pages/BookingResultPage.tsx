@@ -232,56 +232,90 @@ export default function BookingResultPage() {
           <div className="text-center space-y-3 pb-6 border-b border-stone-100">
             {isPaid ? (
               <>
-                <div className="inline-flex p-3 bg-emerald-50 text-emerald-600 rounded-2xl mb-1 ring-8 ring-emerald-50/50">
+                <div className="inline-flex p-3.5 bg-emerald-50 text-emerald-600 rounded-2xl mb-1 ring-8 ring-emerald-50/50">
                   <CheckCircle2 className="w-10 h-10" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-serif-title font-semibold text-stone-900">
-                  Đặt lịch & Thanh toán thành công!
-                </h1>
-                <p className="text-stone-500 text-sm max-w-md mx-auto">
-                  Cảm ơn bạn đã lựa chọn TIKEY SPA. Giao dịch đã được thanh toán an toàn qua cổng VNPay Sandbox.
+                <div className="space-y-1">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100/80 text-emerald-800 tracking-wide uppercase">
+                    Giao dịch hoàn tất
+                  </span>
+                  <h1 className="text-2xl sm:text-3xl font-serif-title font-bold text-stone-900 pt-1">
+                    Thanh toán thành công qua VNPay!
+                  </h1>
+                </div>
+                <p className="text-stone-600 text-sm max-w-lg mx-auto leading-relaxed">
+                  Cảm ơn quý khách đã tin chọn TIKEY SPA. Giao dịch trực tuyến đã được xác nhận thanh toán an toàn và lịch hẹn đã được ghi nhận vào hệ thống.
                 </p>
               </>
             ) : isCancelled ? (
               <>
-                <div className="inline-flex p-3 bg-rose-50 text-rose-600 rounded-2xl mb-1 ring-8 ring-rose-50/50">
+                <div className="inline-flex p-3.5 bg-rose-50 text-rose-600 rounded-2xl mb-1 ring-8 ring-rose-50/50">
                   <XCircle className="w-10 h-10" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-serif-title font-semibold text-stone-900">
-                  Giao dịch đã được hủy
-                </h1>
-                <p className="text-stone-500 text-sm max-w-md mx-auto">
-                  Giao dịch thanh toán trực tuyến qua VNPay đã được hủy. Quý khách có thể đặt lại lịch bất cứ lúc nào.
+                <div className="space-y-1">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-rose-100/80 text-rose-800 tracking-wide uppercase">
+                    Giao dịch đã hủy
+                  </span>
+                  <h1 className="text-2xl sm:text-3xl font-serif-title font-bold text-stone-900 pt-1">
+                    Giao dịch đã được hủy
+                  </h1>
+                </div>
+                <p className="text-stone-600 text-sm max-w-lg mx-auto leading-relaxed">
+                  Giao dịch thanh toán trực tuyến qua VNPay đã được hủy. Quý khách có thể đặt lại lịch hẹn hoặc chọn phương thức thanh toán tại Spa khi đến trải nghiệm.
                 </p>
               </>
             ) : (
               <>
-                <div className="inline-flex p-3 bg-stone-100 text-stone-800 rounded-2xl mb-1 ring-8 ring-stone-100/50">
+                <div className="inline-flex p-3.5 bg-stone-100 text-stone-800 rounded-2xl mb-1 ring-8 ring-stone-100/50">
                   <Clock className="w-10 h-10" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-serif-title font-semibold text-stone-900">
+                <h1 className="text-2xl sm:text-3xl font-serif-title font-bold text-stone-900">
                   Đã ghi nhận lịch hẹn
                 </h1>
-                <p className="text-stone-500 text-sm max-w-md mx-auto">
-                  Lịch hẹn của bạn đã được ghi nhận. Quý khách vui lòng thanh toán trực tiếp khi đến spa.
+                <p className="text-stone-600 text-sm max-w-lg mx-auto leading-relaxed">
+                  Lịch hẹn của bạn đã được ghi nhận. Quý khách vui lòng thanh toán trực tiếp khi đến làm dịch vụ tại spa.
                 </p>
               </>
             )}
 
             {/* Booking Code Highlight Box */}
-            <div className="inline-flex items-center gap-3 bg-stone-50 border border-stone-200/80 px-4 py-2 rounded-xl mt-3">
+            <div className="inline-flex flex-wrap items-center justify-center gap-3 bg-stone-50 border border-stone-200/90 px-5 py-2.5 rounded-2xl mt-4 shadow-2xs">
               <span className="text-xs uppercase tracking-wider font-semibold text-stone-500">Mã lịch hẹn:</span>
-              <span className="font-mono text-base font-bold text-stone-900">{booking.bookingCode}</span>
+              <span className="font-mono text-lg font-bold text-stone-900 tracking-wide">{booking.bookingCode}</span>
               <button
                 type="button"
                 onClick={handleCopyCode}
-                className="p-1 text-stone-400 hover:text-stone-800 transition-colors rounded"
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-stone-600 hover:text-stone-900 hover:bg-white rounded-lg border border-stone-200 transition-colors cursor-pointer"
                 title="Sao chép mã"
               >
-                {copied ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
+                {copied ? (
+                  <>
+                    <Check size={14} className="text-emerald-600" />
+                    <span className="text-emerald-700 font-semibold">Đã chép</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={14} />
+                    <span>Sao chép</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
+
+          {/* Next Steps Guidance Banner */}
+          {isPaid && (
+            <div className="bg-[#465d4c]/5 border border-[#465d4c]/20 rounded-2xl p-4 sm:p-5 text-left">
+              <h4 className="text-xs font-bold text-[#465d4c] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Sparkles size={14} /> Hướng dẫn tiếp theo cho quý khách
+              </h4>
+              <ul className="text-xs sm:text-sm text-stone-700 space-y-1.5 list-disc list-inside">
+                <li>Lịch hẹn đã được xác nhận tự động và chuyển đến đội ngũ chuyên viên kỹ thuật.</li>
+                <li>Quý khách vui lòng có mặt trước giờ hẹn <strong>10 - 15 phút</strong> để thưởng thức trà thảo mộc đón tiếp và chuẩn bị tốt nhất.</li>
+                <li>Quý khách có thể sử dụng mã lịch hẹn <strong>{booking.bookingCode}</strong> để tra cứu hoặc liên hệ hỗ trợ bất kỳ lúc nào.</li>
+              </ul>
+            </div>
+          )}
 
           {/* Details Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -404,21 +438,21 @@ export default function BookingResultPage() {
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-stone-100">
             <Link
               to="/tra-cuu"
-              className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-stone-200 text-stone-700 text-xs font-semibold hover:bg-stone-50 transition-colors text-center"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-stone-200 text-stone-700 text-xs font-semibold hover:bg-stone-50 transition-colors text-center inline-flex items-center justify-center gap-1.5"
             >
-              Tra cứu lịch hẹn khác
+              <Search size={14} /> Tra cứu lịch hẹn
             </Link>
             <div className="flex gap-3 w-full sm:w-auto">
               <Link
                 to="/"
-                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-stone-100 text-stone-700 text-xs font-semibold hover:bg-stone-200 transition-colors text-center"
+                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-stone-100 text-stone-700 text-xs font-semibold hover:bg-stone-200 transition-colors text-center inline-flex items-center justify-center gap-1.5"
               >
-                Về trang chủ
+                <Home size={14} /> Về trang chủ
               </Link>
               <button
                 type="button"
                 onClick={() => navigate('/#booking-flow')}
-                className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-stone-900 text-white text-xs font-semibold hover:bg-stone-800 transition-colors flex items-center justify-center gap-1.5"
+                className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-stone-900 text-white text-xs font-semibold hover:bg-stone-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 Đặt lịch mới <ArrowRight size={14} />
               </button>
