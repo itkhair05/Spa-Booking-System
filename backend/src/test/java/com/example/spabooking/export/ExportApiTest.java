@@ -664,6 +664,200 @@ public class ExportApiTest {
         }
     }
 
+    @Test
+    void revenueExportIncludesTodayCompletedRevenueAlongsideYesterday() throws Exception {
+        long unique = System.currentTimeMillis() + 50;
+        Tenant tenant = new Tenant();
+        tenant.setName("Tenant TodayYesterday");
+        tenant.setSlug("tenant-today-yesterday-" + unique);
+        tenant = tenantRepository.saveAndFlush(tenant);
+
+        User owner = new User();
+        owner.setUsername("ownerTodayYesterday-" + unique);
+        owner.setPassword("encoded");
+        owner.setRole(UserRole.OWNER);
+        owner.setTenant(tenant);
+        owner = userRepository.saveAndFlush(owner);
+
+        String ownerJwtLocal = jwtUtils.generateJwtToken(new UsernamePasswordAuthenticationToken(
+                new CustomUserDetails(owner), null, new CustomUserDetails(owner).getAuthorities()));
+
+        Customer customer = new Customer();
+        customer.setTenant(tenant);
+        customer.setName("Cust TodayYesterday");
+        customer.setPhone("0977000111");
+        customer.setIsActive(true);
+        customer = customerRepository.saveAndFlush(customer);
+
+        Staff staff = new Staff();
+        staff.setTenant(tenant);
+        staff.setName("Staff TodayYesterday");
+        staff.setIsActive(true);
+        staff = staffRepository.saveAndFlush(staff);
+
+        com.example.spabooking.service.entity.Service svc900k = new com.example.spabooking.service.entity.Service();
+        svc900k.setTenant(tenant);
+        svc900k.setName("Service 900k");
+        svc900k.setPrice(new BigDecimal("900000.00"));
+        svc900k.setDurationMinutes(60);
+        svc900k.setIsActive(true);
+        svc900k = serviceRepository.saveAndFlush(svc900k);
+
+        com.example.spabooking.service.entity.Service svc950k = new com.example.spabooking.service.entity.Service();
+        svc950k.setTenant(tenant);
+        svc950k.setName("Service 950k");
+        svc950k.setPrice(new BigDecimal("950000.00"));
+        svc950k.setDurationMinutes(60);
+        svc950k.setIsActive(true);
+        svc950k = serviceRepository.saveAndFlush(svc950k);
+
+        LocalDateTime now = LocalDateTime.now(VIETNAM_ZONE);
+        // Yesterday: 900,000, completed in the late evening (after a hypothetical "export run" time
+        // of day would have excluded it under the old now()-bound window).
+        saveBooking(tenant, customer, staff, svc900k,
+                now.toLocalDate().minusDays(1).atStartOfDay().plusHours(23).plusMinutes(30), BookingStatus.COMPLETED);
+        // Today: 950,000, completed later today than the current wall-clock time of the test run
+        // would allow under the old buggy `windowEnd = now()` bound.
+        saveBooking(tenant, customer, staff, svc950k,
+                now.toLocalDate().atStartOfDay().plusHours(23).plusMinutes(59), BookingStatus.COMPLETED);
+
+        MvcResult result = mockMvc.perform(get("/api/v1/exports/revenue")
+                        .header("Authorization", "Bearer " + ownerJwtLocal))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(xlsxBytes(result)))) {
+            Sheet sheet = workbook.getSheetAt(0);
+            // Header + 2 data rows (yesterday, today) + total row = 4 rows
+            assertThat(sheet.getPhysicalNumberOfRows(), is(4));
+
+            Row totalRow = sheet.getRow(sheet.getLastRowNum());
+            assertThat(totalRow.getCell(0).getStringCellValue(), is("TỔNG DOANH THU"));
+            assertThat("Yesterday (900,000) + today (950,000) must equal 1,850,000",
+                    totalRow.getCell(6).getNumericCellValue(), is(1850000.0));
+        }
+    }
+
+    @Test
+    void revenueExportIncludesTodayLateNightAndExcludesTomorrowMidnight() throws Exception {
+        long unique = System.currentTimeMillis() + 60;
+        Tenant tenant = new Tenant();
+        tenant.setName("Tenant Boundary");
+        tenant.setSlug("tenant-boundary-" + unique);
+        tenant = tenantRepository.saveAndFlush(tenant);
+
+        User owner = new User();
+        owner.setUsername("ownerBoundary-" + unique);
+        owner.setPassword("encoded");
+        owner.setRole(UserRole.OWNER);
+        owner.setTenant(tenant);
+        owner = userRepository.saveAndFlush(owner);
+
+        String ownerJwtLocal = jwtUtils.generateJwtToken(new UsernamePasswordAuthenticationToken(
+                new CustomUserDetails(owner), null, new CustomUserDetails(owner).getAuthorities()));
+
+        Customer customer = new Customer();
+        customer.setTenant(tenant);
+        customer.setName("Cust Boundary");
+        customer.setPhone("0977000222");
+        customer.setIsActive(true);
+        customer = customerRepository.saveAndFlush(customer);
+
+        Staff staff = new Staff();
+        staff.setTenant(tenant);
+        staff.setName("Staff Boundary");
+        staff.setIsActive(true);
+        staff = staffRepository.saveAndFlush(staff);
+
+        com.example.spabooking.service.entity.Service svc = new com.example.spabooking.service.entity.Service();
+        svc.setTenant(tenant);
+        svc.setName("Service Boundary");
+        svc.setPrice(new BigDecimal("150000.00"));
+        svc.setDurationMinutes(30);
+        svc.setIsActive(true);
+        svc = serviceRepository.saveAndFlush(svc);
+
+        LocalDateTime now = LocalDateTime.now(VIETNAM_ZONE);
+        // 05/10 23:59:59-equivalent (today, last second of the day) — must be included.
+        saveBooking(tenant, customer, staff, svc,
+                now.toLocalDate().atTime(23, 59, 59), BookingStatus.COMPLETED);
+        // 06/10 00:00:00-equivalent (tomorrow, exact midnight) — must be excluded.
+        saveBooking(tenant, customer, staff, svc,
+                now.toLocalDate().plusDays(1).atStartOfDay(), BookingStatus.COMPLETED);
+
+        MvcResult result = mockMvc.perform(get("/api/v1/exports/revenue")
+                        .header("Authorization", "Bearer " + ownerJwtLocal))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(xlsxBytes(result)))) {
+            Sheet sheet = workbook.getSheetAt(0);
+            // Header + 1 data row (today 23:59:59 only) + total row = 3 rows
+            assertThat(sheet.getPhysicalNumberOfRows(), is(3));
+
+            Row totalRow = sheet.getRow(sheet.getLastRowNum());
+            assertThat(totalRow.getCell(6).getNumericCellValue(), is(150000.0));
+        }
+    }
+
+    @Test
+    void revenueExportExcludesPendingAndCancelledBookingsToday() throws Exception {
+        long unique = System.currentTimeMillis() + 70;
+        Tenant tenant = new Tenant();
+        tenant.setName("Tenant NonCompleted");
+        tenant.setSlug("tenant-non-completed-" + unique);
+        tenant = tenantRepository.saveAndFlush(tenant);
+
+        User owner = new User();
+        owner.setUsername("ownerNonCompleted-" + unique);
+        owner.setPassword("encoded");
+        owner.setRole(UserRole.OWNER);
+        owner.setTenant(tenant);
+        owner = userRepository.saveAndFlush(owner);
+
+        String ownerJwtLocal = jwtUtils.generateJwtToken(new UsernamePasswordAuthenticationToken(
+                new CustomUserDetails(owner), null, new CustomUserDetails(owner).getAuthorities()));
+
+        Customer customer = new Customer();
+        customer.setTenant(tenant);
+        customer.setName("Cust NonCompleted");
+        customer.setPhone("0977000333");
+        customer.setIsActive(true);
+        customer = customerRepository.saveAndFlush(customer);
+
+        Staff staff = new Staff();
+        staff.setTenant(tenant);
+        staff.setName("Staff NonCompleted");
+        staff.setIsActive(true);
+        staff = staffRepository.saveAndFlush(staff);
+
+        com.example.spabooking.service.entity.Service svc = new com.example.spabooking.service.entity.Service();
+        svc.setTenant(tenant);
+        svc.setName("Service NonCompleted");
+        svc.setPrice(new BigDecimal("500000.00"));
+        svc.setDurationMinutes(60);
+        svc.setIsActive(true);
+        svc = serviceRepository.saveAndFlush(svc);
+
+        LocalDateTime now = LocalDateTime.now(VIETNAM_ZONE);
+        saveBooking(tenant, customer, staff, svc, now.toLocalDate().atStartOfDay().plusHours(9), BookingStatus.PENDING);
+        saveBooking(tenant, customer, staff, svc, now.toLocalDate().atStartOfDay().plusHours(11), BookingStatus.CANCELLED);
+
+        MvcResult result = mockMvc.perform(get("/api/v1/exports/revenue")
+                        .header("Authorization", "Bearer " + ownerJwtLocal))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(xlsxBytes(result)))) {
+            Sheet sheet = workbook.getSheetAt(0);
+            // Header + total row only — PENDING and CANCELLED never contribute revenue
+            assertThat(sheet.getPhysicalNumberOfRows(), is(2));
+
+            Row totalRow = sheet.getRow(sheet.getLastRowNum());
+            assertThat(totalRow.getCell(6).getNumericCellValue(), is(0.0));
+        }
+    }
+
     private Row findRowByCellValue(Sheet sheet, int column, String value) {
         for (int i = 1; i <= sheet.getLastRowNum(); i++) {
             Row row = sheet.getRow(i);
