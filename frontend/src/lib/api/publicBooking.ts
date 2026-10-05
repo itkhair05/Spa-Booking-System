@@ -9,6 +9,7 @@ import type {
   CreatePublicBookingRequest,
   PublicBookingResponse,
   PublicBookingDetailResponse,
+  VNPayCallbackResult,
 } from '../../types/publicBooking';
 
 export const getPublicSpaInfo = async (slug: string): Promise<PublicSpaInfoResponse> => {
@@ -84,6 +85,17 @@ export const getPublicBookingByCode = async (
 ): Promise<PublicBookingDetailResponse> => {
   const { data } = await publicAxios.get<PublicBookingDetailResponse>(
     `/public/spas/${slug}/bookings/${encodeURIComponent(bookingCode)}`
+  );
+  return data;
+};
+
+export const verifyVNPayCallback = async (
+  slug: string,
+  params: Record<string, string>
+): Promise<VNPayCallbackResult> => {
+  const { data } = await publicAxios.get<VNPayCallbackResult>(
+    `/public/spas/${slug}/payments/vnpay-callback`,
+    { params }
   );
   return data;
 };

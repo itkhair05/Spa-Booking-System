@@ -6,6 +6,7 @@ import { StepDateTime } from './StepDateTime';
 import { StepCustomer } from './StepCustomer';
 import { StepReview } from './StepReview';
 import { StepSuccess } from './StepSuccess';
+import { verifyVNPayCallback, getPublicBookingByCode } from '../../lib/api/publicBooking';
 import type { PublicSpaInfoResponse } from '../../types/publicBooking';
 
 interface SpaBookingFlowProps {
@@ -29,6 +30,12 @@ const INITIAL_STATE: BookingState = {
   bookingId: null,
   bookingCode: null,
   bookingStatus: null,
+  paymentMethod: 'PAY_AT_SPA',
+  paymentStatus: null,
+  paymentUrl: null,
+  paidAmount: null,
+  paidAt: null,
+  vnpayMessage: null,
 };
 
 export function SpaBookingFlow({ slug, spa }: SpaBookingFlowProps) {
@@ -45,6 +52,69 @@ export function SpaBookingFlow({ slug, spa }: SpaBookingFlowProps) {
   const handleRestart = () => {
     setState(INITIAL_STATE);
   };
+
+  useEffect(() => {
+    // Check for VNPay redirect return parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('vnp_ResponseCode') && urlParams.has('vnp_TxnRef')) {
+      const params: Record<string, string> = {};
+      urlParams.forEach((val, key) => {
+        params[key] = val;
+      });
+
+      verifyVNPayCallback(slug, params)
+        .then(async (result) => {
+          if (result.bookingCode) {
+            try {
+              const detail = await getPublicBookingByCode(slug, result.bookingCode);
+              setState({
+                step: 6,
+                service: {
+                  id: 0,
+                  name: detail.serviceName,
+                  description: detail.serviceDescription || null,
+                  durationMinutes: detail.durationMinutes,
+                  price: detail.price,
+                },
+                staff: {
+                  id: 0,
+                  name: detail.staffName,
+                },
+                date: detail.startTime ? detail.startTime.split('T')[0] : '',
+                time: detail.startTime || '',
+                customer: {
+                  name: detail.customerName,
+                  phone: detail.customerPhone,
+                  email: detail.customerEmail || '',
+                },
+                bookingId: null,
+                bookingCode: detail.bookingCode,
+                bookingStatus: detail.status,
+                paymentMethod: 'VNPAY',
+                paymentStatus: result.status || detail.paymentStatus,
+                paymentUrl: null,
+                paidAmount: result.amount || detail.paidAmount || detail.price,
+                paidAt: result.paidAt || detail.paidAt || null,
+                vnpayMessage: result.message,
+              });
+            } catch {
+              setState((prev) => ({
+                ...prev,
+                step: 6,
+                bookingCode: result.bookingCode || null,
+                paymentMethod: 'VNPAY',
+                paymentStatus: result.status,
+                vnpayMessage: result.message,
+              }));
+            }
+          }
+          window.history.replaceState({}, document.title, window.location.pathname);
+        })
+        .catch(() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        });
+    }
+  }, [slug]);
 
   useEffect(() => {
     // Only focus the panel when user actively advances to a new step, preventing initial page scroll

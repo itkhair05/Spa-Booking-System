@@ -81,6 +81,9 @@ class DevDataSeederTest {
     @Autowired
     private com.example.spabooking.review.repository.ReviewRepository reviewRepository;
 
+    @Autowired
+    private com.example.spabooking.payment.repository.PaymentRepository paymentRepository;
+
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -95,6 +98,9 @@ class DevDataSeederTest {
         userRepository.findByUsername(DevDataSeeder.DEMO_OWNER_USERNAME).ifPresent(userRepository::delete);
         userRepository.findByUsername(DevDataSeeder.DEMO_STAFF_USERNAME).ifPresent(userRepository::delete);
         tenantRepository.findBySlug(DevDataSeeder.DEMO_TENANT_SLUG).ifPresent(t -> {
+            paymentRepository.findAllByTenantId(t.getId()).forEach(paymentRepository::delete);
+            paymentRepository.flush();
+
             bookingRepository.findAllByTenantId(t.getId()).forEach(bookingRepository::delete);
             bookingRepository.flush();
 

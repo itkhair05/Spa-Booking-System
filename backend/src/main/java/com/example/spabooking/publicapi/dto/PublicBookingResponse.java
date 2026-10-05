@@ -15,6 +15,9 @@ public class PublicBookingResponse {
     private LocalDateTime endTime;
     private String status;
     private BigDecimal price;
+    private String paymentMethod;
+    private String paymentStatus;
+    private String paymentUrl;
 
     public static PublicBookingResponse fromEntity(Booking booking) {
         PublicBookingResponse resp = new PublicBookingResponse();
@@ -30,6 +33,15 @@ public class PublicBookingResponse {
         resp.setPrice(booking.getPrice());
         return resp;
     }
+
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+
+    public String getPaymentUrl() { return paymentUrl; }
+    public void setPaymentUrl(String paymentUrl) { this.paymentUrl = paymentUrl; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

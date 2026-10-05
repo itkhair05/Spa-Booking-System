@@ -62,6 +62,7 @@ export interface CreatePublicBookingRequest {
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
+  paymentMethod?: 'PAY_AT_SPA' | 'VNPAY';
 }
 
 export interface PublicBookingResponse {
@@ -75,18 +76,44 @@ export interface PublicBookingResponse {
   endTime: string;
   status: string;
   price: number;
+  paymentMethod?: string;
+  paymentStatus?: string;
+  paymentUrl?: string | null;
 }
 
 export interface PublicBookingDetailResponse {
   bookingCode: string;
   status: string;
   serviceName: string;
+  categoryName?: string | null;
   durationMinutes: number;
   price: number;
   startTime: string;
   endTime: string;
   staffName: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string | null;
+  paymentMethod: string;
+  paymentStatus: string;
+  paidAmount?: number | null;
+  paidAt?: string | null;
   spaName: string;
   spaPhone: string;
   spaAddress: string;
+  spaEmail?: string | null;
+  serviceDescription?: string | null;
+  processSteps?: string | null;
+}
+
+export interface VNPayCallbackResult {
+  success: boolean;
+  message: string;
+  bookingCode?: string | null;
+  txnRef?: string | null;
+  amount?: number | null;
+  status?: string | null;
+  responseCode?: string | null;
+  transactionNo?: string | null;
+  paidAt?: string | null;
 }

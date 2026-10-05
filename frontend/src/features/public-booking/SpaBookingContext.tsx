@@ -15,6 +15,12 @@ export interface BookingState {
   bookingId: number | null; // set after success
   bookingCode: string | null;
   bookingStatus?: string | null;
+  paymentMethod: 'PAY_AT_SPA' | 'VNPAY';
+  paymentStatus?: string | null;
+  paymentUrl?: string | null;
+  paidAmount?: number | null;
+  paidAt?: string | null;
+  vnpayMessage?: string | null;
 }
 
 export interface SpaBookingContextType {

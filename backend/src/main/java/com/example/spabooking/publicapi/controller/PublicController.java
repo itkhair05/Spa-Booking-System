@@ -101,4 +101,11 @@ public class PublicController {
         com.example.spabooking.feedback.dto.FeedbackResponse response = feedbackService.submitPublicFeedback(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
+
+    @GetMapping("/payments/vnpay-callback")
+    public ResponseEntity<com.example.spabooking.payment.dto.VNPayCallbackResult> handleVNPayCallback(
+            @PathVariable String slug,
+            @RequestParam java.util.Map<String, String> allParams) {
+        return ResponseEntity.ok(publicBookingService.processVNPayCallback(allParams));
+    }
 }
