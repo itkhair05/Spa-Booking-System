@@ -1,8 +1,11 @@
 import api from './axios';
 import type { Customer, CreateCustomerRequest, UpdateCustomerRequest } from '../../types/customer';
 
-export const getCustomers = async (): Promise<Customer[]> => {
-  const response = await api.get<Customer[]>('/customers');
+export const getCustomers = async (search?: string, category?: string): Promise<Customer[]> => {
+  const params: Record<string, string> = {};
+  if (search && search.trim()) params.search = search.trim();
+  if (category && category.trim()) params.category = category.trim();
+  const response = await api.get<Customer[]>('/customers', { params });
   return response.data;
 };
 

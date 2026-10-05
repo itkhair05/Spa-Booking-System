@@ -29,21 +29,28 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
       return;
     }
 
+    const rawPhone = phone.trim();
+    const normalizedPhone = rawPhone.replace(/[\s.-]/g, '');
+    if (rawPhone && !/^0\d{9}$/.test(normalizedPhone)) {
+      setError('Số điện thoại phải gồm đúng 10 chữ số.');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
     try {
       if (customer) {
         const data: UpdateCustomerRequest = {
-          name,
-          phone: phone || undefined,
-          email: email || undefined,
+          name: name.trim(),
+          phone: normalizedPhone || undefined,
+          email: email.trim() || undefined,
         };
         await updateCustomer(customer.id, data);
       } else {
         const data: CreateCustomerRequest = {
-          name,
-          phone: phone || undefined,
-          email: email || undefined,
+          name: name.trim(),
+          phone: normalizedPhone || undefined,
+          email: email.trim() || undefined,
         };
         await createCustomer(data);
       }

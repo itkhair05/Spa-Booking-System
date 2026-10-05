@@ -157,9 +157,9 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
       setFbError('Vui lòng nhập họ và tên của bạn.');
       return;
     }
-    const cleanPhone = fbPhone.trim().replace(/\D/g, '');
-    if (cleanPhone.length < 10 || cleanPhone.length > 11) {
-      setFbError('Số điện thoại không hợp lệ (cần từ 10 - 11 chữ số).');
+    const cleanPhone = fbPhone.trim().replace(/[\s.-]/g, '');
+    if (!/^0\d{9}$/.test(cleanPhone)) {
+      setFbError('Số điện thoại phải gồm đúng 10 chữ số.');
       return;
     }
     if (!fbMessage.trim() || fbMessage.trim().length < 10) {
@@ -214,7 +214,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               <span className="font-serif-title font-bold text-lg text-[var(--color-champagne-500)] tracking-tight leading-tight whitespace-nowrap">
                 {spa.name}
               </span>
-              <span className="text-[10px] text-stone-500 uppercase tracking-widest font-semibold whitespace-nowrap">
+              <span className="text-[10px] text-stone-500 uppercase tracking-widest font-semibold whitespace-nowrap hidden sm:inline">
                 Spa & Chăm Sóc Sức Khỏe
               </span>
             </div>
@@ -621,7 +621,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-stone-200 overflow-hidden relative max-h-[90vh] flex flex-col text-left">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-stone-200 relative max-h-[90vh] overflow-y-auto flex flex-col text-left">
             <button
               type="button"
               onClick={() => setSelectedServiceDetail(null)}
@@ -661,7 +661,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               </div>
             </div>
 
-            <div className="overflow-y-auto space-y-5 pr-1 flex-1">
+            <div className="space-y-5 flex-1">
               {selectedServiceDetail.description && (
                 <div>
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-1.5">

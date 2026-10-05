@@ -606,4 +606,138 @@ public class PhaseB6PaymentSecurityIntegrationTest {
                         .header("Authorization", "Bearer " + ownerTokenA))
                 .andExpect(status().isOk());
     }
+
+    // =========================================================================
+    // 6. PHASE B.6.1 PHONE VALIDATION & ADMIN BOOKING DETAIL
+    // =========================================================================
+
+    @Test
+    @DisplayName("Public Booking: 10-digit phone accepted (even with formatting spaces)")
+    void testPublicBooking_Accepted10DigitsWithFormatting() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("serviceId", serviceA.getId());
+        payload.put("staffId", staffA.getId());
+        payload.put("startTime", LocalDateTime.now().plusDays(2).withHour(10).withMinute(0).toString());
+        payload.put("customerName", "Nguyen Van An");
+        payload.put("customerPhone", "0901 234 567");
+        payload.put("customerEmail", "an.nguyen@example.com");
+        payload.put("paymentMethod", "PAY_AT_SPA");
+
+        mockMvc.perform(post("/api/v1/public/spas/" + tenantA.getSlug() + "/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingCode", notNullValue()));
+
+        Customer savedCust = customerRepository.findByPhoneAndTenantId("0901234567", tenantA.getId()).orElse(null);
+        assertNotNull(savedCust, "Customer should be saved with normalized 10-digit phone");
+        assertEquals("0901234567", savedCust.getPhone());
+    }
+
+    @Test
+    @DisplayName("Public Booking: Reject 11-digit phone number")
+    void testPublicBooking_Reject11Digits() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("serviceId", serviceA.getId());
+        payload.put("staffId", staffA.getId());
+        payload.put("startTime", LocalDateTime.now().plusDays(2).withHour(10).withMinute(0).toString());
+        payload.put("customerName", "Nguyen Van An");
+        payload.put("customerPhone", "09012345678");
+        payload.put("customerEmail", "an.nguyen@example.com");
+        payload.put("paymentMethod", "PAY_AT_SPA");
+
+        mockMvc.perform(post("/api/v1/public/spas/" + tenantA.getSlug() + "/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.customerPhone", is("Số điện thoại phải gồm đúng 10 chữ số")));
+    }
+
+    @Test
+    @DisplayName("Public Booking: Reject fewer than 10 digits")
+    void testPublicBooking_RejectFewerThan10Digits() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("serviceId", serviceA.getId());
+        payload.put("staffId", staffA.getId());
+        payload.put("startTime", LocalDateTime.now().plusDays(2).withHour(10).withMinute(0).toString());
+        payload.put("customerName", "Nguyen Van An");
+        payload.put("customerPhone", "090123456");
+        payload.put("customerEmail", "an.nguyen@example.com");
+        payload.put("paymentMethod", "PAY_AT_SPA");
+
+        mockMvc.perform(post("/api/v1/public/spas/" + tenantA.getSlug() + "/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.customerPhone", is("Số điện thoại phải gồm đúng 10 chữ số")));
+    }
+
+    @Test
+    @DisplayName("Public Booking: Reject malformed phone (letters)")
+    void testPublicBooking_RejectMalformedPhone() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("serviceId", serviceA.getId());
+        payload.put("staffId", staffA.getId());
+        payload.put("startTime", LocalDateTime.now().plusDays(2).withHour(10).withMinute(0).toString());
+        payload.put("customerName", "Nguyen Van An");
+        payload.put("customerPhone", "0901abc567");
+        payload.put("customerEmail", "an.nguyen@example.com");
+        payload.put("paymentMethod", "PAY_AT_SPA");
+
+        mockMvc.perform(post("/api/v1/public/spas/" + tenantA.getSlug() + "/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.customerPhone", is("Số điện thoại phải gồm đúng 10 chữ số")));
+    }
+
+    @Test
+    @DisplayName("Admin Booking Detail: OWNER sees payment info, service process steps and category without exposing secrets")
+    void testAdminBookingDetail_OwnerSeesPaymentAndProcess() throws Exception {
+        Booking booking = new Booking();
+        booking.setTenant(tenantA);
+        Customer customer = createCustomer("VIP Customer", "0987654321", "vip@example.com", tenantA);
+        booking.setCustomer(customer);
+        booking.setService(serviceA);
+        booking.setStaff(staffA);
+        booking.setStartTime(LocalDateTime.now().plusDays(3).withHour(14).withMinute(0));
+        booking.setEndTime(booking.getStartTime().plusMinutes(75));
+        booking.setStatus(BookingStatus.CONFIRMED);
+        booking.setPrice(serviceA.getPrice());
+        booking.setBookingCode("BK-DETAIL-" + System.currentTimeMillis());
+        booking = bookingRepository.saveAndFlush(booking);
+
+        Payment payment = new Payment();
+        payment.setTenant(tenantA);
+        payment.setBooking(booking);
+        payment.setPaymentMethod(PaymentMethod.VNPAY);
+        payment.setProvider(PaymentProvider.VNPAY);
+        payment.setAmount(serviceA.getPrice());
+        payment.setStatus(PaymentStatus.PAID);
+        payment.setTxnRef("TXN-DETAIL-" + System.currentTimeMillis());
+        payment.setTransactionNo("14567890");
+        payment.setBankCode("NCB");
+        payment.setCardType("ATM");
+        payment.setPaidAt(LocalDateTime.now());
+        paymentRepository.saveAndFlush(payment);
+
+        mockMvc.perform(get("/api/v1/bookings/" + booking.getId())
+                        .header("Authorization", "Bearer " + ownerTokenA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingCode", is(booking.getBookingCode())))
+                .andExpect(jsonPath("$.status", is("CONFIRMED")))
+                .andExpect(jsonPath("$.categoryName", is("Chăm sóc trị liệu")))
+                .andExpect(jsonPath("$.serviceDescription", notNullValue()))
+                .andExpect(jsonPath("$.processSteps", notNullValue()))
+                .andExpect(jsonPath("$.paymentMethod", is("VNPAY")))
+                .andExpect(jsonPath("$.paymentProvider", is("VNPAY")))
+                .andExpect(jsonPath("$.paymentStatus", is("PAID")))
+                .andExpect(jsonPath("$.transactionNo", is("14567890")))
+                .andExpect(jsonPath("$.bankCode", is("NCB")))
+                .andExpect(jsonPath("$.cardType", is("ATM")))
+                .andExpect(jsonPath("$.paidAmount", is(450000.0)))
+                .andExpect(jsonPath("$.vnp_SecureHash").doesNotExist())
+                .andExpect(jsonPath("$.hashSecret").doesNotExist())
+                .andExpect(jsonPath("$.secretKey").doesNotExist());
+    }
 }

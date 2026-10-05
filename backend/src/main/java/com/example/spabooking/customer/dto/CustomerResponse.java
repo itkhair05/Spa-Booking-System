@@ -14,6 +14,8 @@ public class CustomerResponse {
     private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long totalBookings;
+    private LocalDateTime lastBookingAt;
 
     public static CustomerResponse fromEntity(Customer customer) {
         CustomerResponse response = new CustomerResponse();
@@ -25,6 +27,7 @@ public class CustomerResponse {
         response.setIsActive(customer.getIsActive());
         response.setCreatedAt(customer.getCreatedAt());
         response.setUpdatedAt(customer.getUpdatedAt());
+        response.setTotalBookings(0L);
         return response;
     }
 
@@ -52,4 +55,10 @@ public class CustomerResponse {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public Long getTotalBookings() { return totalBookings; }
+    public void setTotalBookings(Long totalBookings) { this.totalBookings = totalBookings; }
+
+    public LocalDateTime getLastBookingAt() { return lastBookingAt; }
+    public void setLastBookingAt(LocalDateTime lastBookingAt) { this.lastBookingAt = lastBookingAt; }
 }

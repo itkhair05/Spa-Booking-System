@@ -120,7 +120,7 @@ public class PublicApiControllerTest {
                 + "\"staffId\": 1,"
                 + "\"startTime\": \"2026-12-12T10:00:00\","
                 + "\"customerName\": \"Test Customer\","
-                + "\"customerPhone\": \"1234567890\""
+                + "\"customerPhone\": \"0912345678\""
                 + "}";
 
         // The service should not be found within the resolved tenant context, returning 404

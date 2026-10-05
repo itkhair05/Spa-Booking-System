@@ -27,6 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import com.example.spabooking.payment.entity.Payment;
+import com.example.spabooking.payment.repository.PaymentRepository;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -38,18 +41,21 @@ public class BookingService {
     private final StaffRepository staffRepository;
     private final ServiceRepository serviceRepository;
     private final TenantRepository tenantRepository;
+    private final PaymentRepository paymentRepository;
 
     @Autowired
     public BookingService(BookingRepository bookingRepository,
                           CustomerRepository customerRepository,
                           StaffRepository staffRepository,
                           ServiceRepository serviceRepository,
-                          TenantRepository tenantRepository) {
+                          TenantRepository tenantRepository,
+                          PaymentRepository paymentRepository) {
         this.bookingRepository = bookingRepository;
         this.customerRepository = customerRepository;
         this.staffRepository = staffRepository;
         this.serviceRepository = serviceRepository;
         this.tenantRepository = tenantRepository;
+        this.paymentRepository = paymentRepository;
     }
 
     @Transactional(readOnly = true)
@@ -110,7 +116,9 @@ public class BookingService {
         Booking booking = findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
         boolean isOwner = getCurrentUserDetails().map(CustomUserDetails::isOwner).orElse(false);
-        return BookingDetailResponse.fromEntity(booking, isOwner);
+        Long tenantId = TenantContext.requireTenantId();
+        Payment payment = paymentRepository.findByBookingIdAndTenantId(booking.getId(), tenantId).orElse(null);
+        return BookingDetailResponse.fromEntity(booking, payment, isOwner);
     }
 
     @Transactional
@@ -253,6 +261,9 @@ public class BookingService {
         }
 
         existingBooking.setStatus(target);
+        if (target == BookingStatus.COMPLETED && existingBooking.getCustomer() != null) {
+            existingBooking.getCustomer().setLastVisit(LocalDateTime.now());
+        }
         return bookingRepository.save(existingBooking);
     }
 

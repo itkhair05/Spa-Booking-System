@@ -13,6 +13,7 @@ import Articles from './pages/Articles';
 import ReviewsPage from './pages/Reviews';
 import Settings from './pages/Settings';
 import PublicBooking from './pages/PublicBooking';
+import BookingResultPage from './pages/BookingResultPage';
 
 /**
  * Ensures direct loads, reloads, and page navigation start at the top of the page
@@ -183,10 +184,11 @@ function App() {
             }
           />
 
-          {/* Public landing on root, tra-cuu, and dat-lich callback */}
+          {/* Public landing on root, tra-cuu, and dat-lich callback/ket-qua */}
           <Route path="/" element={<PublicBooking />} />
           <Route path="/tra-cuu" element={<PublicBooking />} />
-          <Route path="/dat-lich/callback" element={<PublicBooking />} />
+          <Route path="/dat-lich/callback" element={<BookingResultPage />} />
+          <Route path="/dat-lich/ket-qua" element={<BookingResultPage />} />
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />

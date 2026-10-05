@@ -151,7 +151,7 @@ public class CustomerControllerTest {
                 {
                     "name": "Charlie",
                     "email": "charlie@example.com",
-                    "phone": "555-0100"
+                    "phone": "0901234567"
                 }
                 """;
 
@@ -160,7 +160,8 @@ public class CustomerControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name", is("Charlie")));
+                .andExpect(jsonPath("$.name", is("Charlie")))
+                .andExpect(jsonPath("$.phone", is("0901234567")));
     }
 
     @Test
@@ -169,7 +170,7 @@ public class CustomerControllerTest {
                 {
                     "name": "Charlie",
                     "email": "charlie@example.com",
-                    "phone": "555-0100"
+                    "phone": "0901234567"
                 }
                 """;
 
@@ -186,7 +187,7 @@ public class CustomerControllerTest {
                 {
                     "name": "Alice Updated",
                     "email": "alice.updated@example.com",
-                    "phone": "123456789"
+                    "phone": "0987654321"
                 }
                 """;
 
@@ -203,7 +204,7 @@ public class CustomerControllerTest {
                 {
                     "name": "Alice Updated",
                     "email": "alice.updated@example.com",
-                    "phone": "123456789"
+                    "phone": "0987654321"
                 }
                 """;
 
@@ -212,7 +213,112 @@ public class CustomerControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name", is("Alice Updated")));
+                .andExpect(jsonPath("$.name", is("Alice Updated")))
+                .andExpect(jsonPath("$.phone", is("0987654321")));
+    }
+
+    @Test
+    void testPhoneValidation_Accepted10DigitsWithFormatting() throws Exception {
+        String requestJson = """
+                {
+                    "name": "Valid Phone User",
+                    "phone": "0901 234 567"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/customers")
+                        .header("Authorization", "Bearer " + ownerJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.phone", is("0901234567")));
+    }
+
+    @Test
+    void testPhoneValidation_Reject11Digits() throws Exception {
+        String requestJson = """
+                {
+                    "name": "Eleven Digits",
+                    "phone": "09012345678"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/customers")
+                        .header("Authorization", "Bearer " + ownerJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.phone", is("Số điện thoại phải gồm đúng 10 chữ số")));
+    }
+
+    @Test
+    void testPhoneValidation_RejectFewerThan10Digits() throws Exception {
+        String requestJson = """
+                {
+                    "name": "Short Phone",
+                    "phone": "090123456"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/customers")
+                        .header("Authorization", "Bearer " + ownerJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.phone", is("Số điện thoại phải gồm đúng 10 chữ số")));
+    }
+
+    @Test
+    void testPhoneValidation_RejectMalformed() throws Exception {
+        String requestJson = """
+                {
+                    "name": "Letters In Phone",
+                    "phone": "0901abc567"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/customers")
+                        .header("Authorization", "Bearer " + ownerJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.phone", is("Số điện thoại phải gồm đúng 10 chữ số")));
+    }
+
+    @Test
+    void testCustomerSearch_ByName() throws Exception {
+        mockMvc.perform(get("/api/v1/customers?search=ali")
+                        .header("Authorization", "Bearer " + ownerJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].name", is("Alice")));
+    }
+
+    @Test
+    void testCustomerSearch_ByPhone() throws Exception {
+        customerA.setPhone("0901234567");
+        customerRepository.saveAndFlush(customerA);
+
+        mockMvc.perform(get("/api/v1/customers?search=0901 234")
+                        .header("Authorization", "Bearer " + ownerJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].name", is("Alice")));
+    }
+
+    @Test
+    void testCustomerSearch_TenantIsolation() throws Exception {
+        // Bob belongs to tenant B
+        mockMvc.perform(get("/api/v1/customers?search=Bob")
+                        .header("Authorization", "Bearer " + ownerJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+
+        mockMvc.perform(get("/api/v1/customers?search=Bob")
+                        .header("Authorization", "Bearer " + ownerTenantBJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].name", is("Bob")));
     }
 
     @Test

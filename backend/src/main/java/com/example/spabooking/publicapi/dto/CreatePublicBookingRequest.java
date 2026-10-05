@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
+import jakarta.validation.constraints.Pattern;
+
 public class CreatePublicBookingRequest {
 
     @NotNull(message = "Service ID is required")
@@ -22,6 +24,7 @@ public class CreatePublicBookingRequest {
     private String customerName;
 
     @NotBlank(message = "Customer phone is required")
+    @Pattern(regexp = "^0\\d{9}$", message = "Số điện thoại phải gồm đúng 10 chữ số")
     private String customerPhone;
 
     @Email(message = "Invalid email format")
@@ -41,7 +44,9 @@ public class CreatePublicBookingRequest {
     public String getCustomerName() { return customerName; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
     public String getCustomerPhone() { return customerPhone; }
-    public void setCustomerPhone(String customerPhone) { this.customerPhone = customerPhone; }
+    public void setCustomerPhone(String customerPhone) {
+        this.customerPhone = customerPhone != null ? customerPhone.replaceAll("[\\s.-]", "") : null;
+    }
     public String getCustomerEmail() { return customerEmail; }
     public void setCustomerEmail(String customerEmail) { this.customerEmail = customerEmail; }
 }

@@ -11,16 +11,39 @@ import { getCustomers, deleteCustomer } from '../lib/api/customers';
 import { formatDateDMY } from '../lib/format';
 import type { Customer } from '../types/customer';
 import { CustomerForm } from './CustomerForm';
-import { Users, Trash2, Plus } from 'lucide-react';
+import {
+  Users,
+  Trash2,
+  Plus,
+  Search,
+  X,
+  Phone,
+  Mail,
+  CalendarCheck,
+  Clock
+} from 'lucide-react';
 import { useAuth } from '../app/auth/useAuth';
 
-const Customers = () => {
+type CustomerCategory = 'all' | 'new' | 'has_bookings' | 'recent';
+
+const CATEGORIES: { id: CustomerCategory; label: string; description: string }[] = [
+  { id: 'all', label: 'Tất cả', description: 'Toàn bộ danh bạ khách hàng' },
+  { id: 'new', label: 'Khách hàng mới', description: 'Mới tạo gần đây hoặc chưa có lịch hẹn' },
+  { id: 'has_bookings', label: 'Đã từng đặt lịch', description: 'Đã có ít nhất 1 cuộc hẹn' },
+  { id: 'recent', label: 'Hoạt động gần đây', description: 'Ghé spa hoặc đặt lịch trong 30 ngày qua' },
+];
+
+export default function Customers() {
   const { user } = useAuth();
   const isOwner = user?.roles?.includes('ROLE_OWNER');
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Search & Filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<CustomerCategory>('all');
 
   // Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -31,11 +54,11 @@ const Customers = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const fetchCustomers = useCallback(async () => {
+  const fetchCustomers = useCallback(async (search?: string, category?: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await getCustomers();
+      const data = await getCustomers(search, category);
       setCustomers(data);
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
@@ -45,12 +68,16 @@ const Customers = () => {
     }
   }, []);
 
+  // Initial load and whenever search or category changes
   useEffect(() => {
-    if (isOwner) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchCustomers();
-    }
-  }, [fetchCustomers, isOwner]);
+    if (!isOwner) return;
+
+    const timer = setTimeout(() => {
+      fetchCustomers(searchQuery, selectedCategory);
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [fetchCustomers, isOwner, searchQuery, selectedCategory]);
 
   if (!isOwner) {
     return (
@@ -81,11 +108,10 @@ const Customers = () => {
 
   const handleFormSuccess = () => {
     handleCloseForm();
-    fetchCustomers();
+    fetchCustomers(searchQuery, selectedCategory);
   };
 
   const handleDeleteClick = (customer: Customer) => {
-    if (!isOwner) return;
     setDeleteError(null);
     setDeletingCustomer(customer);
   };
@@ -97,10 +123,10 @@ const Customers = () => {
     try {
       await deleteCustomer(deletingCustomer.id);
       setDeletingCustomer(null);
-      fetchCustomers();
+      fetchCustomers(searchQuery, selectedCategory);
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      setDeleteError(errorObj.response?.data?.message || 'Không thể xóa khách hàng.');
+      setDeleteError(errorObj.response?.data?.message || 'Không thể xóa khách hàng vì còn lịch hẹn liên quan.');
     } finally {
       setIsDeleting(false);
     }
@@ -121,12 +147,21 @@ const Customers = () => {
     );
   }
 
+  // Generate initials for avatar
+  const getInitials = (name: string) => {
+    if (!name) return 'KH';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
   return (
     <AppShell title="Khách hàng">
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <PageHeader
           title="Quản lý Khách hàng"
-          description="Danh sách khách hàng đã từng sử dụng dịch vụ tại spa."
+          description="Hồ sơ khách hàng, lịch sử đặt hẹn và phân nhóm chăm sóc tại TIKEY SPA."
         />
         <Button onClick={() => handleOpenForm()}>
           <Plus size={16} />
@@ -134,11 +169,66 @@ const Customers = () => {
         </Button>
       </div>
 
+      {/* Search and Category Filter Section */}
+      <div className="space-y-4 mb-6">
+        {/* Search Bar */}
+        <div className="relative max-w-xl">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
+            <Search size={17} />
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tìm khách hàng theo tên hoặc số điện thoại..."
+            className="w-full pl-10 pr-10 py-2.5 bg-white border border-stone-200 rounded-xl text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#465d4c] focus:ring-1 focus:ring-[#465d4c] transition-all shadow-2xs"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-stone-400 hover:text-stone-700"
+              aria-label="Xóa tìm kiếm"
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
+
+        {/* Category Filter Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {CATEGORIES.map((cat) => {
+            const isActive = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                  isActive
+                    ? 'bg-stone-900 text-white shadow-2xs'
+                    : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+                }`}
+                title={cat.description}
+              >
+                <span>{cat.label}</span>
+                {isActive && !isLoading && (
+                  <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded-full">
+                    {customers.length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Loading State */}
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse" aria-busy="true">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i}>
-              <CardContent className="h-32 bg-[var(--color-neutral-100)] rounded-xl">
+              <CardContent className="h-40 bg-stone-100 rounded-xl p-5">
                 <div />
               </CardContent>
             </Card>
@@ -146,11 +236,13 @@ const Customers = () => {
         </div>
       )}
 
+      {/* Error State */}
       {error && !isLoading && (
-        <ErrorState message={error} onRetry={fetchCustomers} />
+        <ErrorState message={error} onRetry={() => fetchCustomers(searchQuery, selectedCategory)} />
       )}
 
-      {!isLoading && !error && customers.length === 0 && (
+      {/* Empty State - No customers at all */}
+      {!isLoading && !error && customers.length === 0 && !searchQuery && selectedCategory === 'all' && (
         <EmptyState
           icon={<Users size={22} />}
           title="Chưa có khách hàng"
@@ -164,62 +256,143 @@ const Customers = () => {
         />
       )}
 
+      {/* Empty State - Search / Filter Returned No Results */}
+      {!isLoading && !error && customers.length === 0 && (searchQuery || selectedCategory !== 'all') && (
+        <div className="bg-white border border-stone-200 rounded-2xl p-10 text-center max-w-md mx-auto my-6 shadow-2xs">
+          <Search size={32} className="text-stone-300 mx-auto mb-3" />
+          <h3 className="font-serif-title font-semibold text-stone-900 text-base mb-1">
+            Không tìm thấy khách hàng
+          </h3>
+          <p className="text-xs text-stone-500 mb-5 leading-relaxed">
+            {searchQuery
+              ? `Không có khách hàng nào phù hợp với từ khóa "${searchQuery}".`
+              : 'Chưa có khách hàng nào trong nhóm phân loại này.'}
+          </p>
+          <div className="flex justify-center gap-2">
+            {searchQuery && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setSearchQuery('')}
+              >
+                Xóa tìm kiếm
+              </Button>
+            )}
+            {selectedCategory !== 'all' && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setSelectedCategory('all')}
+              >
+                Xem tất cả
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Customer List - Mobile-first Responsive Cards */}
       {!isLoading && !error && customers.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {customers.map((customer) => (
-            <Card key={customer.id}>
-              <CardContent className="p-4 sm:p-5 flex flex-col h-full">
-                <div className="flex justify-between items-start gap-2 mb-2">
-                  <h4 className="font-semibold text-base text-[var(--color-neutral-900)]">{customer.name}</h4>
-                  {customer.isActive !== undefined && (
-                    <Badge tone={customer.isActive ? 'success' : 'neutral'}>
-                      {customer.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
-                    </Badge>
-                  )}
-                </div>
+          {customers.map((customer) => {
+            const hasBookings = (customer.totalBookings ?? 0) > 0;
+            return (
+              <Card key={customer.id} className="border-stone-200/80 hover:border-stone-300 transition-all shadow-2xs">
+                <CardContent className="p-4 sm:p-5 flex flex-col h-full space-y-3.5">
+                  {/* Card Header: Avatar + Name + Badges */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-700 font-semibold text-xs flex items-center justify-center shrink-0 border border-stone-200/60">
+                        {getInitials(customer.name)}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-semibold text-sm text-stone-900 truncate" title={customer.name}>
+                          {customer.name}
+                        </h4>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className={`inline-flex items-center text-[10px] font-medium px-2 py-0.2 rounded-md ${
+                            hasBookings
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200/60'
+                              : 'bg-stone-100 text-stone-600 border border-stone-200/60'
+                          }`}>
+                            {hasBookings
+                              ? `${customer.totalBookings} cuộc hẹn`
+                              : 'Khách mới'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="text-sm text-[var(--color-neutral-600)] space-y-1 mb-4 grow">
-                  {customer.phone && (
-                    <p>
-                      <span className="text-[var(--color-neutral-500)]">Số điện thoại: </span>
-                      {customer.phone}
-                    </p>
-                  )}
-                  {customer.email && (
-                    <p className="break-all">
-                      <span className="text-[var(--color-neutral-500)]">Email: </span>
-                      {customer.email}
-                    </p>
-                  )}
-                  {customer.lastVisit && (
-                    <p>
-                      <span className="text-[var(--color-neutral-500)]">Lần ghé gần nhất: </span>
-                      {formatDateDMY(customer.lastVisit)}
-                    </p>
-                  )}
-                </div>
+                    {customer.isActive !== undefined && (
+                      <Badge tone={customer.isActive ? 'success' : 'neutral'}>
+                        {customer.isActive ? 'Hoạt động' : 'Ngừng'}
+                      </Badge>
+                    )}
+                  </div>
 
-                <div className="mt-auto flex items-center justify-end gap-2 pt-3 border-t border-[var(--color-neutral-100)]">
-                  <Button variant="secondary" size="sm" onClick={() => handleOpenForm(customer)}>
-                    Chỉnh sửa
-                  </Button>
-                  {isOwner && (
+                  {/* Contact Info */}
+                  <div className="text-xs text-stone-600 space-y-1.5 bg-stone-50/70 p-3 rounded-xl border border-stone-100 grow">
+                    {customer.phone ? (
+                      <p className="flex items-center gap-2">
+                        <Phone size={13} className="text-stone-400 shrink-0" />
+                        <a href={`tel:${customer.phone}`} className="hover:text-stone-900 font-medium">
+                          {customer.phone}
+                        </a>
+                      </p>
+                    ) : (
+                      <p className="flex items-center gap-2 text-stone-400">
+                        <Phone size={13} className="shrink-0" /> Chưa có số điện thoại
+                      </p>
+                    )}
+
+                    {customer.email ? (
+                      <p className="flex items-center gap-2 truncate" title={customer.email}>
+                        <Mail size={13} className="text-stone-400 shrink-0" />
+                        <a href={`mailto:${customer.email}`} className="hover:text-stone-900 truncate">
+                          {customer.email}
+                        </a>
+                      </p>
+                    ) : null}
+
+                    {customer.lastVisit ? (
+                      <p className="flex items-center gap-2 text-[11px] text-stone-500 pt-1 border-t border-stone-200/50">
+                        <Clock size={12} className="text-stone-400 shrink-0" />
+                        Lần ghé gần nhất: <strong>{formatDateDMY(customer.lastVisit)}</strong>
+                      </p>
+                    ) : customer.lastBookingAt ? (
+                      <p className="flex items-center gap-2 text-[11px] text-stone-500 pt-1 border-t border-stone-200/50">
+                        <CalendarCheck size={12} className="text-stone-400 shrink-0" />
+                        Lịch hẹn gần nhất: <strong>{formatDateDMY(customer.lastBookingAt)}</strong>
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-stone-400 pt-1 border-t border-stone-200/50">
+                        Chưa có lịch sử ghé spa
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="mt-auto flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
+                    <Button variant="secondary" size="sm" onClick={() => handleOpenForm(customer)}>
+                      Chỉnh sửa
+                    </Button>
                     <Button
                       variant="danger-outline"
                       size="sm"
                       onClick={() => handleDeleteClick(customer)}
                       aria-label={`Xóa khách hàng ${customer.name}`}
                     >
-                      <Trash2 size={16} aria-hidden="true" />
+                      <Trash2 size={15} aria-hidden="true" />
                     </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
+      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={deletingCustomer !== null}
         title="Xóa khách hàng?"
@@ -238,6 +411,4 @@ const Customers = () => {
       />
     </AppShell>
   );
-};
-
-export default Customers;
+}
