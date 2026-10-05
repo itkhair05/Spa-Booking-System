@@ -27,6 +27,11 @@ public class CreatePublicBookingRequest {
     @Email(message = "Invalid email format")
     private String customerEmail;
 
+    private String paymentMethod;
+
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
     public Long getServiceId() { return serviceId; }
     public void setServiceId(Long serviceId) { this.serviceId = serviceId; }
     public Long getStaffId() { return staffId; }

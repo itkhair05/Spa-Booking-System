@@ -183,9 +183,10 @@ function App() {
             }
           />
 
-          {/* Public landing on root and tra-cuu */}
+          {/* Public landing on root, tra-cuu, and dat-lich callback */}
           <Route path="/" element={<PublicBooking />} />
           <Route path="/tra-cuu" element={<PublicBooking />} />
+          <Route path="/dat-lich/callback" element={<PublicBooking />} />
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />

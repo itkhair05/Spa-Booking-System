@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useSpaBooking } from './SpaBookingContext';
-import { formatDateLongFromYMD } from '../../lib/format';
-import { CheckCircle2, Calendar, MapPin, Copy, Check, Search, RotateCcw, CalendarPlus, Bell } from 'lucide-react';
+import { formatCurrency, formatDateLongFromYMD } from '../../lib/format';
+import { CheckCircle2, Calendar, MapPin, Copy, Check, Search, RotateCcw, CalendarPlus, Bell, CreditCard, Banknote } from 'lucide-react';
 
 export function StepSuccess() {
   const { spa, state, handleRestart } = useSpaBooking();
-  const { service, staff, date, time, customer, bookingCode, bookingId } = state;
+  const { service, staff, date, time, customer, bookingCode, bookingId, paymentMethod, paymentStatus } = state;
   const [copied, setCopied] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderMessage, setReminderMessage] = useState<string | null>(null);
@@ -95,6 +95,10 @@ export function StepSuccess() {
     }
   };
 
+  const isVnPay = paymentMethod === 'VNPAY';
+  const isPaid = paymentStatus === 'PAID';
+  const isCancelledOrFailed = paymentStatus === 'CANCELLED' || paymentStatus === 'FAILED';
+
   return (
     <div className="text-center py-6 sm:py-8" role="status">
       <div className="w-16 h-16 bg-[#edf7f2] rounded-full flex items-center justify-center mx-auto mb-5 shadow-sm border border-[#b7e4c7]">
@@ -107,10 +111,13 @@ export function StepSuccess() {
       <p className="text-stone-600 mb-1">
         Cảm ơn <span className="font-semibold text-stone-900">{customer.name}</span>. Yêu cầu đặt lịch của bạn đã được ghi nhận.
       </p>
-      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium my-3">
+
+      {/* Appointment Confirmation Badge */}
+      <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium my-3">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
         Trạng thái: Chờ xác nhận (PENDING)
       </div>
+
       <p className="text-sm text-stone-500 max-w-md mx-auto mb-6">
         TIKEY SPA sẽ kiểm tra và liên hệ số điện thoại <span className="font-medium text-stone-700">{customer.phone}</span> để xác nhận lịch hẹn của bạn.
       </p>
@@ -127,7 +134,7 @@ export function StepSuccess() {
           <button
             type="button"
             onClick={handleCopyCode}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl bg-white border border-stone-200 text-stone-700 hover:bg-stone-100 hover:text-stone-900 transition-colors shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl bg-white border border-stone-200 text-stone-700 hover:bg-stone-100 hover:text-stone-900 transition-colors shadow-xs cursor-pointer"
             aria-label="Sao chép mã tra cứu"
           >
             {copied ? (
@@ -145,6 +152,17 @@ export function StepSuccess() {
         </div>
 
         <div className="pt-4 space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="text-xs text-stone-500 block">Dịch vụ</span>
+              <p className="font-medium text-stone-900">{service.name}</p>
+            </div>
+            <div className="text-right">
+              <span className="text-xs text-stone-500 block">Số tiền</span>
+              <p className="font-semibold text-[#8a704c]">{formatCurrency(service.price)}</p>
+            </div>
+          </div>
+
           <div className="flex items-start gap-3">
             <Calendar className="w-4 h-4 text-stone-400 mt-1 shrink-0" aria-hidden="true" />
             <div>
@@ -161,9 +179,45 @@ export function StepSuccess() {
             </div>
           </div>
 
+          {/* Authoritative Payment Details */}
+          <div className="pt-3 border-t border-stone-200/80 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-stone-500 flex items-center gap-1.5">
+                {isVnPay ? <CreditCard className="w-3.5 h-3.5 text-blue-600" /> : <Banknote className="w-3.5 h-3.5 text-stone-500" />}
+                Phương thức:
+              </span>
+              <span className="font-medium text-stone-800">
+                {isVnPay ? 'VNPay (Sandbox)' : 'Thanh toán tại spa'}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-stone-500">Trạng thái thanh toán:</span>
+              <div>
+                {isPaid ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    Đã thanh toán
+                  </span>
+                ) : isCancelledOrFailed ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                    Thanh toán thất bại / Đã hủy
+                  </span>
+                ) : isVnPay ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                    Đang xử lý
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-stone-100 text-stone-700 border border-stone-200">
+                    Chưa thanh toán
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="pt-2 text-xs border-t border-stone-200/80 flex justify-between items-center text-stone-600">
-            <span>Dịch vụ: <strong className="text-stone-800">{service.name}</strong></span>
-            <span>KTV: <strong className="text-stone-800">{staff.name}</strong></span>
+            <span>Kỹ thuật viên:</span>
+            <strong className="text-stone-800">{staff.name}</strong>
           </div>
         </div>
       </div>

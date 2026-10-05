@@ -289,78 +289,134 @@ export function StepServices() {
         })}
       </div>
 
-      {/* Service Detail / Steps Modal */}
+      {/* Premium Treatment Detail Sheet / Process UX */}
       {previewService && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-stone-900/60 backdrop-blur-xs transition-opacity duration-200"
           role="dialog"
           aria-modal="true"
+          aria-labelledby="treatment-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPreviewService(null);
+          }}
         >
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 overflow-hidden relative max-h-[90vh] flex flex-col">
-            <button
-              type="button"
-              onClick={() => setPreviewService(null)}
-              className="absolute top-4 right-4 p-2 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
-              aria-label="Đóng"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-stone-200/80 overflow-hidden relative max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            {/* Header Banner / Visual Anchor */}
+            <div className="relative bg-gradient-to-br from-stone-100 via-amber-50/40 to-stone-50 p-5 sm:p-6 border-b border-stone-200/70">
+              <button
+                type="button"
+                onClick={() => setPreviewService(null)}
+                className="absolute top-4 right-4 p-2 rounded-full text-stone-400 hover:text-stone-700 hover:bg-white/80 transition-colors cursor-pointer shadow-2xs"
+                aria-label="Đóng chi tiết"
+              >
+                <X className="w-5 h-5" />
+              </button>
 
-            <div className="flex items-center gap-3 mb-4">
-              {previewService.imageUrl && (
-                <img
-                  src={previewService.imageUrl}
-                  alt={previewService.name}
-                  className="w-14 h-14 rounded-2xl object-cover border border-stone-200 shrink-0"
-                />
-              )}
-              <div>
-                <h3 className="text-lg font-serif-title font-medium text-stone-900">{previewService.name}</h3>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-sm font-semibold text-[#8a704c]">
-                    {formatCurrency(previewService.price)}
+              <div className="flex flex-wrap items-center gap-2 mb-2.5">
+                {previewService.categoryName && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#465d4c]/10 text-[#465d4c] tracking-wide uppercase">
+                    {previewService.categoryName}
                   </span>
-                  <span className="text-xs text-stone-400">•</span>
-                  <span className="text-xs text-stone-500">{previewService.durationMinutes} phút</span>
+                )}
+                {previewService.isFeatured && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100/80 text-amber-800 tracking-wide uppercase">
+                    <Sparkles className="w-3 h-3 text-amber-600" />
+                    Liệu trình nổi bật
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-4 items-start">
+                {previewService.imageUrl && (
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 bg-stone-200 border border-stone-300/60 shadow-xs">
+                    <img
+                      src={previewService.imageUrl}
+                      alt={previewService.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0 pr-6">
+                  <h3 id="treatment-modal-title" className="text-lg sm:text-xl font-serif-title font-medium text-stone-900 leading-snug">
+                    {previewService.name}
+                  </h3>
+
+                  <div className="flex flex-wrap items-baseline gap-3 mt-2">
+                    <span className="text-lg sm:text-xl font-bold text-[#8a704c]">
+                      {formatCurrency(previewService.price)}
+                    </span>
+                    <span className="inline-flex items-center text-xs font-medium text-stone-600 bg-white/90 px-2.5 py-1 rounded-lg border border-stone-200 shadow-2xs">
+                      <Clock className="w-3.5 h-3.5 mr-1 text-stone-400" />
+                      {previewService.durationMinutes} phút
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="overflow-y-auto space-y-4 pr-1 text-left flex-1">
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto p-5 sm:p-6 space-y-5 text-left flex-1">
+              {/* Short Description */}
               {previewService.description && (
-                <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-1">Mô tả liệu trình</h4>
-                  <p className="text-sm text-stone-600 leading-relaxed">{previewService.description}</p>
+                <div className="bg-stone-50/80 p-4 rounded-2xl border border-stone-100">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#8a704c]" />
+                    Mô tả liệu trình
+                  </h4>
+                  <p className="text-xs sm:text-sm text-stone-700 leading-relaxed font-sans">
+                    {previewService.description}
+                  </p>
                 </div>
               )}
 
+              {/* Numbered Process Steps */}
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-2">Quy trình thực hiện</h4>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-stone-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#465d4c]" />
+                    Quy trình trị liệu tiêu chuẩn ({parseProcessSteps(previewService.processSteps).length} bước)
+                  </h4>
+                  <span className="text-[11px] text-stone-400 italic">Chuẩn quy chuẩn TIKEY SPA</span>
+                </div>
+
                 {parseProcessSteps(previewService.processSteps).length > 0 ? (
-                  <ol className="space-y-2">
+                  <div className="space-y-2.5">
                     {parseProcessSteps(previewService.processSteps).map((step, idx) => (
-                      <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-stone-700 bg-stone-50 p-2.5 rounded-xl border border-stone-100">
-                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#465d4c] text-white text-[11px] font-semibold shrink-0 mt-0.5">
+                      <div
+                        key={idx}
+                        className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-stone-200/80 hover:border-stone-300 transition-colors shadow-2xs"
+                      >
+                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#465d4c] text-white text-xs font-semibold shrink-0 mt-0.5 shadow-2xs">
                           {idx + 1}
                         </span>
-                        <span className="leading-snug">{step.replace(/^\d+[.\s]*/, '')}</span>
-                      </li>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-stone-800 leading-snug">
+                            {step.replace(/^\d+[.\s]*/, '')}
+                          </p>
+                        </div>
+                      </div>
                     ))}
-                  </ol>
+                  </div>
                 ) : (
-                  <p className="text-xs text-stone-500 italic">Quy trình chuẩn hóa chuyên sâu theo tiêu chuẩn TIKEY SPA.</p>
+                  <div className="p-4 rounded-2xl bg-stone-50 text-center border border-stone-100">
+                    <p className="text-xs text-stone-500 italic">
+                      Liệu trình được thực hiện theo phác đồ độc quyền TIKEY SPA, phối hợp thảo dược tự nhiên và kỹ thuật viên chuyên nghiệp.
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
 
-            <div className="pt-4 mt-4 border-t border-stone-100 flex items-center justify-end gap-2">
+            {/* Footer Action Bar */}
+            <div className="p-4 sm:p-5 bg-stone-50/90 border-t border-stone-200/80 flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => setPreviewService(null)}
-                className="px-4 py-2 text-xs font-medium rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50"
+                className="px-4 py-2.5 text-xs sm:text-sm font-medium rounded-xl border border-stone-200 bg-white text-stone-600 hover:bg-stone-100 hover:text-stone-900 transition-colors cursor-pointer"
               >
                 Đóng
               </button>
+
               <button
                 type="button"
                 onClick={() => {
@@ -368,9 +424,10 @@ export function StepServices() {
                   setPreviewService(null);
                   handleSelect(s);
                 }}
-                className="px-5 py-2 text-xs font-medium rounded-xl bg-[#465d4c] text-white hover:bg-[#374a3c] transition-colors shadow-xs"
+                className="px-6 py-2.5 text-xs sm:text-sm font-semibold rounded-xl bg-[#465d4c] text-white hover:bg-[#374a3c] transition-colors shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
               >
-                Chọn dịch vụ này
+                <span>Đặt lịch ngay</span>
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>

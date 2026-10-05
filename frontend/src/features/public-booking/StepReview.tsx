@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSpaBooking } from './SpaBookingContext';
 import { createPublicBooking } from '../../lib/api/publicBooking';
 import { formatCurrency, formatDateLongFromYMD } from '../../lib/format';
-import { ArrowLeft, User, Calendar, AlertCircle, FileText, CheckCircle2, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, Calendar, AlertCircle, FileText, CheckCircle2, Loader2, CreditCard, Banknote } from 'lucide-react';
 import type { CreatePublicBookingRequest } from '../../types/publicBooking';
 
 export function StepReview() {
@@ -38,6 +38,7 @@ export function StepReview() {
       customerName: customer.name,
       customerPhone: customer.phone,
       customerEmail: customer.email || undefined,
+      paymentMethod: state.paymentMethod || 'PAY_AT_SPA',
     };
 
     try {
@@ -46,7 +47,17 @@ export function StepReview() {
         bookingId: response.id,
         bookingCode: response.bookingCode,
         bookingStatus: response.status,
+        paymentStatus: response.paymentStatus,
+        paymentUrl: response.paymentUrl,
+        paidAmount: response.price,
       });
+
+      // If VNPay sandbox payment selected and URL returned, redirect customer to VNPay
+      if (state.paymentMethod === 'VNPAY' && response.paymentUrl) {
+        window.location.href = response.paymentUrl;
+        return;
+      }
+
       setStep(6);
     } catch (err: unknown) {
       const e = err as { response?: { status: number } };
@@ -155,6 +166,79 @@ export function StepReview() {
               </div>
             )}
           </dl>
+        </div>
+
+        {/* Payment Method Selector */}
+        <div className="bg-stone-50 rounded-2xl p-5 sm:p-6 border border-stone-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-stone-400 uppercase tracking-wider">
+              Phương thức thanh toán
+            </h3>
+            <span className="text-xs text-stone-400">Chọn 1 trong 2 phương thức</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Pay at Spa */}
+            <label
+              className={`relative flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                state.paymentMethod === 'PAY_AT_SPA'
+                  ? 'bg-white border-[#465d4c] ring-2 ring-[#465d4c]/15 shadow-2xs'
+                  : 'bg-white/70 border-stone-200 hover:border-stone-300'
+              }`}
+            >
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="PAY_AT_SPA"
+                checked={state.paymentMethod === 'PAY_AT_SPA'}
+                onChange={() => updateState({ paymentMethod: 'PAY_AT_SPA' })}
+                className="mt-1 text-[#465d4c] focus:ring-[#465d4c]"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <span className="font-medium text-stone-900 text-sm flex items-center gap-1.5">
+                    <Banknote className="w-4 h-4 text-stone-500" />
+                    Thanh toán tại spa
+                  </span>
+                </div>
+                <p className="text-xs text-stone-500 leading-relaxed">
+                  Thanh toán bằng tiền mặt hoặc thẻ trực tiếp khi đến làm dịch vụ tại cơ sở spa.
+                </p>
+              </div>
+            </label>
+
+            {/* VNPay Sandbox */}
+            <label
+              className={`relative flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                state.paymentMethod === 'VNPAY'
+                  ? 'bg-white border-[#465d4c] ring-2 ring-[#465d4c]/15 shadow-2xs'
+                  : 'bg-white/70 border-stone-200 hover:border-stone-300'
+              }`}
+            >
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="VNPAY"
+                checked={state.paymentMethod === 'VNPAY'}
+                onChange={() => updateState({ paymentMethod: 'VNPAY' })}
+                className="mt-1 text-[#465d4c] focus:ring-[#465d4c]"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <span className="font-medium text-stone-900 text-sm flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4 text-blue-600" />
+                    VNPay
+                  </span>
+                  <span className="text-[10px] uppercase font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full">
+                    Sandbox
+                  </span>
+                </div>
+                <p className="text-xs text-stone-500 leading-relaxed">
+                  Chuyển hướng cổng VNPay Sandbox để thanh toán trực tuyến thử nghiệm (ATM / QR / Thẻ).
+                </p>
+              </div>
+            </label>
+          </div>
         </div>
 
         <div className="pt-4 flex flex-col sm:flex-row gap-4 items-center">

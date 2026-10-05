@@ -38,6 +38,9 @@ public class PublicBookingService {
     private final BookingRepository bookingRepository;
     private final com.example.spabooking.article.service.ArticleService articleService;
     private final com.example.spabooking.review.service.ReviewService reviewService;
+    private final com.example.spabooking.payment.service.PaymentService paymentService;
+    private final com.example.spabooking.payment.repository.PaymentRepository paymentRepository;
+    private final com.example.spabooking.payment.service.VNPayService vnPayService;
 
     @Autowired
     public PublicBookingService(TenantRepository tenantRepository,
@@ -48,7 +51,10 @@ public class PublicBookingService {
                                 BookingService bookingService,
                                 BookingRepository bookingRepository,
                                 com.example.spabooking.article.service.ArticleService articleService,
-                                com.example.spabooking.review.service.ReviewService reviewService) {
+                                com.example.spabooking.review.service.ReviewService reviewService,
+                                com.example.spabooking.payment.service.PaymentService paymentService,
+                                com.example.spabooking.payment.repository.PaymentRepository paymentRepository,
+                                com.example.spabooking.payment.service.VNPayService vnPayService) {
         this.tenantRepository = tenantRepository;
         this.serviceRepository = serviceRepository;
         this.serviceCategoryRepository = serviceCategoryRepository;
@@ -58,6 +64,9 @@ public class PublicBookingService {
         this.bookingRepository = bookingRepository;
         this.articleService = articleService;
         this.reviewService = reviewService;
+        this.paymentService = paymentService;
+        this.paymentRepository = paymentRepository;
+        this.vnPayService = vnPayService;
     }
 
     public PublicSpaInfoResponse getSpaInfo() {
@@ -228,7 +237,31 @@ public class PublicBookingService {
         internalRequest.setEndTime(request.getStartTime().plusMinutes(service.getDurationMinutes()));
 
         Booking booking = bookingService.create(internalRequest);
-        return PublicBookingResponse.fromEntity(booking);
+
+        // Process payment
+        com.example.spabooking.payment.enums.PaymentMethod method =
+                "VNPAY".equalsIgnoreCase(request.getPaymentMethod())
+                        ? com.example.spabooking.payment.enums.PaymentMethod.VNPAY
+                        : com.example.spabooking.payment.enums.PaymentMethod.PAY_AT_SPA;
+
+        com.example.spabooking.payment.enums.PaymentProvider provider =
+                (method == com.example.spabooking.payment.enums.PaymentMethod.VNPAY)
+                        ? com.example.spabooking.payment.enums.PaymentProvider.VNPAY
+                        : com.example.spabooking.payment.enums.PaymentProvider.LOCAL;
+
+        com.example.spabooking.payment.entity.Payment payment =
+                paymentService.createPaymentForBooking(booking, method, provider);
+
+        PublicBookingResponse response = PublicBookingResponse.fromEntity(booking);
+        response.setPaymentMethod(payment.getPaymentMethod().name());
+        response.setPaymentStatus(payment.getStatus().name());
+
+        if (method == com.example.spabooking.payment.enums.PaymentMethod.VNPAY) {
+            String paymentUrl = vnPayService.createPaymentUrl(payment, null, null, null);
+            response.setPaymentUrl(paymentUrl);
+        }
+
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -236,6 +269,13 @@ public class PublicBookingService {
         Long tenantId = TenantContext.requireTenantId();
         Booking booking = bookingRepository.findByBookingCodeAndTenantId(bookingCode, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
-        return PublicBookingDetailResponse.fromEntity(booking);
+        com.example.spabooking.payment.entity.Payment payment =
+                paymentRepository.findByBookingIdAndTenantId(booking.getId(), tenantId).orElse(null);
+        return PublicBookingDetailResponse.fromEntity(booking, payment);
+    }
+
+    @Transactional
+    public com.example.spabooking.payment.dto.VNPayCallbackResult processVNPayCallback(java.util.Map<String, String> params) {
+        return paymentService.processVNPayCallback(params);
     }
 }
