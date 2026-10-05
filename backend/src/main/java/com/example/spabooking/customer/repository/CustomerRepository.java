@@ -23,4 +23,15 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     Optional<Customer> findByIdAndTenantIdAndIsActiveTrueForUpdate(@org.springframework.data.repository.query.Param("id") Long id, @org.springframework.data.repository.query.Param("tenantId") Long tenantId);
 
     Optional<Customer> findByPhoneAndTenantId(String phone, Long tenantId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT c FROM Customer c WHERE c.tenant.id = :tenantId AND c.isActive = true " +
+           "AND (:query IS NULL OR :query = '' " +
+           "     OR LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           "     OR LOWER(c.email) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           "     OR (:digitsOnly != '' AND REPLACE(REPLACE(REPLACE(c.phone, ' ', ''), '-', ''), '.', '') LIKE CONCAT('%', :digitsOnly, '%')) " +
+           "     OR (:query IS NOT NULL AND c.phone LIKE CONCAT('%', :query, '%'))) " +
+           "ORDER BY c.id DESC")
+    List<Customer> searchCustomers(@org.springframework.data.repository.query.Param("tenantId") Long tenantId,
+                                   @org.springframework.data.repository.query.Param("query") String query,
+                                   @org.springframework.data.repository.query.Param("digitsOnly") String digitsOnly);
 }

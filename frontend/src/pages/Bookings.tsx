@@ -29,7 +29,9 @@ import {
   Mail,
   AlertCircle,
   Copy,
-  Check
+  Check,
+  CreditCard,
+  Sparkles
 } from 'lucide-react';
 
 const STATUS_CONFIG: Record<BookingStatus, { label: string; tone: BadgeTone }> = {
@@ -139,6 +141,20 @@ const Bookings = () => {
     setSelectedStaffId(booking.staffId || null);
     setAssignError(null);
     await loadStaffForAssignment();
+  };
+
+  const parseSteps = (stepsStr?: string | null): string[] => {
+    if (!stepsStr) return [];
+    try {
+      const parsed = JSON.parse(stepsStr);
+      if (Array.isArray(parsed)) return parsed.map(String);
+    } catch {
+      return stepsStr
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    return [];
   };
 
   const handleConfirmAssign = async (e: React.FormEvent) => {
@@ -485,87 +501,223 @@ const Bookings = () => {
 
       {/* Booking Detail Modal */}
       {(detailBooking || detailLoading) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-stone-200 max-w-lg w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl border border-stone-200 max-w-xl w-full p-6 sm:p-7 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <button
               type="button"
               onClick={() => setDetailBooking(null)}
-              className="absolute right-4 top-4 text-stone-400 hover:text-stone-700 p-1.5 rounded-lg"
+              className="absolute right-4 top-4 text-stone-400 hover:text-stone-700 p-2 rounded-xl hover:bg-stone-100 transition-colors"
               aria-label="Đóng"
             >
               <X size={18} />
             </button>
 
             {detailLoading ? (
-              <div className="py-12 text-center text-sm text-stone-500">Đang tải chi tiết cuộc hẹn...</div>
+              <div className="py-16 text-center text-sm text-stone-500">Đang tải chi tiết cuộc hẹn...</div>
             ) : detailBooking && (
-              <div className="space-y-5">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-serif-title font-semibold text-lg text-stone-900">
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="pr-8">
+                  <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                    <h3 className="font-serif-title font-semibold text-xl text-stone-900">
                       Chi tiết lịch hẹn
                     </h3>
                     <Badge tone={STATUS_CONFIG[detailBooking.status].tone}>
                       {STATUS_CONFIG[detailBooking.status].label}
                     </Badge>
                   </div>
-                  {detailBooking.bookingCode && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-mono text-stone-500">Mã: {detailBooking.bookingCode}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyCode(detailBooking.bookingCode!)}
-                        className="text-stone-400 hover:text-stone-700 p-1"
-                        title="Sao chép mã"
-                      >
-                        {copiedCode ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Customer Information */}
-                <div className="bg-stone-50 p-4 rounded-xl border border-stone-100 space-y-2">
-                  <span className="text-[11px] uppercase font-bold text-stone-400 tracking-wider">Thông tin khách hàng</span>
-                  <p className="font-semibold text-stone-900 text-sm">{detailBooking.customerName}</p>
-                  {detailBooking.customerPhone && (
-                    <p className="text-xs text-stone-600 flex items-center gap-1.5">
-                      <Phone size={13} className="text-stone-400" />
-                      <a href={`tel:${detailBooking.customerPhone}`} className="hover:underline">{detailBooking.customerPhone}</a>
-                    </p>
-                  )}
-                  {detailBooking.customerEmail && (
-                    <p className="text-xs text-stone-600 flex items-center gap-1.5">
-                      <Mail size={13} className="text-stone-400" />
-                      <span>{detailBooking.customerEmail}</span>
-                    </p>
-                  )}
-                </div>
-
-                {/* Service & Staff */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-stone-50 rounded-xl border border-stone-100">
-                    <span className="text-[11px] uppercase font-bold text-stone-400 tracking-wider">Dịch vụ</span>
-                    <p className="font-semibold text-stone-900 text-xs mt-1">{detailBooking.serviceName}</p>
-                    <p className="text-xs text-[#465d4c] font-medium mt-0.5">{formatCurrency(detailBooking.price)}</p>
-                  </div>
-
-                  <div className="p-3 bg-stone-50 rounded-xl border border-stone-100">
-                    <span className="text-[11px] uppercase font-bold text-stone-400 tracking-wider">Kỹ thuật viên</span>
-                    <p className="font-semibold text-stone-900 text-xs mt-1">{detailBooking.staffName}</p>
-                    {detailBooking.staffPhone && (
-                      <p className="text-[11px] text-stone-500 mt-0.5">{detailBooking.staffPhone}</p>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500">
+                    {detailBooking.bookingCode && (
+                      <span className="flex items-center gap-1 font-mono">
+                        Mã: <strong className="text-stone-800">{detailBooking.bookingCode}</strong>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCode(detailBooking.bookingCode!)}
+                          className="text-stone-400 hover:text-stone-700 p-0.5 rounded transition-colors"
+                          title="Sao chép mã"
+                        >
+                          {copiedCode ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                        </button>
+                      </span>
+                    )}
+                    {detailBooking.createdAt && (
+                      <span>Tạo lúc: {new Date(detailBooking.createdAt).toLocaleString('vi-VN')}</span>
                     )}
                   </div>
                 </div>
 
-                {/* Time & Schedule */}
-                <div className="p-3 bg-stone-50 rounded-xl border border-stone-100 flex items-center gap-2.5 text-xs text-stone-700">
-                  <Clock size={15} className="text-[#465d4c]" />
-                  <span>Thời gian: <strong>{formatTimeRange(detailBooking.startTime, detailBooking.endTime)}</strong></span>
+                {/* Section 1: Customer Information */}
+                <div className="bg-stone-50 rounded-xl p-4 border border-stone-200/70 space-y-2.5">
+                  <span className="text-[11px] uppercase font-bold text-stone-400 tracking-wider flex items-center gap-1.5">
+                    <UserRound size={13} /> Thông tin khách hàng
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Họ và tên</span>
+                      <strong className="text-stone-900 text-sm font-semibold">{detailBooking.customerName}</strong>
+                    </div>
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Số điện thoại</span>
+                      {detailBooking.customerPhone ? (
+                        <a href={`tel:${detailBooking.customerPhone}`} className="text-stone-800 font-medium hover:underline flex items-center gap-1">
+                          <Phone size={12} className="text-stone-400" /> {detailBooking.customerPhone}
+                        </a>
+                      ) : (
+                        <span className="text-stone-400">Chưa có</span>
+                      )}
+                    </div>
+                    {detailBooking.customerEmail && (
+                      <div className="sm:col-span-2">
+                        <span className="text-stone-400 block text-[11px]">Email</span>
+                        <a href={`mailto:${detailBooking.customerEmail}`} className="text-stone-800 hover:underline flex items-center gap-1">
+                          <Mail size={12} className="text-stone-400" /> {detailBooking.customerEmail}
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2">
+                {/* Section 2: Service & Schedule */}
+                <div className="bg-stone-50 rounded-xl p-4 border border-stone-200/70 space-y-3">
+                  <span className="text-[11px] uppercase font-bold text-stone-400 tracking-wider flex items-center gap-1.5">
+                    <Sparkles size={13} /> Dịch vụ & Lịch hẹn
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Dịch vụ</span>
+                      <p className="font-semibold text-stone-900 text-sm mt-0.5">{detailBooking.serviceName}</p>
+                      {detailBooking.categoryName && (
+                        <span className="inline-block mt-1 text-[10px] font-medium text-stone-600 bg-stone-200/70 px-1.5 py-0.5 rounded">
+                          {detailBooking.categoryName}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Thời lượng & Đơn giá</span>
+                      <p className="text-stone-800 mt-0.5 font-medium">
+                        {detailBooking.durationMinutes || detailBooking.serviceDuration || 60} phút &middot; <span className="text-[#465d4c] font-semibold">{formatCurrency(detailBooking.price)}</span>
+                      </p>
+                    </div>
+                    <div className="sm:col-span-2 pt-1 border-t border-stone-200/50 flex items-center gap-2 text-stone-700">
+                      <Clock size={14} className="text-[#465d4c]" />
+                      <span>Thời gian hẹn: <strong>{formatTimeRange(detailBooking.startTime, detailBooking.endTime)}</strong></span>
+                    </div>
+                  </div>
+
+                  {/* Read-only Process Steps */}
+                  {parseSteps(detailBooking.processSteps).length > 0 && (
+                    <div className="pt-2.5 border-t border-stone-200/60">
+                      <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block mb-1.5">
+                        Quy trình thực hiện ({parseSteps(detailBooking.processSteps).length} bước)
+                      </span>
+                      <ol className="space-y-1 text-xs text-stone-700 list-decimal list-inside pl-1 bg-white p-2.5 rounded-lg border border-stone-200/60">
+                        {parseSteps(detailBooking.processSteps).map((step, idx) => (
+                          <li key={idx} className="leading-relaxed">{step}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 3: Assigned Staff */}
+                <div className="bg-stone-50 rounded-xl p-4 border border-stone-200/70 space-y-2">
+                  <span className="text-[11px] uppercase font-bold text-stone-400 tracking-wider flex items-center gap-1.5">
+                    <UserCheck size={13} /> Kỹ thuật viên phụ trách
+                  </span>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div>
+                      <p className="font-semibold text-stone-900 text-sm">{detailBooking.staffName || 'Chưa phân công'}</p>
+                      {detailBooking.staffPhone && (
+                        <p className="text-stone-600 mt-0.5 flex items-center gap-1">
+                          <Phone size={12} className="text-stone-400" /> {detailBooking.staffPhone}
+                        </p>
+                      )}
+                    </div>
+                    {isOwner && detailBooking.status === 'PENDING' && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          const target = bookings.find(b => b.id === detailBooking.id);
+                          if (target) {
+                            setDetailBooking(null);
+                            handleOpenAssign(target);
+                          }
+                        }}
+                      >
+                        Đổi nhân viên
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Section 4: Payment Details */}
+                <div className="bg-stone-50 rounded-xl p-4 border border-stone-200/70 space-y-2.5">
+                  <span className="text-[11px] uppercase font-bold text-stone-400 tracking-wider flex items-center gap-1.5">
+                    <CreditCard size={13} /> Thông tin thanh toán
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Phương thức</span>
+                      <strong className="text-stone-900">
+                        {detailBooking.paymentMethod === 'VNPAY' ? 'VNPay Sandbox' : 'Thanh toán tại Spa'}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Trạng thái thanh toán</span>
+                      <span className={`inline-block font-semibold px-2 py-0.5 rounded text-[11px] ${
+                        detailBooking.paymentStatus === 'PAID'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : detailBooking.paymentStatus === 'CANCELLED'
+                          ? 'bg-rose-100 text-rose-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {detailBooking.paymentStatus === 'PAID'
+                          ? 'Đã thanh toán (PAID)'
+                          : detailBooking.paymentStatus === 'CANCELLED'
+                          ? 'Đã hủy (CANCELLED)'
+                          : 'Chờ thanh toán (UNPAID)'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Số tiền</span>
+                      <strong className="text-stone-900 text-sm font-serif-title">
+                        {formatCurrency(detailBooking.paidAmount || detailBooking.price)}
+                      </strong>
+                    </div>
+                    {detailBooking.paidAt && (
+                      <div>
+                        <span className="text-stone-400 block text-[11px]">Thời gian thanh toán</span>
+                        <span className="text-stone-700">
+                          {new Date(detailBooking.paidAt).toLocaleString('vi-VN')}
+                        </span>
+                      </div>
+                    )}
+                    {detailBooking.transactionNo && (
+                      <div>
+                        <span className="text-stone-400 block text-[11px]">Mã GD Cổng (Transaction No)</span>
+                        <span className="font-mono text-stone-700">{detailBooking.transactionNo}</span>
+                      </div>
+                    )}
+                    {detailBooking.txnRef && (
+                      <div>
+                        <span className="text-stone-400 block text-[11px]">Mã tham chiếu (TxnRef)</span>
+                        <span className="font-mono text-stone-700 text-[11px] truncate block" title={detailBooking.txnRef}>
+                          {detailBooking.txnRef}
+                        </span>
+                      </div>
+                    )}
+                    {detailBooking.bankCode && (
+                      <div>
+                        <span className="text-stone-400 block text-[11px]">Ngân hàng / Cổng</span>
+                        <span className="text-stone-700">{detailBooking.bankCode}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="flex justify-end gap-2 pt-2 border-t border-stone-100">
                   <Button variant="secondary" onClick={() => setDetailBooking(null)}>
                     Đóng
                   </Button>

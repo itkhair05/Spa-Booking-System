@@ -2,6 +2,7 @@ package com.example.spabooking.booking.dto;
 
 import com.example.spabooking.booking.entity.Booking;
 import com.example.spabooking.booking.enums.BookingStatus;
+import com.example.spabooking.payment.entity.Payment;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,8 +29,11 @@ public class BookingDetailResponse {
     // Service
     private Long serviceId;
     private String serviceName;
+    private String categoryName;
     private Integer serviceDuration;
     private BigDecimal servicePrice;
+    private String serviceDescription;
+    private String processSteps;
 
     // Staff
     private Long staffId;
@@ -37,7 +41,22 @@ public class BookingDetailResponse {
     private String staffPhone;
     private String staffEmail;
 
+    // Payment
+    private String paymentMethod;
+    private String paymentProvider;
+    private String paymentStatus;
+    private BigDecimal paidAmount;
+    private LocalDateTime paidAt;
+    private String txnRef;
+    private String transactionNo;
+    private String bankCode;
+    private String cardType;
+
     public static BookingDetailResponse fromEntity(Booking booking, boolean isOwner) {
+        return fromEntity(booking, null, isOwner);
+    }
+
+    public static BookingDetailResponse fromEntity(Booking booking, Payment payment, boolean isOwner) {
         BookingDetailResponse response = new BookingDetailResponse();
         response.setId(booking.getId());
         response.setBookingCode(booking.getBookingCode());
@@ -64,6 +83,11 @@ public class BookingDetailResponse {
             response.setServiceName(booking.getService().getName());
             response.setServiceDuration(booking.getService().getDurationMinutes());
             response.setServicePrice(booking.getService().getPrice());
+            response.setServiceDescription(booking.getService().getDescription());
+            response.setProcessSteps(booking.getService().getProcessSteps());
+            if (booking.getService().getCategory() != null) {
+                response.setCategoryName(booking.getService().getCategory().getName());
+            }
         }
 
         if (booking.getStaff() != null) {
@@ -73,6 +97,25 @@ public class BookingDetailResponse {
                 response.setStaffPhone(booking.getStaff().getPhone());
                 response.setStaffEmail(booking.getStaff().getEmail());
             }
+        }
+
+        if (payment != null) {
+            response.setPaymentMethod(payment.getPaymentMethod().name());
+            response.setPaymentProvider(payment.getProvider().name());
+            response.setPaymentStatus(payment.getStatus().name());
+            response.setPaidAmount(payment.getAmount());
+            response.setPaidAt(payment.getPaidAt());
+            if (isOwner) {
+                response.setTxnRef(payment.getTxnRef());
+                response.setTransactionNo(payment.getTransactionNo());
+                response.setBankCode(payment.getBankCode());
+                response.setCardType(payment.getCardType());
+            }
+        } else {
+            response.setPaymentMethod("PAY_AT_SPA");
+            response.setPaymentProvider("SPA");
+            response.setPaymentStatus("UNPAID");
+            response.setPaidAmount(booking.getPrice());
         }
 
         return response;
@@ -126,11 +169,20 @@ public class BookingDetailResponse {
     public String getServiceName() { return serviceName; }
     public void setServiceName(String serviceName) { this.serviceName = serviceName; }
 
+    public String getCategoryName() { return categoryName; }
+    public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
+
     public Integer getServiceDuration() { return serviceDuration; }
     public void setServiceDuration(Integer serviceDuration) { this.serviceDuration = serviceDuration; }
 
     public BigDecimal getServicePrice() { return servicePrice; }
     public void setServicePrice(BigDecimal servicePrice) { this.servicePrice = servicePrice; }
+
+    public String getServiceDescription() { return serviceDescription; }
+    public void setServiceDescription(String serviceDescription) { this.serviceDescription = serviceDescription; }
+
+    public String getProcessSteps() { return processSteps; }
+    public void setProcessSteps(String processSteps) { this.processSteps = processSteps; }
 
     public Long getStaffId() { return staffId; }
     public void setStaffId(Long staffId) { this.staffId = staffId; }
@@ -143,4 +195,31 @@ public class BookingDetailResponse {
 
     public String getStaffEmail() { return staffEmail; }
     public void setStaffEmail(String staffEmail) { this.staffEmail = staffEmail; }
+
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
+    public String getPaymentProvider() { return paymentProvider; }
+    public void setPaymentProvider(String paymentProvider) { this.paymentProvider = paymentProvider; }
+
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+
+    public BigDecimal getPaidAmount() { return paidAmount; }
+    public void setPaidAmount(BigDecimal paidAmount) { this.paidAmount = paidAmount; }
+
+    public LocalDateTime getPaidAt() { return paidAt; }
+    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+
+    public String getTxnRef() { return txnRef; }
+    public void setTxnRef(String txnRef) { this.txnRef = txnRef; }
+
+    public String getTransactionNo() { return transactionNo; }
+    public void setTransactionNo(String transactionNo) { this.transactionNo = transactionNo; }
+
+    public String getBankCode() { return bankCode; }
+    public void setBankCode(String bankCode) { this.bankCode = bankCode; }
+
+    public String getCardType() { return cardType; }
+    public void setCardType(String cardType) { this.cardType = cardType; }
 }

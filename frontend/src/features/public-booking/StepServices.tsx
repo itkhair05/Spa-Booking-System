@@ -300,9 +300,9 @@ export function StepServices() {
             if (e.target === e.currentTarget) setPreviewService(null);
           }}
         >
-          <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-stone-200/80 overflow-hidden relative max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-stone-200/80 relative max-h-[90vh] overflow-y-auto flex flex-col animate-in fade-in zoom-in-95 duration-200">
             {/* Header Banner / Visual Anchor */}
-            <div className="relative bg-gradient-to-br from-stone-100 via-amber-50/40 to-stone-50 p-5 sm:p-6 border-b border-stone-200/70">
+            <div className="sticky top-0 z-10 bg-gradient-to-br from-stone-100 via-amber-50/60 to-stone-50 p-5 sm:p-6 border-b border-stone-200/70 backdrop-blur-xs">
               <button
                 type="button"
                 onClick={() => setPreviewService(null)}
@@ -354,8 +354,8 @@ export function StepServices() {
               </div>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="overflow-y-auto p-5 sm:p-6 space-y-5 text-left flex-1">
+            {/* Content without nested scrollbar */}
+            <div className="p-5 sm:p-6 space-y-5 text-left flex-1">
               {/* Short Description */}
               {previewService.description && (
                 <div className="bg-stone-50/80 p-4 rounded-2xl border border-stone-100">
@@ -408,7 +408,7 @@ export function StepServices() {
             </div>
 
             {/* Footer Action Bar */}
-            <div className="p-4 sm:p-5 bg-stone-50/90 border-t border-stone-200/80 flex items-center justify-between gap-3">
+            <div className="sticky bottom-0 z-10 p-4 sm:p-5 bg-stone-50/95 backdrop-blur-xs border-t border-stone-200/80 flex items-center justify-between gap-3 mt-auto">
               <button
                 type="button"
                 onClick={() => setPreviewService(null)}

@@ -39,14 +39,28 @@ export interface BookingDetail {
   // Service
   serviceId: number;
   serviceName: string;
+  categoryName?: string;
   serviceDuration?: number;
   servicePrice?: number;
+  serviceDescription?: string;
+  processSteps?: string;
 
   // Staff
   staffId?: number;
   staffName?: string;
   staffPhone?: string;
   staffEmail?: string;
+
+  // Payment
+  paymentMethod?: string;
+  paymentProvider?: string;
+  paymentStatus?: string;
+  paidAmount?: number;
+  paidAt?: string;
+  txnRef?: string;
+  transactionNo?: string;
+  bankCode?: string;
+  cardType?: string;
 }
 
 export interface AssignBookingRequest {

@@ -4,6 +4,8 @@ export interface Customer {
   phone: string | null;
   email: string | null;
   lastVisit: string | null;
+  totalBookings?: number;
+  lastBookingAt?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

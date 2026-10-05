@@ -29,11 +29,10 @@ public class CustomerController {
 
     @GetMapping
     @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<List<CustomerResponse>> getAllCustomers() {
-        List<Customer> customers = customerService.findAll();
-        List<CustomerResponse> response = customers.stream()
-                .map(CustomerResponse::fromEntity)
-                .collect(Collectors.toList());
+    public ResponseEntity<List<CustomerResponse>> getAllCustomers(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String category) {
+        List<CustomerResponse> response = customerService.findAllWithStats(search, category);
         return ResponseEntity.ok(response);
     }
 

@@ -12,10 +12,12 @@ export function StepCustomer() {
   const validate = () => {
     const newErrors: FormErrors = {};
     if (!form.name.trim()) newErrors.name = 'Vui lòng nhập họ và tên';
-    if (!form.phone.trim()) {
+    const rawPhone = form.phone.trim();
+    const normalizedPhone = rawPhone.replace(/[\s.-]/g, '');
+    if (!rawPhone) {
       newErrors.phone = 'Vui lòng nhập số điện thoại';
-    } else if (!/^[0-9]{9,11}$/.test(form.phone.trim())) {
-      newErrors.phone = 'Số điện thoại không hợp lệ';
+    } else if (!/^0\d{9}$/.test(normalizedPhone)) {
+      newErrors.phone = 'Số điện thoại phải gồm đúng 10 chữ số.';
     }
 
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
@@ -36,7 +38,9 @@ export function StepCustomer() {
       }
       return;
     }
-    updateState({ customer: form });
+    const rawPhone = form.phone.trim();
+    const normalizedPhone = rawPhone.replace(/[\s.-]/g, '');
+    updateState({ customer: { ...form, phone: normalizedPhone } });
     setStep(5);
   };
 

@@ -197,4 +197,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime,
             @Param("excludeBookingId") Long excludeBookingId);
+
+    @Query("SELECT b.customer.id, COUNT(b), MAX(b.startTime) FROM Booking b WHERE b.tenant.id = :tenantId GROUP BY b.customer.id")
+    List<Object[]> findCustomerBookingStatsByTenantId(@Param("tenantId") Long tenantId);
 }
