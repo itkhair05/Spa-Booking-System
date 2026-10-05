@@ -10,10 +10,10 @@ import java.nio.charset.StandardCharsets;
 @Configuration
 public class VNPayConfig {
 
-    @Value("${vnpay.tmn-code:TIKEYSPA}")
+    @Value("${vnpay.tmn-code:VMWY8Z1F}")
     private String tmnCode;
 
-    @Value("${vnpay.hash-secret:SANDBOXSECRETKEYTIKEYSPA2026}")
+    @Value("${vnpay.hash-secret:}")
     private String hashSecret;
 
     @Value("${vnpay.payment-url:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}")
@@ -21,6 +21,9 @@ public class VNPayConfig {
 
     @Value("${vnpay.return-url:http://localhost:5173/dat-lich/callback}")
     private String returnUrl;
+
+    @Value("${vnpay.ipn-url:}")
+    private String ipnUrl;
 
     public String getTmnCode() {
         return tmnCode;
@@ -38,7 +41,14 @@ public class VNPayConfig {
         return returnUrl;
     }
 
+    public String getIpnUrl() {
+        return ipnUrl;
+    }
+
     public static String hmacSHA512(String key, String data) {
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("VNPay Hash Secret must be configured in environment or .env");
+        }
         try {
             Mac hmac512 = Mac.getInstance("HmacSHA512");
             SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA512");
