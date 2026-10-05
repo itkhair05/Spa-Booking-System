@@ -38,9 +38,36 @@ public class PublicController {
         return ResponseEntity.ok(publicBookingService.getActiveServices());
     }
 
+    @GetMapping("/services/featured")
+    public ResponseEntity<List<PublicServiceResponse>> getFeaturedServices(@PathVariable String slug) {
+        return ResponseEntity.ok(publicBookingService.getFeaturedServices());
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<List<PublicCategoryResponse>> getCategories(@PathVariable String slug) {
+        return ResponseEntity.ok(publicBookingService.getActiveCategories());
+    }
+
     @GetMapping("/staff")
     public ResponseEntity<List<PublicStaffResponse>> getStaff(@PathVariable String slug) {
         return ResponseEntity.ok(publicBookingService.getActiveStaff());
+    }
+
+    @GetMapping("/articles")
+    public ResponseEntity<List<com.example.spabooking.article.dto.PublicArticleResponse>> getArticles(@PathVariable String slug) {
+        return ResponseEntity.ok(publicBookingService.getPublishedArticles());
+    }
+
+    @GetMapping("/articles/{slugOrId}")
+    public ResponseEntity<com.example.spabooking.article.dto.PublicArticleResponse> getArticle(
+            @PathVariable String slug,
+            @PathVariable String slugOrId) {
+        return ResponseEntity.ok(publicBookingService.getPublishedArticle(slugOrId));
+    }
+
+    @GetMapping("/reviews")
+    public ResponseEntity<List<com.example.spabooking.review.dto.PublicReviewResponse>> getReviews(@PathVariable String slug) {
+        return ResponseEntity.ok(publicBookingService.getPublishedReviews());
     }
 
     @GetMapping("/availability")

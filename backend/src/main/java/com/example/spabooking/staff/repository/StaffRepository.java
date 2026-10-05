@@ -15,6 +15,8 @@ public interface StaffRepository extends JpaRepository<Staff, Long> {
 
     List<Staff> findAllByTenantIdAndIsActiveTrueAndIsDeletedFalse(Long tenantId);
 
+    List<Staff> findAllByTenantIdAndIsActiveTrueAndIsDeletedFalseAndShowOnWebsiteTrue(Long tenantId);
+
     Optional<Staff> findByIdAndTenantIdAndIsActiveTrue(Long id, Long tenantId);
 
     Optional<Staff> findByIdAndTenantIdAndIsActiveTrueAndIsDeletedFalse(Long id, Long tenantId);

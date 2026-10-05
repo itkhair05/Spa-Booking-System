@@ -15,4 +15,10 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
     Optional<Service> findByIdAndTenantId(Long id, Long tenantId);
 
     List<Service> findAllByTenantIdAndIsActiveTrue(Long tenantId);
+
+    List<Service> findAllByTenantIdAndIsActiveTrueAndIsFeaturedTrue(Long tenantId);
+
+    List<Service> findAllByTenantIdAndCategoryId(Long tenantId, Long categoryId);
+
+    boolean existsByTenantIdAndCategoryId(Long tenantId, Long categoryId);
 }

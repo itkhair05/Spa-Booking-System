@@ -74,6 +74,9 @@ public class StaffController {
         if (request.getIsActive() != null) {
             staff.setIsActive(request.getIsActive());
         }
+        if (request.getShowOnWebsite() != null) {
+            staff.setShowOnWebsite(request.getShowOnWebsite());
+        }
 
         Staff createdStaff = staffService.create(staff);
         return new ResponseEntity<>(staffService.toResponse(createdStaff), HttpStatus.CREATED);
@@ -91,6 +94,9 @@ public class StaffController {
         staffDetails.setAvatarUrl(request.getAvatarUrl());
         if (request.getIsActive() != null) {
             staffDetails.setIsActive(request.getIsActive());
+        }
+        if (request.getShowOnWebsite() != null) {
+            staffDetails.setShowOnWebsite(request.getShowOnWebsite());
         }
 
         Staff updatedStaff = staffService.update(id, staffDetails);

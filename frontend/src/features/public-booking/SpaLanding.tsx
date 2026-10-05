@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { getPublicServices, getPublicStaff } from '../../lib/api/publicBooking';
+import { getPublicServices, getPublicStaff, getPublicArticles, getPublicReviews } from '../../lib/api/publicBooking';
 import { submitPublicFeedback } from '../../lib/api/feedback';
 import { formatCurrency } from '../../lib/format';
-import type { PublicSpaInfoResponse, PublicServiceResponse, PublicStaffResponse } from '../../types/publicBooking';
+import type {
+  PublicSpaInfoResponse,
+  PublicServiceResponse,
+  PublicStaffResponse,
+  PublicArticleResponse,
+  PublicReviewResponse,
+} from '../../types/publicBooking';
 import type { FeedbackType } from '../../types/feedback';
 import { PublicBookingLookup } from './PublicBookingLookup';
 import { HeroAtmosphere } from './HeroAtmosphere';
@@ -29,6 +35,7 @@ import {
   AlertCircle,
   X,
   Menu,
+  Info,
 } from 'lucide-react';
 
 interface SpaLandingProps {
@@ -45,137 +52,28 @@ function initials(name: string): string {
   return (first + last).toUpperCase();
 }
 
-/**
- * Static Articles / Blog Content Model for Spa & Wellness.
- * Structured cleanly for future CMS/backend extensibility without fake API calls.
- */
-interface Article {
-  id: string;
-  title: string;
-  category: string;
-  readTime: string;
-  excerpt: string;
-  content: string[];
-  tips?: string[];
+function parseProcessSteps(stepsJson?: string | null): string[] {
+  if (!stepsJson) return [];
+  try {
+    const parsed = JSON.parse(stepsJson);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {
+    return stepsJson.split('\n').filter((s) => s.trim().length > 0);
+  }
+  return [];
 }
-
-const SPA_ARTICLES: Article[] = [
-  {
-    id: 'art-1',
-    category: 'Massage & Thư giãn',
-    readTime: '5 phút đọc',
-    title: 'Bí quyết phục hồi năng lượng và giải tỏa căng cơ sau tuần làm việc',
-    excerpt: 'Lắng nghe cơ thể khi các nhóm cơ vai gáy bắt đầu báo động. Khám phá cách các chuyển động ấn huyệt kích hoạt tuần hoàn máu và tái tạo năng lượng.',
-    content: [
-      'Cuộc sống hiện đại với nhiều giờ ngồi trước màn hình máy tính khiến vùng cổ, vai gáy và cột sống thắt lưng chịu áp lực rất lớn. Khi cơ bắp co cứng kéo dài, lưu thông máu lên não giảm, dẫn đến đau đầu, mệt mỏi và suy giảm chất lượng giấc ngủ.',
-      'Liệu pháp massage trị liệu không chỉ đơn thuần là xoa bóp ngoài da. Bằng kỹ thuật miết dọc theo dải cơ và kích thích các điểm áp lực (acupressure points), các kỹ thuật viên giúp giải phóng axit lactic tích tụ, làm giãn bó cơ sâu và kích thích hệ thần kinh phó giao cảm đưa cơ thể vào trạng thái thư giãn tối đa.',
-      'Một liệu trình đều đặn mỗi 1–2 tuần là liều thuốc tự nhiên tuyệt vời để giữ cho tinh thần minh mẫn và cơ thể dẻo dai.',
-    ],
-    tips: [
-      'Uống đủ một ly nước ấm sau khi massage để hỗ trợ đào thải độc tố.',
-      'Tránh tắm nước quá lạnh hoặc vận động cường độ cao trong vòng 2 giờ sau trị liệu.',
-      'Dành 15 phút tập thở sâu trước khi đi ngủ để duy trì cảm giác thư thái.',
-    ],
-  },
-  {
-    id: 'art-2',
-    category: 'Chăm sóc da',
-    readTime: '4 phút đọc',
-    title: 'Quy trình chăm sóc da chuyên sâu: Tái sinh làn da mệt mỏi',
-    excerpt: 'Tại sao làm sạch bề mặt là chưa đủ? Tìm hiểu quy trình làm sạch sâu, thanh lọc lỗ chân lông và cấp ẩm tầng sâu với dưỡng chất thảo mộc tại spa.',
-    content: [
-      'Bụi mịn, ánh nắng mặt trời và mỹ phẩm trang điểm hàng ngày tích tụ sâu trong lỗ chân lông mà các bước tẩy trang thông thường khó lòng làm sạch triệt để. Theo thời gian, da trở nên xỉn màu, bít tắc và nhanh lão hóa.',
-      'Quy trình chăm sóc da chuyên sâu tại TIKEY SPA kết hợp liệu pháp xông hơi thảo dược mở lỗ chân lông, làm sạch bã nhờn bằng sóng siêu âm nhẹ nhàng, và điện di tinh chất collagen cùng acid hyaluronic vào tầng trung bì.',
-      'Làn da sau liệu trình không chỉ sáng mịn tức thì mà còn tăng cường hàng rào bảo vệ tự nhiên, giúp chống lại các tác nhân ô nhiễm môi trường.',
-    ],
-    tips: [
-      'Duy trì bôi kem chống nắng SPF 50+ hàng ngày ngay cả khi ở trong nhà.',
-      'Bổ sung nước lọc và nước ép rau củ giàu chất chống oxy hóa.',
-      'Thực hiện liệu trình chăm sóc da định kỳ 10–14 ngày/lần để đạt hiệu quả tối ưu.',
-    ],
-  },
-  {
-    id: 'art-3',
-    category: 'Tips dịch vụ',
-    readTime: '3 phút đọc',
-    title: 'Những lưu ý quan trọng trước và sau buổi trị liệu tại spa',
-    excerpt: 'Để đạt hiệu quả tối đa cho mỗi buổi trị liệu, bạn nên chuẩn bị những gì và chăm sóc bản thân ra sao sau khi rời khỏi spa?',
-    content: [
-      'Một buổi trị liệu hiệu quả bắt đầu từ việc chuẩn bị đúng cách. Trước khi đến spa 60 phút, bạn nên tránh ăn quá no hoặc sử dụng các chất kích thích như cà phê, rượu bia vì chúng làm tăng nhịp tim và khiến cơ thể khó chìm vào trạng thái tĩnh tại.',
-      'Hãy cởi mở chia sẻ với kỹ thuật viên về tình trạng sức khỏe hiện tại: bạn có vết thương hở, đang mang thai, hoặc đặc biệt nhạy cảm với vùng cơ nào không. Điều này giúp chuyên viên điều chỉnh lực bấm và liệu pháp phù hợp nhất với thể trạng của bạn.',
-      'Sau buổi trị liệu, cảm giác hơi lâng lâng hoặc buồn ngủ nhẹ là hoàn toàn bình thường khi cơ thể bắt đầu quá trình tự phục hồi.',
-    ],
-    tips: [
-      'Đến trước lịch hẹn 10–15 phút để thưởng thức trà thảo mộc và thả lỏng tâm trí.',
-      'Tắt chuông điện thoại để tận hưởng trọn vẹn không gian tĩnh lặng.',
-      'Giữ ấm cơ thể sau khi massage tinh dầu, đặc biệt khi thời tiết chuyển mùa.',
-    ],
-  },
-  {
-    id: 'art-4',
-    category: 'Wellness',
-    readTime: '6 phút đọc',
-    title: 'Hương liệu pháp (Aromatherapy): Thư thái tâm trí từ tinh dầu thiên nhiên',
-    excerpt: 'Hương thơm từ sả chanh, oải hương hay vỏ bưởi tác động thế nào đến sóng não và cảm xúc? Khám phá sức mạnh trị liệu của mùi hương.',
-    content: [
-      'Khứu giác là giác quan duy nhất có đường dẫn thần kinh trực tiếp đến hệ viền (limbic system) — trung tâm điều khiển cảm xúc, trí nhớ và nhịp sinh học của não bộ. Đây là lý do một mùi hương quen thuộc có thể ngay lập tức xoa dịu lo âu.',
-      'Tại TIKEY SPA, chúng tôi tuyển chọn những loại tinh dầu nguyên chất chiết xuất tự nhiên: Tinh dầu Oải hương Pháp giúp xoa dịu hệ thần kinh và đưa giấc ngủ sâu; Tinh dầu Sả chanh & Vỏ bưởi Việt Nam thanh lọc không khí, khử khuẩn và nâng cao sinh khí.',
-      'Khi kết hợp cùng hơi ấm từ đá bazan và đôi bàn tay ấm áp của chuyên viên, hương liệu pháp tạo nên một trải nghiệm đa giác quan khó quên.',
-    ],
-    tips: [
-      'Nhỏ 2-3 giọt tinh dầu yêu thích vào máy xông phòng ngủ 30 phút trước khi ngủ.',
-      'Kết hợp hít thở sâu theo nhịp 4-7-8 để kích hoạt hiệu quả an thần.',
-    ],
-  },
-];
-
-/**
- * Transparent Demo Testimonial Model with clear demo indication.
- */
-interface Testimonial {
-  name: string;
-  role: string;
-  service: string;
-  rating: number;
-  comment: string;
-}
-
-const DEMO_TESTIMONIALS: Testimonial[] = [
-  {
-    name: 'Chị Minh Anh',
-    role: 'Khách hàng thân thiết',
-    service: 'Massage Body Thụy Điển (60p)',
-    rating: 5,
-    comment: 'Không gian tĩnh lặng vô cùng, bước vào là ngửi thấy mùi thảo mộc sả chanh dịu nhẹ. Kỹ thuật viên thao tác rất êm và có lực vừa phải, sau buổi massage cổ vai gáy của mình nhẹ nhõm hẳn.',
-  },
-  {
-    name: 'Anh Tuấn Hùng',
-    role: 'Khách hàng định kỳ',
-    service: 'Trị Liệu Căng Cơ Chuyên Sâu (90p)',
-    rating: 5,
-    comment: 'Sau chuỗi ngày ngồi văn phòng đau thắt lưng, mình thử đặt lịch tại TIKEY SPA. Quy trình đặt lịch trên web rất nhanh không cần tạo tài khoản rườm rà. Chuyên viên rất hiểu huyệt đạo và tư vấn nhiệt tình.',
-  },
-  {
-    name: 'Chị Thu Thảo',
-    role: 'Khách hàng trải nghiệm',
-    service: 'Chăm Sóc Da Mặt Chuyên Sâu (60p)',
-    rating: 5,
-    comment: 'Dịch vụ chăm sóc da rất kỹ, các bước xông hơi và đắp mặt nạ thảo dược làm da mình mịn màng và sáng hẳn lên. Phòng ốc sạch sẽ, âm nhạc du dương tạo cảm giác an tâm tuyệt đối.',
-  },
-  {
-    name: 'Chị Hoàng Yến',
-    role: 'Khách hàng trải nghiệm',
-    service: 'Gội Đầu Dưỡng Sinh Thảo Mộc',
-    rating: 5,
-    comment: 'Rất ấn tượng với sự lễ phép và chu đáo của nhân viên. Nước gội nấu từ bồ kết và vỏ bưởi thật thơm, massage đầu rất đã giúp mình giảm hẳn triệu chứng mất ngủ đêm qua.',
-  },
-];
 
 export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
   const [services, setServices] = useState<PublicServiceResponse[] | null>(null);
   const [servicesFailed, setServicesFailed] = useState(false);
   const [staffList, setStaffList] = useState<PublicStaffResponse[] | null>(null);
   const [staffFailed, setStaffFailed] = useState(false);
+  const [articles, setArticles] = useState<PublicArticleResponse[] | null>(null);
+  const [reviews, setReviews] = useState<PublicReviewResponse[] | null>(null);
+
+  // Modals
+  const [selectedServiceDetail, setSelectedServiceDetail] = useState<PublicServiceResponse | null>(null);
+  const [readingArticle, setReadingArticle] = useState<PublicArticleResponse | null>(null);
 
   // Mobile menu toggle
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -191,9 +89,6 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  // Article reading modal state
-  const [readingArticle, setReadingArticle] = useState<Article | null>(null);
 
   // Feedback form state
   const [fbName, setFbName] = useState('');
@@ -226,10 +121,32 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
         if (!cancelled) setStaffFailed(true);
       });
 
+    getPublicArticles(slug)
+      .then((data) => {
+        if (!cancelled) setArticles(data);
+      })
+      .catch(() => {
+        // Fallback or ignore
+      });
+
+    getPublicReviews(slug)
+      .then((data) => {
+        if (!cancelled) setReviews(data);
+      })
+      .catch(() => {
+        // Fallback or ignore
+      });
+
     return () => {
       cancelled = true;
     };
   }, [slug]);
+
+  // Featured services filtered strictly by isFeatured
+  const featuredServices = useMemo(() => {
+    if (!services) return [];
+    return services.filter((s) => s.isFeatured);
+  }, [services]);
 
   const handleFeedbackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,8 +171,8 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
       setFbSubmitting(true);
       await submitPublicFeedback(slug, {
         name: fbName.trim(),
-        phone: fbPhone.trim(),
-        email: fbEmail.trim() || undefined,
+        phone: cleanPhone,
+        email: fbEmail.trim() ? fbEmail.trim() : undefined,
         type: fbType,
         bookingCode: fbBookingCode.trim() ? fbBookingCode.trim().toUpperCase() : undefined,
         message: fbMessage.trim(),
@@ -267,36 +184,30 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
       setFbEmail('');
       setFbBookingCode('');
       setFbMessage('');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Không thể gửi phản hồi lúc này. Vui lòng thử lại.';
-      setFbError(msg);
+      setFbType('SUGGESTION');
+    } catch {
+      setFbError('Không thể gửi phản hồi lúc này. Xin vui lòng thử lại sau.');
     } finally {
       setFbSubmitting(false);
     }
   };
 
-  const showServices = services !== null && services.length > 0;
-  const showStaff = staffList !== null && staffList.length > 0;
+  const showStaff = (staffList && staffList.length > 0) || staffFailed;
 
   return (
-    <div className="min-h-screen bg-[#faf8f5] flex flex-col font-sans text-stone-800 antialiased selection:bg-[#c6d8c9] selection:text-[#25382a]">
-      {/* Top Bar — Restrained Quiet-Luxury Glassmorphism */}
+    <div className="min-h-screen bg-[#faf8f5] text-stone-800 flex flex-col font-sans antialiased selection:bg-[#465d4c] selection:text-white">
+      {/* HEADER / NAVIGATION BAR */}
       <header
-        className={`sticky top-0 z-30 transition-all duration-300 ${
+        className={`sticky top-0 z-40 transition-all duration-300 ${
           isScrolled
-            ? 'bg-[#faf8f5]/80 backdrop-blur-xl border-b border-[#e7e2d8]/80 shadow-[0_4px_24px_-4px_rgba(40,30,20,0.04)]'
-            : 'bg-[#faf8f5]/30 backdrop-blur-md border-b border-white/40'
+            ? 'bg-[#faf8f5]/85 backdrop-blur-md shadow-xs border-b border-[#e7e2d8]'
+            : 'bg-[#faf8f5]/60 backdrop-blur-xs border-b border-transparent'
         }`}
-        style={{
-          WebkitBackdropFilter: isScrolled
-            ? 'blur(20px) saturate(125%)'
-            : 'blur(12px) saturate(115%)',
-        }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
-          {/* Brand */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between gap-4">
+          {/* Logo & Spa Name */}
           <a href="#" className="flex items-center gap-2.5 group shrink-0">
-            <span className="w-8 h-8 rounded-full bg-[#f2f6f3] border border-[#c6d8c9] flex items-center justify-center text-[#465d4c] shadow-xs group-hover:scale-105 transition-transform">
+            <span className="w-8 h-8 rounded-full bg-[#f2f6f3] border border-[#c6d8c9] flex items-center justify-center group-hover:scale-105 transition-transform">
               <Sparkles className="w-4 h-4 text-[#b8976c]" aria-hidden="true" />
             </span>
             <div className="flex flex-col">
@@ -309,23 +220,21 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
             </div>
           </a>
 
-          {/* Quick Nav Links — Desktop (Strictly single-line, whitespace-nowrap) */}
+          {/* Quick Nav Links — Desktop */}
           <nav className="hidden lg:flex items-center gap-3.5 xl:gap-6 text-xs font-semibold text-stone-600 uppercase tracking-wider flex-nowrap shrink-0">
             <a href="#gioi-thieu" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
               Giới thiệu
             </a>
-            {showServices && (
-              <a href="#dich-vu" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
-                Dịch vụ
-              </a>
-            )}
+            <a href="#dich-vu" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
+              Dịch vụ nổi bật
+            </a>
             {showStaff && (
               <a href="#doi-ngu" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
                 Đội ngũ
               </a>
             )}
             <a href="#goc-cham-soc" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
-              Bài viết
+              Góc chăm sóc
             </a>
             <a href="#danh-gia" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
               Đánh giá
@@ -380,15 +289,13 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               >
                 Giới thiệu
               </a>
-              {showServices && (
-                <a
-                  href="#dich-vu"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="whitespace-nowrap py-2 px-3 hover:bg-black/5 rounded-xl transition-colors"
-                >
-                  Dịch vụ nổi bật
-                </a>
-              )}
+              <a
+                href="#dich-vu"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="whitespace-nowrap py-2 px-3 hover:bg-black/5 rounded-xl transition-colors"
+              >
+                Dịch vụ nổi bật
+              </a>
               {showStaff && (
                 <a
                   href="#doi-ngu"
@@ -439,9 +346,8 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
         )}
       </header>
 
-      {/* 1. HERO SECTION WITH LIGHTWEIGHT ORGANIC ATMOSPHERE */}
+      {/* 1. HERO SECTION */}
       <section className="relative overflow-hidden pt-12 sm:pt-20 pb-16 sm:pb-24 border-b border-[#e7e2d8]">
-        {/* Lightweight Pure CSS Organic Wellness Atmosphere (Zero Three.js/WebGL) */}
         <HeroAtmosphere />
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
@@ -456,7 +362,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
 
           <p className="text-stone-600 text-base sm:text-lg max-w-2xl mx-auto mb-10 leading-relaxed font-light">
             Không gian yên tĩnh giao hòa cùng thảo mộc tự nhiên Việt Nam. Trải nghiệm các liệu pháp massage,
-            trị liệu da và phục hồi năng lượng được thiết kế riêng cho bạn
+            trị liệu da và phục hồi năng lượng được thiết kế riêng cho bạn.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-14">
@@ -468,14 +374,12 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               <ArrowRight className="w-4 h-4" aria-hidden="true" />
             </a>
 
-            {showServices && (
-              <a
-                href="#dich-vu"
-                className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3.5 bg-white/80 backdrop-blur-md border border-[#d8d1c3]/70 text-stone-700 font-medium rounded-xl hover:bg-white hover:text-stone-900 transition-colors max-sm:min-h-11 shadow-xs"
-              >
-                Khám phá dịch vụ
-              </a>
-            )}
+            <a
+              href="#dich-vu"
+              className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3.5 bg-white/80 backdrop-blur-md border border-[#d8d1c3]/70 text-stone-700 font-medium rounded-xl hover:bg-white hover:text-stone-900 transition-colors max-sm:min-h-11 shadow-xs"
+            >
+              Khám phá dịch vụ
+            </a>
 
             <a
               href="#tra-cuu"
@@ -486,7 +390,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
             </a>
           </div>
 
-          {/* Highlights — Restrained Liquid Glass Cards */}
+          {/* Highlights */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto text-left">
             <div className="p-4 rounded-2xl bg-white/75 backdrop-blur-md border border-white/60 shadow-xs flex items-start gap-3.5">
               <div className="p-2.5 rounded-xl bg-[#f2f6f3]/90 text-[#465d4c] shrink-0">
@@ -561,7 +465,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               </div>
             </div>
 
-            {/* Right Card / Visual Presentation */}
+            {/* Right Card */}
             <div className="lg:col-span-5">
               <div className="relative rounded-3xl p-8 bg-white border border-[#e7e2d8] shadow-sm">
                 <div className="w-12 h-12 rounded-2xl bg-[#f2f6f3] border border-[#c6d8c9] flex items-center justify-center text-[#465d4c] mb-6">
@@ -590,31 +494,37 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
         </div>
       </section>
 
-      {/* 3. SERVICES SECTION WITH PERSISTENT IMAGES */}
-      {(showServices || servicesFailed) && (
-        <section
-          id="dich-vu"
-          aria-labelledby="services-heading"
-          className="py-16 sm:py-24 border-b border-[#e7e2d8] bg-white scroll-mt-20"
-        >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-2xl mx-auto mb-12">
-              <span className="text-xs uppercase tracking-widest font-semibold text-[#566f5c]">
-                Liệu trình chuyên sâu
-              </span>
-              <h2 id="services-heading" className="text-2xl sm:text-4xl font-serif-title font-medium text-stone-900 mt-1 mb-3">
-                Dịch vụ nổi bật tại {spa.name}
-              </h2>
-              <p className="text-stone-500 text-sm">
-                Mỗi liệu trình được chắt lọc tinh tế để đem lại hiệu quả trị liệu tối ưu và cảm giác thư giãn tuyệt đối.
-              </p>
-            </div>
+      {/* 3. FEATURED SERVICES SECTION */}
+      <section
+        id="dich-vu"
+        aria-labelledby="services-heading"
+        className="py-16 sm:py-24 border-b border-[#e7e2d8] bg-white scroll-mt-20"
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="text-xs uppercase tracking-widest font-semibold text-[#566f5c]">
+              Liệu trình tuyển chọn
+            </span>
+            <h2 id="services-heading" className="text-2xl sm:text-4xl font-serif-title font-medium text-stone-900 mt-1 mb-3">
+              Dịch vụ nổi bật tại {spa.name}
+            </h2>
+            <p className="text-stone-500 text-sm">
+              Mỗi liệu trình được chắt lọc tinh tế để đem lại hiệu quả trị liệu tối ưu và cảm giác thư giãn tuyệt đối.
+            </p>
+          </div>
 
-            {servicesFailed ? (
-              <p className="text-stone-500 text-center">Không thể tải danh sách dịch vụ.</p>
-            ) : (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {services!.map((service) => (
+          {servicesFailed ? (
+            <p className="text-stone-500 text-center">Không thể tải danh sách dịch vụ.</p>
+          ) : featuredServices.length === 0 ? (
+            <div className="text-center py-10 px-4 bg-stone-50 rounded-2xl border border-stone-200 max-w-md mx-auto text-stone-500 text-sm">
+              Hiện chưa có dịch vụ nào được gắn nổi bật. Vui lòng xem danh mục dịch vụ đầy đủ ở phần Đặt lịch bên dưới.
+            </div>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {featuredServices.map((service) => {
+                const steps = parseProcessSteps(service.processSteps);
+
+                return (
                   <div
                     key={service.id}
                     className="flex flex-col rounded-2xl border border-[#e7e2d8] bg-[#faf8f5] hover:bg-white hover:border-[#c6d8c9] hover:shadow-md transition-all group overflow-hidden"
@@ -630,6 +540,18 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                       </div>
                     )}
                     <div className="p-6 flex flex-col grow">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        {service.categoryName && (
+                          <span className="text-[11px] font-semibold text-[#566f5c] px-2 py-0.5 rounded-full bg-[#f2f6f3] border border-[#c6d8c9]/60">
+                            {service.categoryName}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                          <Sparkles className="w-3 h-3 text-amber-500" />
+                          Nổi bật
+                        </span>
+                      </div>
+
                       <div className="flex justify-between items-start gap-3 mb-2.5">
                         <h3 className="font-serif-title font-medium text-lg text-stone-900 group-hover:text-[#465d4c] transition-colors">
                           {service.name}
@@ -640,13 +562,23 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                       </div>
 
                       {service.description ? (
-                        <p className="text-xs text-stone-600 mb-5 line-clamp-3 leading-relaxed">
+                        <p className="text-xs text-stone-600 mb-4 line-clamp-3 leading-relaxed">
                           {service.description}
                         </p>
                       ) : (
-                        <p className="text-xs text-stone-400 italic mb-5">
+                        <p className="text-xs text-stone-400 italic mb-4">
                           Liệu trình chăm sóc toàn diện tại spa.
                         </p>
+                      )}
+
+                      {/* Process steps pill */}
+                      {steps.length > 0 && (
+                        <div className="mb-4">
+                          <span className="text-[11px] text-stone-500 bg-white px-2 py-1 rounded-md border border-stone-200/70 inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-[#465d4c]" />
+                            Quy trình {steps.length} bước trị liệu
+                          </span>
+                        </div>
                       )}
 
                       <div className="mt-auto pt-4 border-t border-[#e7e2d8] flex items-center justify-between text-xs text-stone-500">
@@ -654,25 +586,139 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                           <Clock className="w-4 h-4 text-[#566f5c]" aria-hidden="true" />
                           {service.durationMinutes} phút
                         </span>
-                        <a
-                          href="#booking"
-                          className="inline-flex items-center gap-1 font-semibold text-[#465d4c] hover:underline"
-                        >
-                          Đặt dịch vụ này
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </a>
+
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedServiceDetail(service)}
+                            className="text-xs text-stone-600 hover:text-[#465d4c] font-medium inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Info className="w-3.5 h-3.5" />
+                            Xem chi tiết
+                          </button>
+                          <a
+                            href="#booking"
+                            className="inline-flex items-center gap-1 font-semibold text-[#465d4c] hover:underline"
+                          >
+                            Đặt lịch
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))}
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Service Detail Modal */}
+      {selectedServiceDetail && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-stone-200 overflow-hidden relative max-h-[90vh] flex flex-col text-left">
+            <button
+              type="button"
+              onClick={() => setSelectedServiceDetail(null)}
+              className="absolute top-4 right-4 p-2 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+              aria-label="Đóng"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-4 mb-4">
+              {selectedServiceDetail.imageUrl && (
+                <img
+                  src={selectedServiceDetail.imageUrl}
+                  alt={selectedServiceDetail.name}
+                  className="w-16 h-16 rounded-2xl object-cover border border-stone-200 shrink-0"
+                />
+              )}
+              <div>
+                {selectedServiceDetail.categoryName && (
+                  <span className="text-[11px] font-semibold text-[#566f5c] px-2 py-0.5 rounded-full bg-[#f2f6f3] border border-[#c6d8c9]/60 inline-block mb-1">
+                    {selectedServiceDetail.categoryName}
+                  </span>
+                )}
+                <h3 className="text-xl font-serif-title font-medium text-stone-900 leading-snug">
+                  {selectedServiceDetail.name}
+                </h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-base font-semibold text-[#8a704c]">
+                    {formatCurrency(selectedServiceDetail.price)}
+                  </span>
+                  <span className="text-xs text-stone-400">•</span>
+                  <span className="text-xs text-stone-500 inline-flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-stone-400" />
+                    {selectedServiceDetail.durationMinutes} phút
+                  </span>
+                </div>
               </div>
-            )}
+            </div>
+
+            <div className="overflow-y-auto space-y-5 pr-1 flex-1">
+              {selectedServiceDetail.description && (
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-1.5">
+                    Mô tả liệu trình
+                  </h4>
+                  <p className="text-sm text-stone-600 leading-relaxed">
+                    {selectedServiceDetail.description}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-2.5">
+                  Quy trình thực hiện ({parseProcessSteps(selectedServiceDetail.processSteps).length} bước)
+                </h4>
+                {parseProcessSteps(selectedServiceDetail.processSteps).length > 0 ? (
+                  <ol className="space-y-2">
+                    {parseProcessSteps(selectedServiceDetail.processSteps).map((step, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-stone-700 bg-stone-50 p-3 rounded-xl border border-stone-100">
+                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#465d4c] text-white text-[11px] font-semibold shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span className="leading-snug">{step.replace(/^\d+[.\s]*/, '')}</span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-xs text-stone-500 italic bg-stone-50 p-3 rounded-xl border border-stone-100">
+                    Liệu trình được thực hiện theo quy trình chuẩn hóa chăm sóc sức khỏe và phục hồi của TIKEY SPA.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-stone-100 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedServiceDetail(null)}
+                className="px-4 py-2.5 text-xs font-medium rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50"
+              >
+                Đóng
+              </button>
+              <a
+                href="#booking"
+                onClick={() => setSelectedServiceDetail(null)}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 text-xs font-medium rounded-xl bg-[#465d4c] text-white hover:bg-[#374a3c] transition-colors shadow-xs"
+              >
+                <span>Đặt lịch ngay</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
           </div>
-        </section>
+        </div>
       )}
 
-      {/* 4. STAFF / TEAM SECTION WITH PERSISTENT AVATARS */}
-      {(showStaff || staffFailed) && (
+      {/* 4. STAFF / TEAM SECTION */}
+      {showStaff && (
         <section
           id="doi-ngu"
           aria-labelledby="staff-heading"
@@ -747,40 +793,46 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {SPA_ARTICLES.map((art) => (
-              <div
-                key={art.id}
-                className="flex flex-col rounded-2xl border border-[#e7e2d8] bg-[#faf8f5] hover:bg-white hover:border-[#c6d8c9] hover:shadow-md transition-all p-6"
-              >
-                <div className="flex items-center justify-between text-[11px] font-semibold text-[#566f5c] mb-3">
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#f2f6f3] border border-[#c6d8c9]/60">
-                    {art.category}
-                  </span>
-                  <span className="text-stone-400 font-normal">{art.readTime}</span>
+          {!articles || articles.length === 0 ? (
+            <p className="text-stone-500 text-center py-8">Chưa có bài viết nào được xuất bản.</p>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {articles.map((art) => (
+                <div
+                  key={art.id}
+                  className="flex flex-col rounded-2xl border border-[#e7e2d8] bg-[#faf8f5] hover:bg-white hover:border-[#c6d8c9] hover:shadow-md transition-all p-6 text-left"
+                >
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-[#566f5c] mb-3">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#f2f6f3] border border-[#c6d8c9]/60">
+                      {art.category || 'Chăm sóc'}
+                    </span>
+                    <span className="text-stone-400 font-normal">{art.readTime || '3 phút đọc'}</span>
+                  </div>
+
+                  <h3 className="font-serif-title font-medium text-base text-stone-900 mb-2.5 leading-snug line-clamp-2">
+                    {art.title}
+                  </h3>
+
+                  {art.excerpt && (
+                    <p className="text-xs text-stone-600 line-clamp-3 mb-6 leading-relaxed">
+                      {art.excerpt}
+                    </p>
+                  )}
+
+                  <div className="mt-auto pt-4 border-t border-[#e7e2d8]">
+                    <button
+                      type="button"
+                      onClick={() => setReadingArticle(art)}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#465d4c] hover:text-[#374a3c] transition-colors cursor-pointer"
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>Đọc bài viết</span>
+                    </button>
+                  </div>
                 </div>
-
-                <h3 className="font-serif-title font-medium text-base text-stone-900 mb-2.5 leading-snug line-clamp-2">
-                  {art.title}
-                </h3>
-
-                <p className="text-xs text-stone-600 line-clamp-3 mb-6 leading-relaxed">
-                  {art.excerpt}
-                </p>
-
-                <div className="mt-auto pt-4 border-t border-[#e7e2d8]">
-                  <button
-                    type="button"
-                    onClick={() => setReadingArticle(art)}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#465d4c] hover:text-[#374a3c] transition-colors"
-                  >
-                    <BookOpen className="w-3.5 h-3.5" />
-                    <span>Đọc bài viết</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -790,7 +842,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-article-title"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs text-left"
         >
           <div className="bg-[#faf8f5] border border-[#e7e2d8] rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative">
             <button
@@ -804,37 +856,28 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
 
             <div className="flex items-center gap-3 text-xs text-[#566f5c] font-semibold mb-3">
               <span className="px-3 py-0.5 rounded-full bg-[#f2f6f3] border border-[#c6d8c9]">
-                {readingArticle.category}
+                {readingArticle.category || 'Góc chăm sóc'}
               </span>
-              <span className="text-stone-400 font-normal">{readingArticle.readTime}</span>
+              <span className="text-stone-400 font-normal">{readingArticle.readTime || '3 phút đọc'}</span>
             </div>
 
             <h2 id="modal-article-title" className="text-2xl sm:text-3xl font-serif-title font-medium text-stone-900 mb-6 leading-tight">
               {readingArticle.title}
             </h2>
 
-            <div className="space-y-4 text-stone-700 text-sm leading-relaxed mb-8">
-              {readingArticle.content.map((p, idx) => (
-                <p key={idx}>{p}</p>
-              ))}
-            </div>
-
-            {readingArticle.tips && readingArticle.tips.length > 0 && (
-              <div className="p-5 rounded-2xl bg-white border border-[#c6d8c9] mb-6">
-                <h4 className="font-semibold text-stone-900 text-xs uppercase tracking-wider mb-2.5 flex items-center gap-1.5 text-[#465d4c]">
-                  <Sparkles className="w-4 h-4 text-[#b8976c]" />
-                  <span>Lời khuyên từ chuyên gia</span>
-                </h4>
-                <ul className="space-y-2 text-xs text-stone-600">
-                  {readingArticle.tips.map((tip, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-[#b8976c] font-bold">•</span>
-                      <span>{tip}</span>
-                    </li>
-                  ))}
-                </ul>
+            {readingArticle.coverImage && (
+              <div className="rounded-2xl overflow-hidden mb-6 border border-stone-200 max-h-72">
+                <img
+                  src={readingArticle.coverImage}
+                  alt={readingArticle.title}
+                  className="w-full h-full object-cover"
+                />
               </div>
             )}
+
+            <div className="space-y-4 text-stone-700 text-sm leading-relaxed mb-8 whitespace-pre-line">
+              {readingArticle.content}
+            </div>
 
             <div className="flex justify-end pt-4 border-t border-[#e7e2d8]">
               <button
@@ -869,44 +912,57 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {DEMO_TESTIMONIALS.map((t, idx) => (
-              <div
-                key={idx}
-                className="p-6 rounded-2xl bg-white border border-[#e7e2d8] shadow-xs flex flex-col justify-between"
-              >
-                <div>
-                  {/* Star Rating */}
-                  <div className="flex items-center gap-1 text-[#b8976c] mb-3">
-                    {Array.from({ length: t.rating }).map((_, sIdx) => (
-                      <Star key={sIdx} className="w-4 h-4 fill-current" />
-                    ))}
+          {!reviews || reviews.length === 0 ? (
+            <p className="text-stone-500 text-center py-8">Chưa có đánh giá nào được phê duyệt.</p>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 text-left">
+              {reviews.map((r) => (
+                <div
+                  key={r.id}
+                  className="p-6 rounded-2xl bg-white border border-[#e7e2d8] shadow-xs flex flex-col justify-between"
+                >
+                  <div>
+                    {/* Star Rating & Demo Tag */}
+                    <div className="flex items-center justify-between gap-1 mb-3">
+                      <div className="flex items-center text-[#b8976c]">
+                        {Array.from({ length: r.rating || 5 }).map((_, sIdx) => (
+                          <Star key={sIdx} className="w-4 h-4 fill-current" />
+                        ))}
+                      </div>
+                      {r.isDemo && (
+                        <span className="text-[10px] text-stone-400 bg-stone-50 px-2 py-0.5 rounded border border-stone-200">
+                          Minh họa
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs sm:text-sm text-stone-600 italic leading-relaxed mb-6">
+                      &ldquo;{r.comment}&rdquo;
+                    </p>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-stone-600 italic leading-relaxed mb-6">
-                    &ldquo;{t.comment}&rdquo;
-                  </p>
+                  <div className="pt-4 border-t border-[#e7e2d8]">
+                    <h4 className="font-semibold text-stone-900 text-sm">{r.customerName}</h4>
+                    {r.serviceName && (
+                      <span className="text-[11px] text-[#566f5c] font-medium block truncate mt-0.5">
+                        {r.serviceName}
+                      </span>
+                    )}
+                  </div>
                 </div>
-
-                <div className="pt-4 border-t border-[#e7e2d8]">
-                  <h4 className="font-semibold text-stone-900 text-sm">{t.name}</h4>
-                  <span className="text-[11px] text-[#566f5c] font-medium block truncate">
-                    {t.service}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           <div className="mt-8 text-center">
             <span className="text-[11px] text-stone-400 italic">
-              * Đây là khu vực minh họa trải nghiệm dịch vụ. Khách hàng thực tế có thể đóng góp ý kiến trực tiếp tại mục Phản hồi bên dưới.
+              * Khách hàng trải nghiệm có thể đóng góp ý kiến trực tiếp tại mục Phản hồi bên dưới.
             </span>
           </div>
         </div>
       </section>
 
-      {/* 7. FEEDBACK & COMPLAINTS SECTION ("PHẢN HỒI & KHIẾU NẠI") */}
+      {/* 7. FEEDBACK & COMPLAINTS SECTION */}
       <section
         id="phan-hoi"
         aria-labelledby="feedback-heading"
@@ -951,7 +1007,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                       <Mail className="w-5 h-5" />
                     </div>
                     <div>
-                      <span className="text-xs text-stone-500 block">Hộp thư chăm sóc khách hàng</span>
+                      <span className="text-xs text-stone-500 block">Thư điện tử chăm sóc khách hàng</span>
                       <a href={`mailto:${spa.email}`} className="font-semibold text-stone-900 text-sm hover:text-[#465d4c]">
                         {spa.email}
                       </a>
@@ -959,24 +1015,10 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                   </div>
                 )}
 
-                {spa.address && (
-                  <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-[#faf8f5] border border-[#e7e2d8]">
-                    <div className="p-2.5 rounded-xl bg-[#f2f6f3] text-[#465d4c] shrink-0">
-                      <MapPin className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-xs text-stone-500 block">Địa chỉ cơ sở</span>
-                      <span className="font-medium text-stone-800 text-xs sm:text-sm">
-                        {spa.address}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="p-4 rounded-2xl bg-[#fcfaf7] border border-[#c6d8c9]/50 text-xs text-stone-600">
-                  <div className="flex items-center gap-2 font-semibold text-[#465d4c] mb-1">
-                    <Clock className="w-4 h-4 text-[#b8976c]" />
-                    <span>Thời gian phản hồi</span>
+                <div className="p-4 rounded-2xl bg-[#f2f6f3]/70 border border-[#c6d8c9]/60 text-xs text-stone-600 space-y-1.5">
+                  <div className="font-semibold text-[#465d4c] flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-[#b8976c]" />
+                    <span>Cam kết bảo mật & Xử lý thỏa đáng</span>
                   </div>
                   <p>Mọi ý kiến sẽ được Ban Quản trị TIKEY SPA tiếp nhận và phản hồi chính thức trong vòng 24 giờ làm việc.</p>
                 </div>
@@ -1159,11 +1201,10 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
         </div>
       </section>
 
-      {/* 10. FOOTER / CONTACT */}
+      {/* 10. FOOTER */}
       <footer id="lien-he" className="mt-auto bg-stone-900 text-stone-300">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-stone-800">
-            {/* Brand column */}
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-3 text-white">
                 <Sparkles className="w-5 h-5 text-[#b8976c]" />
@@ -1177,7 +1218,6 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               </div>
             </div>
 
-            {/* Contact details */}
             <div className="md:col-span-1">
               <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
                 Thông tin liên hệ
@@ -1208,7 +1248,6 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               </ul>
             </div>
 
-            {/* Quick links */}
             <div className="md:col-span-1">
               <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
                 Lối tắt trang
@@ -1218,7 +1257,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                   Giới thiệu & Triết lý
                 </a>
                 <a href="#dich-vu" className="hover:text-white transition-colors">
-                  Danh mục dịch vụ
+                  Dịch vụ nổi bật
                 </a>
                 <a href="#doi-ngu" className="hover:text-white transition-colors">
                   Đội ngũ chuyên viên
@@ -1232,7 +1271,6 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               </div>
             </div>
 
-            {/* Customer Care & Portal */}
             <div className="md:col-span-1">
               <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
                 Hỗ trợ & Quản trị

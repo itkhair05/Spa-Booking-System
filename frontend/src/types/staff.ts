@@ -4,6 +4,7 @@ export interface Staff {
   phone: string | null;
   email: string | null;
   isActive: boolean;
+  showOnWebsite?: boolean;
   avatarUrl?: string | null;
   username?: string | null;
   accountEnabled?: boolean;
@@ -26,6 +27,7 @@ export interface CreateStaffRequest {
   email?: string;
   avatarUrl?: string | null;
   isActive?: boolean;
+  showOnWebsite?: boolean;
 }
 
 export interface UpdateStaffRequest {
@@ -34,6 +36,7 @@ export interface UpdateStaffRequest {
   email?: string;
   avatarUrl?: string | null;
   isActive?: boolean;
+  showOnWebsite?: boolean;
 }
 
 export interface CreateStaffAccountRequest {

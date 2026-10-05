@@ -22,6 +22,7 @@ export const StaffForm = ({ staff, onSuccess, onCancel }: StaffFormProps) => {
   const [phone, setPhone] = useState<string>(staff ? (staff.phone || '') : '');
   const [email, setEmail] = useState<string>(staff ? (staff.email || '') : '');
   const [isActive, setIsActive] = useState<boolean>(staff ? staff.isActive : true);
+  const [showOnWebsite, setShowOnWebsite] = useState<boolean>(staff ? (staff.showOnWebsite ?? true) : true);
 
   // Avatar state
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(staff?.avatarUrl || null);
@@ -72,6 +73,7 @@ export const StaffForm = ({ staff, onSuccess, onCancel }: StaffFormProps) => {
           phone: phone || undefined,
           email: email || undefined,
           isActive,
+          showOnWebsite,
         };
         savedStaff = await updateStaff(staff.id, data);
         if (deleteExistingAvatar && !avatarFile) {
@@ -83,6 +85,7 @@ export const StaffForm = ({ staff, onSuccess, onCancel }: StaffFormProps) => {
           phone: phone || undefined,
           email: email || undefined,
           isActive,
+          showOnWebsite,
         };
         savedStaff = await createStaff(data);
       }
@@ -189,8 +192,18 @@ export const StaffForm = ({ staff, onSuccess, onCancel }: StaffFormProps) => {
           />
           
           <label className="flex items-center gap-2 text-sm font-semibold text-[var(--color-neutral-700)] mt-2 cursor-pointer">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
+              checked={showOnWebsite}
+              onChange={(e) => setShowOnWebsite(e.target.checked)}
+              className="w-4 h-4 rounded border-[var(--color-neutral-300)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-500)]"
+            />
+            Hiển thị trên website (Đội ngũ công khai)
+          </label>
+
+          <label className="flex items-center gap-2 text-sm font-semibold text-[var(--color-neutral-700)] mt-1 cursor-pointer">
+            <input
+              type="checkbox"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
               className="w-4 h-4 rounded border-[var(--color-neutral-300)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-500)]"

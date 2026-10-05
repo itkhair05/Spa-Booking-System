@@ -72,6 +72,15 @@ class DevDataSeederTest {
     @Autowired
     private com.example.spabooking.feedback.repository.FeedbackRepository feedbackRepository;
 
+    @Autowired
+    private com.example.spabooking.service.repository.ServiceCategoryRepository serviceCategoryRepository;
+
+    @Autowired
+    private com.example.spabooking.article.repository.ArticleRepository articleRepository;
+
+    @Autowired
+    private com.example.spabooking.review.repository.ReviewRepository reviewRepository;
+
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -97,6 +106,15 @@ class DevDataSeederTest {
 
             serviceRepository.findAllByTenantId(t.getId()).forEach(serviceRepository::delete);
             serviceRepository.flush();
+
+            serviceCategoryRepository.findAllByTenantId(t.getId()).forEach(serviceCategoryRepository::delete);
+            serviceCategoryRepository.flush();
+
+            articleRepository.findAllByTenantId(t.getId()).forEach(articleRepository::delete);
+            articleRepository.flush();
+
+            reviewRepository.findAllByTenantId(t.getId()).forEach(reviewRepository::delete);
+            reviewRepository.flush();
 
             // Remove any login accounts linked to this tenant's staff before deleting
             // the staff rows (users.staff_id FK), including accounts created via the UI.

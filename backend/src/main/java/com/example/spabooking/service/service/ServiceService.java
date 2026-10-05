@@ -16,11 +16,15 @@ public class ServiceService {
 
     private final ServiceRepository serviceRepository;
     private final TenantRepository tenantRepository;
+    private final com.example.spabooking.service.repository.ServiceCategoryRepository serviceCategoryRepository;
 
     @Autowired
-    public ServiceService(ServiceRepository serviceRepository, TenantRepository tenantRepository) {
+    public ServiceService(ServiceRepository serviceRepository,
+                          TenantRepository tenantRepository,
+                          com.example.spabooking.service.repository.ServiceCategoryRepository serviceCategoryRepository) {
         this.serviceRepository = serviceRepository;
         this.tenantRepository = tenantRepository;
+        this.serviceCategoryRepository = serviceCategoryRepository;
     }
 
     public List<Service> findAll() {
@@ -34,14 +38,30 @@ public class ServiceService {
     }
 
     public Service create(Service service) {
+        return create(service, null);
+    }
+
+    public Service create(Service service, Long categoryId) {
         Long tenantId = TenantContext.requireTenantId();
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
         service.setTenant(tenant);
+
+        if (categoryId != null && categoryId > 0) {
+            com.example.spabooking.service.entity.ServiceCategory category = serviceCategoryRepository
+                    .findByIdAndTenantId(categoryId, tenantId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + categoryId));
+            service.setCategory(category);
+        }
+
         return serviceRepository.save(service);
     }
 
     public Service update(Long id, Service updatedDetails) {
+        return update(id, updatedDetails, null);
+    }
+
+    public Service update(Long id, Service updatedDetails, Long categoryId) {
         Long tenantId = TenantContext.requireTenantId();
         Service existingService = serviceRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
@@ -56,6 +76,25 @@ public class ServiceService {
         
         if (updatedDetails.getIsActive() != null) {
             existingService.setIsActive(updatedDetails.getIsActive());
+        }
+
+        if (updatedDetails.getIsFeatured() != null) {
+            existingService.setIsFeatured(updatedDetails.getIsFeatured());
+        }
+
+        if (updatedDetails.getProcessSteps() != null) {
+            existingService.setProcessSteps(updatedDetails.getProcessSteps());
+        }
+
+        if (categoryId != null) {
+            if (categoryId <= 0) {
+                existingService.setCategory(null);
+            } else {
+                com.example.spabooking.service.entity.ServiceCategory category = serviceCategoryRepository
+                        .findByIdAndTenantId(categoryId, tenantId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + categoryId));
+                existingService.setCategory(category);
+            }
         }
         
         return serviceRepository.save(existingService);

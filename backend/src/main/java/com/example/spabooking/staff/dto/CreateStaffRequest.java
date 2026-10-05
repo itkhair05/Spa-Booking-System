@@ -17,6 +17,8 @@ public class CreateStaffRequest {
 
     private Boolean isActive = true;
 
+    private Boolean showOnWebsite = true;
+
     private String avatarUrl;
 
     // Getters and Setters
@@ -31,6 +33,9 @@ public class CreateStaffRequest {
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+
+    public Boolean getShowOnWebsite() { return showOnWebsite; }
+    public void setShowOnWebsite(Boolean showOnWebsite) { this.showOnWebsite = showOnWebsite; }
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }

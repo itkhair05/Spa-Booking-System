@@ -10,6 +10,10 @@ public class PublicServiceResponse {
     private Integer durationMinutes;
     private BigDecimal price;
     private String imageUrl;
+    private Long categoryId;
+    private String categoryName;
+    private Boolean isFeatured;
+    private String processSteps;
 
     public static PublicServiceResponse fromEntity(Service service) {
         PublicServiceResponse resp = new PublicServiceResponse();
@@ -19,6 +23,12 @@ public class PublicServiceResponse {
         resp.setDurationMinutes(service.getDurationMinutes());
         resp.setPrice(service.getPrice());
         resp.setImageUrl(service.getImageUrl());
+        if (service.getCategory() != null) {
+            resp.setCategoryId(service.getCategory().getId());
+            resp.setCategoryName(service.getCategory().getName());
+        }
+        resp.setIsFeatured(service.getIsFeatured());
+        resp.setProcessSteps(service.getProcessSteps());
         return resp;
     }
 
@@ -34,4 +44,12 @@ public class PublicServiceResponse {
     public void setPrice(BigDecimal price) { this.price = price; }
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public Long getCategoryId() { return categoryId; }
+    public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
+    public String getCategoryName() { return categoryName; }
+    public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
+    public Boolean getIsFeatured() { return isFeatured; }
+    public void setIsFeatured(Boolean isFeatured) { this.isFeatured = isFeatured; }
+    public String getProcessSteps() { return processSteps; }
+    public void setProcessSteps(String processSteps) { this.processSteps = processSteps; }
 }

@@ -26,6 +26,12 @@ public class UpdateServiceRequest {
 
     private String imageUrl;
 
+    private Long categoryId;
+
+    private Boolean isFeatured;
+
+    private String processSteps;
+
     // Getters and Setters
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -44,4 +50,13 @@ public class UpdateServiceRequest {
 
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public Long getCategoryId() { return categoryId; }
+    public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
+
+    public Boolean getIsFeatured() { return isFeatured; }
+    public void setIsFeatured(Boolean isFeatured) { this.isFeatured = isFeatured; }
+
+    public String getProcessSteps() { return processSteps; }
+    public void setProcessSteps(String processSteps) { this.processSteps = processSteps; }
 }

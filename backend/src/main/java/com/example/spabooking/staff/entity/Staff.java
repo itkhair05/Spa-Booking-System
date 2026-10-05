@@ -29,6 +29,9 @@ public class Staff {
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;
 
+    @Column(name = "show_on_website", nullable = false)
+    private Boolean showOnWebsite = true;
+
     @Column(name = "avatar_url", length = 512)
     private String avatarUrl;
 
@@ -71,6 +74,9 @@ public class Staff {
 
     public Boolean getIsDeleted() { return isDeleted; }
     public void setIsDeleted(Boolean isDeleted) { this.isDeleted = isDeleted; }
+
+    public Boolean getShowOnWebsite() { return showOnWebsite; }
+    public void setShowOnWebsite(Boolean showOnWebsite) { this.showOnWebsite = showOnWebsite; }
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }

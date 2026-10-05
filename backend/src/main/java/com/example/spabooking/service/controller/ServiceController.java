@@ -62,8 +62,12 @@ public class ServiceController {
         if (request.getIsActive() != null) {
             service.setIsActive(request.getIsActive());
         }
+        if (request.getIsFeatured() != null) {
+            service.setIsFeatured(request.getIsFeatured());
+        }
+        service.setProcessSteps(request.getProcessSteps());
 
-        Service createdService = serviceService.create(service);
+        Service createdService = serviceService.create(service, request.getCategoryId());
         return new ResponseEntity<>(ServiceResponse.fromEntity(createdService), HttpStatus.CREATED);
     }
 
@@ -81,8 +85,12 @@ public class ServiceController {
         if (request.getIsActive() != null) {
             serviceDetails.setIsActive(request.getIsActive());
         }
+        if (request.getIsFeatured() != null) {
+            serviceDetails.setIsFeatured(request.getIsFeatured());
+        }
+        serviceDetails.setProcessSteps(request.getProcessSteps());
 
-        Service updatedService = serviceService.update(id, serviceDetails);
+        Service updatedService = serviceService.update(id, serviceDetails, request.getCategoryId());
         return ResponseEntity.ok(ServiceResponse.fromEntity(updatedService));
     }
 

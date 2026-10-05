@@ -14,6 +14,10 @@ public class ServiceResponse {
     private BigDecimal price;
     private Boolean isActive;
     private String imageUrl;
+    private Long categoryId;
+    private String categoryName;
+    private Boolean isFeatured;
+    private String processSteps;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -26,6 +30,12 @@ public class ServiceResponse {
         response.setPrice(service.getPrice());
         response.setIsActive(service.getIsActive());
         response.setImageUrl(service.getImageUrl());
+        if (service.getCategory() != null) {
+            response.setCategoryId(service.getCategory().getId());
+            response.setCategoryName(service.getCategory().getName());
+        }
+        response.setIsFeatured(service.getIsFeatured());
+        response.setProcessSteps(service.getProcessSteps());
         response.setCreatedAt(service.getCreatedAt());
         response.setUpdatedAt(service.getUpdatedAt());
         return response;
@@ -33,6 +43,18 @@ public class ServiceResponse {
 
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public Long getCategoryId() { return categoryId; }
+    public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
+
+    public String getCategoryName() { return categoryName; }
+    public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
+
+    public Boolean getIsFeatured() { return isFeatured; }
+    public void setIsFeatured(Boolean isFeatured) { this.isFeatured = isFeatured; }
+
+    public String getProcessSteps() { return processSteps; }
+    public void setProcessSteps(String processSteps) { this.processSteps = processSteps; }
 
     // Getters and Setters
     public Long getId() { return id; }

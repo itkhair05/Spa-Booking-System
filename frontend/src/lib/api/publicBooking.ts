@@ -3,6 +3,9 @@ import type {
   PublicSpaInfoResponse,
   PublicServiceResponse,
   PublicStaffResponse,
+  PublicCategoryResponse,
+  PublicArticleResponse,
+  PublicReviewResponse,
   CreatePublicBookingRequest,
   PublicBookingResponse,
   PublicBookingDetailResponse,
@@ -18,8 +21,33 @@ export const getPublicServices = async (slug: string): Promise<PublicServiceResp
   return data;
 };
 
+export const getPublicFeaturedServices = async (slug: string): Promise<PublicServiceResponse[]> => {
+  const { data } = await publicAxios.get<PublicServiceResponse[]>(`/public/spas/${slug}/services/featured`);
+  return data;
+};
+
+export const getPublicCategories = async (slug: string): Promise<PublicCategoryResponse[]> => {
+  const { data } = await publicAxios.get<PublicCategoryResponse[]>(`/public/spas/${slug}/categories`);
+  return data;
+};
+
 export const getPublicStaff = async (slug: string): Promise<PublicStaffResponse[]> => {
   const { data } = await publicAxios.get<PublicStaffResponse[]>(`/public/spas/${slug}/staff`);
+  return data;
+};
+
+export const getPublicArticles = async (slug: string): Promise<PublicArticleResponse[]> => {
+  const { data } = await publicAxios.get<PublicArticleResponse[]>(`/public/spas/${slug}/articles`);
+  return data;
+};
+
+export const getPublicArticle = async (slug: string, slugOrId: string): Promise<PublicArticleResponse> => {
+  const { data } = await publicAxios.get<PublicArticleResponse>(`/public/spas/${slug}/articles/${encodeURIComponent(slugOrId)}`);
+  return data;
+};
+
+export const getPublicReviews = async (slug: string): Promise<PublicReviewResponse[]> => {
+  const { data } = await publicAxios.get<PublicReviewResponse[]>(`/public/spas/${slug}/reviews`);
   return data;
 };
 
