@@ -117,6 +117,10 @@ public class StaffService {
             existingStaff.setAvatarUrl(updatedDetails.getAvatarUrl());
         }
 
+        if (updatedDetails.getShowOnWebsite() != null) {
+            existingStaff.setShowOnWebsite(updatedDetails.getShowOnWebsite());
+        }
+
         if (updatedDetails.getIsActive() != null) {
             existingStaff.setIsActive(updatedDetails.getIsActive());
             // Sync status with associated user account if present

@@ -6,6 +6,10 @@ export interface Service {
   price: number;
   imageUrl?: string | null;
   isActive: boolean;
+  categoryId?: number | null;
+  categoryName?: string | null;
+  isFeatured?: boolean;
+  processSteps?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -17,6 +21,9 @@ export interface CreateServiceRequest {
   price: number;
   imageUrl?: string | null;
   isActive?: boolean;
+  categoryId?: number | null;
+  isFeatured?: boolean;
+  processSteps?: string | null;
 }
 
 export interface UpdateServiceRequest {
@@ -26,4 +33,7 @@ export interface UpdateServiceRequest {
   price: number;
   imageUrl?: string | null;
   isActive?: boolean;
+  categoryId?: number | null;
+  isFeatured?: boolean;
+  processSteps?: string | null;
 }

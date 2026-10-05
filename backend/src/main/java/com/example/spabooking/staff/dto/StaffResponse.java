@@ -13,6 +13,7 @@ public class StaffResponse {
     private String username;
     private Boolean accountEnabled;
     private Boolean isActive;
+    private Boolean showOnWebsite;
     private String avatarUrl;
     private String accessToken;
     private LocalDateTime createdAt;
@@ -35,11 +36,15 @@ public class StaffResponse {
         response.setUsername(username);
         response.setAccountEnabled(accountEnabled);
         response.setIsActive(staff.getIsActive());
+        response.setShowOnWebsite(staff.getShowOnWebsite());
         response.setAvatarUrl(staff.getAvatarUrl());
         response.setCreatedAt(staff.getCreatedAt());
         response.setUpdatedAt(staff.getUpdatedAt());
         return response;
     }
+
+    public Boolean getShowOnWebsite() { return showOnWebsite; }
+    public void setShowOnWebsite(Boolean showOnWebsite) { this.showOnWebsite = showOnWebsite; }
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }

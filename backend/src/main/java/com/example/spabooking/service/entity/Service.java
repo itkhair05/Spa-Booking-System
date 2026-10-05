@@ -32,6 +32,16 @@ public class Service {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private ServiceCategory category;
+
+    @Column(name = "is_featured", nullable = false)
+    private Boolean isFeatured = false;
+
+    @Column(name = "process_steps", columnDefinition = "TEXT")
+    private String processSteps;
+
     @Column(name = "image_url", length = 512)
     private String imageUrl;
 
@@ -74,6 +84,15 @@ public class Service {
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean active) { isActive = active; }
+
+    public ServiceCategory getCategory() { return category; }
+    public void setCategory(ServiceCategory category) { this.category = category; }
+
+    public Boolean getIsFeatured() { return isFeatured; }
+    public void setIsFeatured(Boolean isFeatured) { this.isFeatured = isFeatured; }
+
+    public String getProcessSteps() { return processSteps; }
+    public void setProcessSteps(String processSteps) { this.processSteps = processSteps; }
 
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }

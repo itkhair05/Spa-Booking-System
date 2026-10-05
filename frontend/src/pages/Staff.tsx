@@ -11,7 +11,7 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { getStaff, deleteStaff, updateStaff, createStaffAccount } from '../lib/api/staff';
 import type { Staff as StaffType } from '../types/staff';
 import { StaffForm } from './StaffForm';
-import { UserRound, Trash2, Plus, KeyRound, ShieldAlert, Check, Phone, Mail } from 'lucide-react';
+import { UserRound, Trash2, Plus, KeyRound, ShieldAlert, Check, Phone, Mail, Globe } from 'lucide-react';
 import { useAuth } from '../app/auth/useAuth';
 
 const Staff = () => {
@@ -130,6 +130,23 @@ const Staff = () => {
       // Ignore
     } finally {
       setIsToggling(false);
+    }
+  };
+
+  // Toggle website public visibility
+  const handleToggleWebsiteVisibility = async (member: StaffType) => {
+    if (!isOwner) return;
+    try {
+      await updateStaff(member.id, {
+        name: member.name,
+        phone: member.phone || undefined,
+        email: member.email || undefined,
+        isActive: member.isActive,
+        showOnWebsite: !(member.showOnWebsite ?? true),
+      });
+      await fetchStaff();
+    } catch {
+      // Ignore
     }
   };
 
@@ -298,6 +315,35 @@ const Staff = () => {
                       )
                     ) : (
                       <span className="text-[11px] text-stone-400">Chưa cấp</span>
+                    )}
+                  </div>
+
+                  {/* Public Website Visibility */}
+                  <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-medium text-stone-500">Hiển thị website:</span>
+                    {isOwner ? (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleWebsiteVisibility(member)}
+                        className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
+                          member.showOnWebsite ?? true
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                            : 'bg-stone-100 text-stone-500 border-stone-200 hover:bg-stone-200'
+                        }`}
+                        title="Nhấn để bật/tắt hiển thị nhân viên trên website công khai"
+                      >
+                        <Globe size={11} />
+                        <span>{member.showOnWebsite ?? true ? 'Hiển thị trên website' : 'Ẩn khỏi website'}</span>
+                      </button>
+                    ) : (
+                      <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                        member.showOnWebsite ?? true
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-stone-100 text-stone-500 border-stone-200'
+                      }`}>
+                        <Globe size={11} />
+                        <span>{member.showOnWebsite ?? true ? 'Hiển thị' : 'Ẩn'}</span>
+                      </span>
                     )}
                   </div>
                 </div>

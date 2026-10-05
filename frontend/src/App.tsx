@@ -9,6 +9,8 @@ import Customers from './pages/Customers';
 import Services from './pages/Services';
 import Staff from './pages/Staff';
 import FeedbackPage from './pages/Feedback';
+import Articles from './pages/Articles';
+import ReviewsPage from './pages/Reviews';
 import Settings from './pages/Settings';
 import PublicBooking from './pages/PublicBooking';
 
@@ -145,6 +147,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <Staff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/articles"
+            element={
+              <ProtectedRoute>
+                <Articles />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reviews"
+            element={
+              <ProtectedRoute>
+                <ReviewsPage />
               </ProtectedRoute>
             }
           />

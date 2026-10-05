@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useSpaBooking } from './SpaBookingContext';
 import { formatDateLongFromYMD } from '../../lib/format';
-import { CheckCircle2, Calendar, MapPin, Copy, Check, Search, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Calendar, MapPin, Copy, Check, Search, RotateCcw, CalendarPlus, Bell } from 'lucide-react';
 
 export function StepSuccess() {
   const { spa, state, handleRestart } = useSpaBooking();
   const { service, staff, date, time, customer, bookingCode, bookingId } = state;
   const [copied, setCopied] = useState(false);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState<string | null>(null);
 
   if (!service || !staff) return null;
 
@@ -19,7 +21,6 @@ export function StepSuccess() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      // Fallback
       setCopied(false);
     }
   };
@@ -32,9 +33,65 @@ export function StepSuccess() {
       if (input) {
         input.value = displayCode;
         input.focus();
-        // Trigger event if needed
         input.dispatchEvent(new Event('input', { bubbles: true }));
       }
+    }
+  };
+
+  // Build Google Calendar Deep Link
+  const buildGoogleCalendarUrl = () => {
+    try {
+      const [year, month, day] = date.split('-').map(Number);
+      const [hours, minutes] = timeString.split(':').map(Number);
+      const startDate = new Date(year, month - 1, day, hours, minutes, 0);
+      const durationMs = (service.durationMinutes || 60) * 60 * 1000;
+      const endDate = new Date(startDate.getTime() + durationMs);
+
+      const formatIsoCompact = (d: Date) => {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+      };
+
+      const startIso = formatIsoCompact(startDate);
+      const endIso = formatIsoCompact(endDate);
+
+      const title = `[TIKEY SPA] ${service.name} - Mã: ${displayCode}`;
+      const details = `Lịch hẹn tại TIKEY SPA\nDịch vụ: ${service.name}\nKhách hàng: ${customer.name} (${customer.phone})\nKỹ thuật viên: ${staff.name}\nMã đặt lịch: ${displayCode}\nĐịa chỉ: ${spa.address || 'TIKEY SPA'}\nHotline: ${spa.phone || ''}`;
+      const location = spa.address || spa.name || 'TIKEY SPA';
+
+      return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startIso}/${endIso}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
+    } catch {
+      return '#';
+    }
+  };
+
+  const handleToggleReminder = async () => {
+    if (reminderEnabled) {
+      setReminderEnabled(false);
+      setReminderMessage(null);
+      return;
+    }
+
+    setReminderEnabled(true);
+    if ('Notification' in window) {
+      if (Notification.permission === 'default') {
+        try {
+          const perm = await Notification.requestPermission();
+          if (perm === 'granted') {
+            setReminderMessage('Đã bật thông báo nhắc lịch trên trình duyệt này.');
+          } else {
+            setReminderMessage('Bạn có thể bật thông báo trình duyệt trong cài đặt để nhận nhắc lịch.');
+          }
+        } catch {
+          setReminderMessage('Đã lưu tùy chọn nhắc hẹn.');
+        }
+      } else if (Notification.permission === 'granted') {
+        setReminderMessage('Đã bật thông báo nhắc lịch trên trình duyệt này.');
+      } else {
+        setReminderMessage('Đã lưu tùy chọn nhắc hẹn cho số điện thoại của bạn.');
+      }
+    } else {
+      setReminderMessage('Đã lưu tùy chọn nhắc hẹn cho số điện thoại của bạn.');
     }
   };
 
@@ -109,6 +166,53 @@ export function StepSuccess() {
             <span>KTV: <strong className="text-stone-800">{staff.name}</strong></span>
           </div>
         </div>
+      </div>
+
+      {/* Optional Google Calendar & Reminder Actions */}
+      <div className="max-w-md mx-auto mb-6 p-4 rounded-2xl bg-amber-50/50 border border-amber-200/70 text-left space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CalendarPlus className="w-4 h-4 text-[#8a704c]" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#8a704c]">Lịch & Nhắc hẹn tiện ích</span>
+          </div>
+          <span className="text-[11px] text-stone-500 bg-white/80 px-2 py-0.5 rounded-full border border-stone-200">Tùy chọn</span>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+          <a
+            href={buildGoogleCalendarUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white border border-stone-300 text-stone-800 text-xs font-medium hover:bg-stone-50 hover:border-stone-400 transition-colors shadow-xs"
+          >
+            <CalendarPlus className="w-4 h-4 text-[#4285F4]" />
+            <span>Thêm vào Google Calendar</span>
+          </a>
+        </div>
+
+        <label className="flex items-start gap-2.5 pt-1 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={reminderEnabled}
+            onChange={handleToggleReminder}
+            className="mt-0.5 h-4 w-4 rounded border-stone-300 text-[#465d4c] focus:ring-[#465d4c]"
+          />
+          <div className="text-xs text-stone-700">
+            <span className="font-medium flex items-center gap-1">
+              <Bell className="w-3.5 h-3.5 text-stone-500" />
+              Nhắc tôi trước lịch hẹn
+            </span>
+            <span className="text-[11px] text-stone-500 block mt-0.5">
+              Gửi thông báo nhắc nhở nhẹ nhàng trước giờ trị liệu.
+            </span>
+          </div>
+        </label>
+
+        {reminderMessage && (
+          <p className="text-[11px] text-[#2d6a4f] bg-emerald-50 border border-emerald-200 p-2 rounded-lg">
+            ✓ {reminderMessage}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3">

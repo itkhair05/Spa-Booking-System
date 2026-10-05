@@ -14,6 +14,39 @@ export interface PublicServiceResponse {
   durationMinutes: number;
   price: number;
   imageUrl?: string | null;
+  categoryId?: number | null;
+  categoryName?: string | null;
+  isFeatured?: boolean;
+  processSteps?: string | null;
+}
+
+export interface PublicCategoryResponse {
+  id: number;
+  name: string;
+  description?: string | null;
+  displayOrder: number;
+}
+
+export interface PublicArticleResponse {
+  id: number;
+  title: string;
+  slug: string;
+  category?: string | null;
+  readTime?: string | null;
+  excerpt?: string | null;
+  content: string;
+  coverImage?: string | null;
+  publishedAt?: string | null;
+}
+
+export interface PublicReviewResponse {
+  id: number;
+  customerName: string;
+  rating: number;
+  comment: string;
+  serviceName?: string | null;
+  isDemo?: boolean;
+  createdAt: string;
 }
 
 export interface PublicStaffResponse {

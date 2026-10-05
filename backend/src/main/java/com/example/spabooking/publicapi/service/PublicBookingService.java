@@ -31,24 +31,33 @@ public class PublicBookingService {
 
     private final TenantRepository tenantRepository;
     private final ServiceRepository serviceRepository;
+    private final com.example.spabooking.service.repository.ServiceCategoryRepository serviceCategoryRepository;
     private final StaffRepository staffRepository;
     private final CustomerRepository customerRepository;
     private final BookingService bookingService;
     private final BookingRepository bookingRepository;
+    private final com.example.spabooking.article.service.ArticleService articleService;
+    private final com.example.spabooking.review.service.ReviewService reviewService;
 
     @Autowired
     public PublicBookingService(TenantRepository tenantRepository,
                                 ServiceRepository serviceRepository,
+                                com.example.spabooking.service.repository.ServiceCategoryRepository serviceCategoryRepository,
                                 StaffRepository staffRepository,
                                 CustomerRepository customerRepository,
                                 BookingService bookingService,
-                                BookingRepository bookingRepository) {
+                                BookingRepository bookingRepository,
+                                com.example.spabooking.article.service.ArticleService articleService,
+                                com.example.spabooking.review.service.ReviewService reviewService) {
         this.tenantRepository = tenantRepository;
         this.serviceRepository = serviceRepository;
+        this.serviceCategoryRepository = serviceCategoryRepository;
         this.staffRepository = staffRepository;
         this.customerRepository = customerRepository;
         this.bookingService = bookingService;
         this.bookingRepository = bookingRepository;
+        this.articleService = articleService;
+        this.reviewService = reviewService;
     }
 
     public PublicSpaInfoResponse getSpaInfo() {
@@ -66,11 +75,47 @@ public class PublicBookingService {
                 .collect(Collectors.toList());
     }
 
+    public List<PublicServiceResponse> getFeaturedServices() {
+        Long tenantId = TenantContext.requireTenantId();
+        return serviceRepository.findAllByTenantIdAndIsActiveTrueAndIsFeaturedTrue(tenantId)
+                .stream()
+                .map(PublicServiceResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    public List<PublicCategoryResponse> getActiveCategories() {
+        Long tenantId = TenantContext.requireTenantId();
+        return serviceCategoryRepository.findAllByTenantIdAndIsActiveTrueOrderByDisplayOrderAsc(tenantId)
+                .stream()
+                .map(PublicCategoryResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
     public List<PublicStaffResponse> getActiveStaff() {
         Long tenantId = TenantContext.requireTenantId();
-        return staffRepository.findAllByTenantIdAndIsActiveTrue(tenantId)
+        return staffRepository.findAllByTenantIdAndIsActiveTrueAndIsDeletedFalseAndShowOnWebsiteTrue(tenantId)
                 .stream()
                 .map(PublicStaffResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    public List<com.example.spabooking.article.dto.PublicArticleResponse> getPublishedArticles() {
+        return articleService.findAllPublished()
+                .stream()
+                .map(com.example.spabooking.article.dto.PublicArticleResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    public com.example.spabooking.article.dto.PublicArticleResponse getPublishedArticle(String slugOrId) {
+        return com.example.spabooking.article.dto.PublicArticleResponse.fromEntity(
+                articleService.findPublishedBySlugOrId(slugOrId)
+        );
+    }
+
+    public List<com.example.spabooking.review.dto.PublicReviewResponse> getPublishedReviews() {
+        return reviewService.findAllPublished()
+                .stream()
+                .map(com.example.spabooking.review.dto.PublicReviewResponse::fromEntity)
                 .collect(Collectors.toList());
     }
 
