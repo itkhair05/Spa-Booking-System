@@ -145,7 +145,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
            "LEFT JOIN FETCH b.staff " +
            "WHERE b.tenant.id = :tenantId " +
            "AND b.status = 'COMPLETED' " +
-           "AND b.startTime >= :startDate AND b.startTime <= :endDate " +
+           "AND b.startTime >= :startDate AND b.startTime < :endDate " +
            "ORDER BY b.startTime DESC")
     List<Booking> findCompletedRevenueBookings(
             @Param("tenantId") Long tenantId,
