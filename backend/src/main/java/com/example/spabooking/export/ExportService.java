@@ -99,9 +99,11 @@ public class ExportService {
 
     public byte[] exportRevenue() {
         Long tenantId = TenantContext.requireTenantId();
-        LocalDateTime now = LocalDateTime.now(VIETNAM_ZONE);
-        LocalDateTime windowStart = now.minusDays(30);
-        LocalDateTime windowEnd = now;
+        LocalDate today = LocalDate.now(VIETNAM_ZONE);
+        // Calendar-based 30-day window (today + the preceding 29 days), half-open at tomorrow's
+        // midnight so the current day's completed bookings are never excluded by wall-clock time.
+        LocalDateTime windowStart = today.minusDays(29).atStartOfDay();
+        LocalDateTime windowEnd = today.plusDays(1).atStartOfDay();
 
         List<Booking> bookings = bookingRepository.findCompletedRevenueBookings(tenantId, windowStart, windowEnd);
         return buildRevenueWorkbook(bookings, "Doanh thu 30 ngay");
