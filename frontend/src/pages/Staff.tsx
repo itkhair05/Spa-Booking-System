@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import AppShell from '../components/AppShell';
+import RestrictedAccess from '../components/RestrictedAccess';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -75,9 +76,11 @@ const Staff = () => {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchStaff();
-  }, [fetchStaff]);
+    if (isOwner) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchStaff();
+    }
+  }, [fetchStaff, isOwner]);
 
   const handleOpenForm = (staff?: StaffType) => {
     if (!isOwner) return;
@@ -189,6 +192,16 @@ const Staff = () => {
     }
   };
 
+  if (!isOwner) {
+    return (
+      <RestrictedAccess
+        shellTitle="Nhân viên"
+        icon={<UserRound className="w-7 h-7" />}
+        message="Khu vực quản lý nhân viên chỉ dành riêng cho Quản trị viên (OWNER)."
+      />
+    );
+  }
+
   if (isFormOpen && isOwner) {
     return (
       <AppShell title="Nhân viên">
@@ -257,12 +270,6 @@ const Staff = () => {
 
       {activeTab === 'staffList' && (
         <>
-          {!isOwner && (
-            <Alert tone="info" className="mb-6">
-              Chỉ chủ cơ sở có thể thêm, chỉnh sửa hoặc cấp tài khoản nhân viên.
-            </Alert>
-          )}
-
           {accountSuccess && (
             <Alert tone="success" className="mb-6">
               {accountSuccess}

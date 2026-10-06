@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.Pattern;
@@ -21,6 +22,7 @@ public class CreatePublicBookingRequest {
     private LocalDateTime startTime;
 
     @NotBlank(message = "Customer name is required")
+    @Size(max = 255, message = "Customer name must not exceed 255 characters")
     private String customerName;
 
     @NotBlank(message = "Customer phone is required")
@@ -28,6 +30,7 @@ public class CreatePublicBookingRequest {
     private String customerPhone;
 
     @Email(message = "Invalid email format")
+    @Size(max = 254, message = "Email must not exceed 254 characters")
     private String customerEmail;
 
     private String paymentMethod;

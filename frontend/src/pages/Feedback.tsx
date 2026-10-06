@@ -8,6 +8,7 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { getFeedback, updateFeedbackStatus } from '../lib/api/feedback';
 import { formatDateDMY } from '../lib/format';
 import type { FeedbackResponse, FeedbackStatus, FeedbackType } from '../types/feedback';
+import RestrictedAccess from '../components/RestrictedAccess';
 import { MessageSquare, Phone, Mail, Ticket, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../app/auth/useAuth';
 
@@ -107,17 +108,11 @@ const FeedbackPage = () => {
 
   if (!isOwner) {
     return (
-      <AppShell title="Phản hồi & Khiếu nại">
-        <div className="max-w-2xl mx-auto py-16 text-center px-4">
-          <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center mx-auto mb-4 border border-amber-200">
-            <MessageSquare className="w-7 h-7" />
-          </div>
-          <h2 className="text-xl font-serif-title font-semibold text-stone-900 mb-2">Quyền truy cập hạn chế</h2>
-          <p className="text-stone-600 text-sm leading-relaxed mb-6">
-            Khu vực quản lý phản hồi và khiếu nại của khách hàng chỉ dành riêng cho Quản trị viên (OWNER).
-          </p>
-        </div>
-      </AppShell>
+      <RestrictedAccess
+        shellTitle="Phản hồi & Khiếu nại"
+        icon={<MessageSquare className="w-7 h-7" />}
+        message="Khu vực quản lý phản hồi và khiếu nại của khách hàng chỉ dành riêng cho Quản trị viên (OWNER)."
+      />
     );
   }
 

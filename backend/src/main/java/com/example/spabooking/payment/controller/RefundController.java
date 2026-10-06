@@ -1,5 +1,7 @@
 package com.example.spabooking.payment.controller;
 
+import com.example.spabooking.booking.service.BookingService;
+import com.example.spabooking.common.exception.ResourceNotFoundException;
 import com.example.spabooking.payment.dto.InitiateRefundRequest;
 import com.example.spabooking.payment.dto.RefundEligibilityResponse;
 import com.example.spabooking.payment.dto.RefundResponse;
@@ -15,14 +17,19 @@ import org.springframework.web.bind.annotation.*;
 public class RefundController {
 
     private final RefundService refundService;
+    private final BookingService bookingService;
 
-    public RefundController(RefundService refundService) {
+    public RefundController(RefundService refundService, BookingService bookingService) {
         this.refundService = refundService;
+        this.bookingService = bookingService;
     }
 
     @GetMapping("/refund-eligibility")
     @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
     public ResponseEntity<RefundEligibilityResponse> getRefundEligibility(@PathVariable Long bookingId) {
+        // findById enforces staff-own booking access before refund data is exposed
+        bookingService.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
         RefundEligibilityResponse eligibility = refundService.getRefundEligibility(bookingId, null);
         return ResponseEntity.ok(eligibility);
     }
@@ -42,6 +49,9 @@ public class RefundController {
     @GetMapping("/refund")
     @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
     public ResponseEntity<RefundResponse> getRefund(@PathVariable Long bookingId) {
+        // findById enforces staff-own booking access before refund data is exposed
+        bookingService.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
         return refundService.findByBookingId(bookingId)
                 .map(RefundResponse::fromEntity)
                 .map(ResponseEntity::ok)

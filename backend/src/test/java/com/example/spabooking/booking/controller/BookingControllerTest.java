@@ -142,6 +142,10 @@ public class BookingControllerTest {
         staffA.setIsActive(true);
         staffA = staffRepository.saveAndFlush(staffA);
 
+        // STAFF identity must come from the user-staff link; bookings are scoped to it
+        staffUserA.setStaff(staffA);
+        userRepository.saveAndFlush(staffUserA);
+
         serviceA = new com.example.spabooking.service.entity.Service();
         serviceA.setTenant(tenantA);
         serviceA.setName("Massage");

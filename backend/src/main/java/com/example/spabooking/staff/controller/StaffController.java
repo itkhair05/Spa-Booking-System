@@ -37,7 +37,7 @@ public class StaffController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<List<StaffResponse>> getAllStaff() {
         return ResponseEntity.ok(staffService.findAllWithAccounts());
     }
@@ -58,7 +58,7 @@ public class StaffController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<StaffResponse> getStaffById(@PathVariable Long id) {
         return ResponseEntity.ok(staffService.findResponseById(id));
     }

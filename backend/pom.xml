@@ -133,6 +133,9 @@
 						<JWT_SECRET>test_jwt_secret_must_be_at_least_256_bits_long</JWT_SECRET>
 						<VNPAY_HASH_SECRET>test_sandbox_secret_for_surefire_tests_only</VNPAY_HASH_SECRET>
 					</environmentVariables>
+					<systemPropertyVariables>
+						<security.rate-limit.enabled>false</security.rate-limit.enabled>
+					</systemPropertyVariables>
 				</configuration>
 			</plugin>
 		</plugins>
