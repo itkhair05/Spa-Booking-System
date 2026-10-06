@@ -142,6 +142,56 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
     };
   }, [slug]);
 
+  const handleStartFreshBooking = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    setIsMobileMenuOpen(false);
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('serviceId');
+    currentUrl.searchParams.delete('code');
+    currentUrl.searchParams.delete('lookupCode');
+    currentUrl.hash = 'booking';
+    window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+    window.dispatchEvent(new CustomEvent('reset-booking-session'));
+    const el = document.getElementById('booking');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleSelectServiceForBooking = (serviceId: number, e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    setSelectedServiceDetail(null);
+    setIsMobileMenuOpen(false);
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('code');
+    currentUrl.searchParams.delete('lookupCode');
+    currentUrl.searchParams.set('serviceId', String(serviceId));
+    currentUrl.hash = 'booking';
+    window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+    window.dispatchEvent(
+      new CustomEvent('select-service-booking', {
+        detail: { serviceId },
+      })
+    );
+    const el = document.getElementById('booking');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleGoToTraCuu = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    setIsMobileMenuOpen(false);
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('serviceId');
+    currentUrl.hash = 'tra-cuu';
+    window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+    const el = document.getElementById('tra-cuu');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   // Featured services filtered strictly by isFeatured
   const featuredServices = useMemo(() => {
     if (!services) return [];
@@ -242,7 +292,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
             <a href="#phan-hoi" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
               Phản hồi
             </a>
-            <a href="#tra-cuu" className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
+            <a href="#tra-cuu" onClick={handleGoToTraCuu} className="whitespace-nowrap hover:text-[#465d4c] transition-colors py-1">
               Tra cứu
             </a>
           </nav>
@@ -260,7 +310,8 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
 
             <a
               href="#booking"
-              className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-[#465d4c] hover:bg-[#374a3c] text-white text-xs sm:text-sm font-medium rounded-xl transition-all shadow-xs hover:shadow-sm whitespace-nowrap"
+              onClick={handleStartFreshBooking}
+              className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-[#465d4c] hover:bg-[#374a3c] text-white text-xs sm:text-sm font-medium rounded-xl transition-all shadow-xs hover:shadow-sm whitespace-nowrap cursor-pointer"
             >
               <span className="whitespace-nowrap">Đặt lịch ngay</span>
               <ArrowRight className="w-4 h-4" aria-hidden="true" />
@@ -328,7 +379,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               </a>
               <a
                 href="#tra-cuu"
-                onClick={() => setIsMobileMenuOpen(false)}
+                onClick={handleGoToTraCuu}
                 className="whitespace-nowrap py-2 px-3 hover:bg-black/5 rounded-xl transition-colors"
               >
                 Tra cứu lịch hẹn
@@ -368,7 +419,8 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-14">
             <a
               href="#booking"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-[#465d4c] text-white font-medium rounded-xl hover:bg-[#374a3c] transition-all shadow-md hover:shadow-lg max-sm:min-h-11"
+              onClick={handleStartFreshBooking}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-[#465d4c] text-white font-medium rounded-xl hover:bg-[#374a3c] transition-all shadow-md hover:shadow-lg max-sm:min-h-11 cursor-pointer"
             >
               <span>Đặt lịch trực tuyến</span>
               <ArrowRight className="w-4 h-4" aria-hidden="true" />
@@ -383,7 +435,8 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
 
             <a
               href="#tra-cuu"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[#f6efe2]/80 backdrop-blur-md text-[#9e7d52] font-medium rounded-xl hover:bg-[#ebdcc8] transition-colors max-sm:min-h-11 border border-[#ebdcc8]/50"
+              onClick={handleGoToTraCuu}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[#f6efe2]/80 backdrop-blur-md text-[#9e7d52] font-medium rounded-xl hover:bg-[#ebdcc8] transition-colors max-sm:min-h-11 border border-[#ebdcc8]/50 cursor-pointer"
             >
               <Search className="w-4 h-4" aria-hidden="true" />
               <span>Tra cứu lịch hẹn</span>
@@ -598,7 +651,8 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                           </button>
                           <a
                             href="#booking"
-                            className="inline-flex items-center gap-1 font-semibold text-[#465d4c] hover:underline"
+                            onClick={(e) => handleSelectServiceForBooking(service.id, e)}
+                            className="inline-flex items-center gap-1 font-semibold text-[#465d4c] hover:underline cursor-pointer"
                           >
                             Đặt lịch
                             <ArrowRight className="w-3.5 h-3.5" />
@@ -706,8 +760,8 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               </button>
               <a
                 href="#booking"
-                onClick={() => setSelectedServiceDetail(null)}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 text-xs font-medium rounded-xl bg-[#465d4c] text-white hover:bg-[#374a3c] transition-colors shadow-xs"
+                onClick={(e) => handleSelectServiceForBooking(selectedServiceDetail.id, e)}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 text-xs font-medium rounded-xl bg-[#465d4c] text-white hover:bg-[#374a3c] transition-colors shadow-xs cursor-pointer"
               >
                 <span>Đặt lịch ngay</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -929,11 +983,6 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                           <Star key={sIdx} className="w-4 h-4 fill-current" />
                         ))}
                       </div>
-                      {r.isDemo && (
-                        <span className="text-[10px] text-stone-400 bg-stone-50 px-2 py-0.5 rounded border border-stone-200">
-                          Minh họa
-                        </span>
-                      )}
                     </div>
 
                     <p className="text-xs sm:text-sm text-stone-600 italic leading-relaxed mb-6">
@@ -1279,10 +1328,10 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                 <a href="#phan-hoi" className="text-[#b8976c] hover:underline font-medium">
                   Phản hồi & Khiếu nại dịch vụ
                 </a>
-                <a href="#tra-cuu" className="hover:text-white transition-colors">
+                <a href="#tra-cuu" onClick={handleGoToTraCuu} className="hover:text-white transition-colors cursor-pointer">
                   Tra cứu tiến độ lịch hẹn
                 </a>
-                <a href="#booking" className="hover:text-white transition-colors">
+                <a href="#booking" onClick={handleStartFreshBooking} className="hover:text-white transition-colors cursor-pointer">
                   Đặt lịch trực tuyến
                 </a>
               </div>

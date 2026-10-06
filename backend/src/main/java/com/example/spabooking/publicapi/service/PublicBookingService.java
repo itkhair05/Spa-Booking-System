@@ -203,17 +203,21 @@ public class PublicBookingService {
         Service service = serviceRepository.findByIdAndTenantId(request.getServiceId(), tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
 
-        // Resolve or create Customer
+        // Resolve or create Customer within tenant
         Customer customer;
-        Optional<Customer> existingCustomer = customerRepository.findByPhoneAndTenantId(request.getCustomerPhone(), tenantId);
+        Optional<Customer> existingCustomer = customerRepository.findFirstByPhoneAndTenantIdOrderByIdAsc(request.getCustomerPhone(), tenantId);
         if (existingCustomer.isPresent()) {
             customer = existingCustomer.get();
-            if (!customer.getIsActive()) {
-                throw new IllegalArgumentException("Customer account is inactive");
+            // Ensure customer is active so booking can be created
+            if (Boolean.FALSE.equals(customer.getIsActive())) {
+                customer.setIsActive(true);
             }
-            // Update name and email if provided
-            customer.setName(request.getCustomerName());
-            if (request.getCustomerEmail() != null && !request.getCustomerEmail().isEmpty()) {
+            // Preserve existing customer data: only set name if previously empty, or update email if existing email was blank
+            if (customer.getName() == null || customer.getName().trim().isEmpty()) {
+                customer.setName(request.getCustomerName());
+            }
+            if ((customer.getEmail() == null || customer.getEmail().trim().isEmpty())
+                    && request.getCustomerEmail() != null && !request.getCustomerEmail().trim().isEmpty()) {
                 customer.setEmail(request.getCustomerEmail());
             }
             customer = customerRepository.save(customer);

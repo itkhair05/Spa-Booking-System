@@ -58,6 +58,14 @@ export function StepReview() {
         return;
       }
 
+      // Clean serviceId from URL immediately so reload never restores old service
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete('serviceId');
+      currentUrl.searchParams.delete('lookupCode');
+      currentUrl.searchParams.set('code', response.bookingCode);
+      currentUrl.hash = 'tra-cuu';
+      window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+
       setStep(6);
     } catch (err: unknown) {
       const e = err as { response?: { status: number } };
