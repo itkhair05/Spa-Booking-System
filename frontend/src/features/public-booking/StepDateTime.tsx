@@ -114,8 +114,8 @@ export function StepDateTime() {
             </button>
           </div>
         ) : availability.length === 0 ? (
-          <div className="py-8 text-center text-stone-500 bg-stone-50 rounded-xl border border-stone-100">
-            Ngày này không còn khung giờ trống. Vui lòng chọn ngày khác.
+          <div className="py-8 text-center text-stone-500 bg-stone-50 rounded-xl border border-stone-100 px-4">
+            Không có nhân viên phù hợp hoặc nhân viên có lịch nghỉ vào ngày này. Vui lòng chọn ngày khác.
           </div>
         ) : (
           <div
