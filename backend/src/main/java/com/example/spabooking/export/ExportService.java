@@ -165,8 +165,11 @@ public class ExportService {
         return switch (status) {
             case PENDING -> "Chờ xác nhận";
             case CONFIRMED -> "Đã xác nhận";
+            case CHECKED_IN -> "Đã check-in";
+            case IN_PROGRESS -> "Đang thực hiện";
             case COMPLETED -> "Hoàn thành";
             case CANCELLED -> "Đã hủy";
+            case NO_SHOW -> "Không đến";
         };
     }
 

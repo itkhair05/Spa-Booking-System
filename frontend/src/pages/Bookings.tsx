@@ -6,10 +6,20 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Alert } from '../components/ui/Alert';
-import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
-import { getBookings, getBookingById, updateBookingStatus, assignBookingStaff } from '../lib/api/bookings';
+import {
+  getBookings,
+  getBookingById,
+  confirmBooking,
+  checkInBooking,
+  startBooking,
+  completeBooking,
+  cancelBooking,
+  noShowBooking,
+  rescheduleBooking,
+  assignBookingStaff
+} from '../lib/api/bookings';
 import { getStaff } from '../lib/api/staff';
 import type { Booking, BookingDetail, BookingStatus } from '../types/booking';
 import type { Staff } from '../types/staff';
@@ -31,17 +41,49 @@ import {
   Copy,
   Check,
   CreditCard,
-  Sparkles
+  Sparkles,
+  CalendarClock,
+  UserX,
+  Play,
+  CheckCircle2,
+  Ban
 } from 'lucide-react';
 
 const STATUS_CONFIG: Record<BookingStatus, { label: string; tone: BadgeTone }> = {
   PENDING: { label: 'Chờ xác nhận', tone: 'warning' },
   CONFIRMED: { label: 'Đã xác nhận', tone: 'info' },
+  CHECKED_IN: { label: 'Đã check-in', tone: 'info' },
+  IN_PROGRESS: { label: 'Đang thực hiện', tone: 'info' },
   COMPLETED: { label: 'Đã hoàn thành', tone: 'success' },
   CANCELLED: { label: 'Đã hủy', tone: 'neutral' },
+  NO_SHOW: { label: 'Không đến', tone: 'neutral' },
 };
 
 type FilterStatus = 'ALL' | BookingStatus;
+
+const FILTER_TABS: FilterStatus[] = [
+  'ALL',
+  'PENDING',
+  'CONFIRMED',
+  'CHECKED_IN',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+  'NO_SHOW',
+];
+
+const extractDateAndTimeString = (isoString?: string) => {
+  if (!isoString) return { date: '', time: '' };
+  try {
+    const d = new Date(isoString);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return { date, time };
+  } catch {
+    return { date: '', time: '' };
+  }
+};
 
 const Bookings = () => {
   const { user } = useAuth();
@@ -55,7 +97,7 @@ const Bookings = () => {
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Form state
+  // Form state (Create / Edit)
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | undefined>(undefined);
 
@@ -71,13 +113,28 @@ const Bookings = () => {
   const [assignSubmitting, setAssignSubmitting] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
 
-  // In-flight status action
-  const [busy, setBusy] = useState<{ id: number; status: BookingStatus } | null>(null);
+  // Operation in flight
+  const [busyOp, setBusyOp] = useState<{ id: number; action: string } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Cancel confirmation
-  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
+  // Reschedule Modal
+  const [rescheduleTarget, setRescheduleTarget] = useState<Booking | BookingDetail | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleTime, setRescheduleTime] = useState('');
+  const [rescheduleStaffId, setRescheduleStaffId] = useState<number | null>(null);
+  const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
+
+  // Cancel Modal
+  const [cancelTarget, setCancelTarget] = useState<Booking | BookingDetail | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+
+  // No-Show Modal
+  const [noShowTarget, setNoShowTarget] = useState<Booking | BookingDetail | null>(null);
+  const [noShowSubmitting, setNoShowSubmitting] = useState(false);
+  const [noShowError, setNoShowError] = useState<string | null>(null);
 
   const fetchBookings = useCallback(async () => {
     setIsLoading(true);
@@ -98,7 +155,6 @@ const Bookings = () => {
     fetchBookings();
   }, [fetchBookings]);
 
-  // Load staff for assignment if owner
   const loadStaffForAssignment = async () => {
     try {
       const allStaff = await getStaff();
@@ -136,8 +192,8 @@ const Bookings = () => {
     }
   };
 
-  const handleOpenAssign = async (booking: Booking) => {
-    setAssigningBooking(booking);
+  const handleOpenAssign = async (booking: Booking | BookingDetail) => {
+    setAssigningBooking(booking as Booking);
     setSelectedStaffId(booking.staffId || null);
     setAssignError(null);
     await loadStaffForAssignment();
@@ -167,7 +223,6 @@ const Bookings = () => {
       await assignBookingStaff(assigningBooking.id, selectedStaffId);
       setAssigningBooking(null);
       await fetchBookings();
-      // If detail modal is open, refresh it as well
       if (detailBooking && detailBooking.id === assigningBooking.id) {
         handleOpenDetail(detailBooking.id);
       }
@@ -185,39 +240,6 @@ const Bookings = () => {
     }
   };
 
-  const handleStatusChange = async (id: number, status: BookingStatus): Promise<boolean> => {
-    setBusy({ id, status });
-    setActionError(null);
-    try {
-      await updateBookingStatus(id, { status });
-      await fetchBookings();
-      if (detailBooking && detailBooking.id === id) {
-        handleOpenDetail(id);
-      }
-      return true;
-    } catch (err: unknown) {
-      const errorObj = err as { response?: { data?: { message?: string } } };
-      const message = errorObj.response?.data?.message || 'Không thể cập nhật trạng thái lịch hẹn.';
-      if (status === 'CANCELLED') {
-        setCancelError(message);
-      } else {
-        setActionError(message);
-      }
-      return false;
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleConfirmCancel = async () => {
-    if (!cancelTarget) return;
-    const ok = await handleStatusChange(cancelTarget.id, 'CANCELLED');
-    if (ok) {
-      setCancelTarget(null);
-      setCancelError(null);
-    }
-  };
-
   const handleCopyCode = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -225,6 +247,177 @@ const Bookings = () => {
       setTimeout(() => setCopiedCode(false), 2000);
     } catch {
       setCopiedCode(false);
+    }
+  };
+
+  // Operation Actions
+  const handleConfirmBooking = async (id: number) => {
+    setBusyOp({ id, action: 'confirm' });
+    setActionError(null);
+    try {
+      await confirmBooking(id);
+      await fetchBookings();
+      if (detailBooking && detailBooking.id === id) {
+        handleOpenDetail(id);
+      }
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { message?: string } } };
+      setActionError(errorObj.response?.data?.message || 'Không thể xác nhận lịch hẹn.');
+    } finally {
+      setBusyOp(null);
+    }
+  };
+
+  const handleCheckIn = async (id: number) => {
+    setBusyOp({ id, action: 'checkin' });
+    setActionError(null);
+    try {
+      await checkInBooking(id);
+      await fetchBookings();
+      if (detailBooking && detailBooking.id === id) {
+        handleOpenDetail(id);
+      }
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { message?: string } } };
+      setActionError(errorObj.response?.data?.message || 'Không thể check-in lịch hẹn.');
+    } finally {
+      setBusyOp(null);
+    }
+  };
+
+  const handleStart = async (id: number) => {
+    setBusyOp({ id, action: 'start' });
+    setActionError(null);
+    try {
+      await startBooking(id);
+      await fetchBookings();
+      if (detailBooking && detailBooking.id === id) {
+        handleOpenDetail(id);
+      }
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { message?: string } } };
+      setActionError(errorObj.response?.data?.message || 'Không thể bắt đầu thực hiện liệu trình.');
+    } finally {
+      setBusyOp(null);
+    }
+  };
+
+  const handleComplete = async (id: number) => {
+    setBusyOp({ id, action: 'complete' });
+    setActionError(null);
+    try {
+      await completeBooking(id);
+      await fetchBookings();
+      if (detailBooking && detailBooking.id === id) {
+        handleOpenDetail(id);
+      }
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { message?: string } } };
+      setActionError(errorObj.response?.data?.message || 'Không thể hoàn tất lịch hẹn.');
+    } finally {
+      setBusyOp(null);
+    }
+  };
+
+  // Open Reschedule Modal
+  const handleOpenReschedule = async (booking: Booking | BookingDetail) => {
+    const { date, time } = extractDateAndTimeString(booking.startTime);
+    setRescheduleTarget(booking);
+    setRescheduleDate(date);
+    setRescheduleTime(time);
+    setRescheduleStaffId(booking.staffId || null);
+    setRescheduleError(null);
+    if (isOwner && activeStaffList.length === 0) {
+      await loadStaffForAssignment();
+    }
+  };
+
+  const handleConfirmReschedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rescheduleTarget || !rescheduleDate || !rescheduleTime) {
+      setRescheduleError('Vui lòng chọn ngày và giờ hẹn mới.');
+      return;
+    }
+
+    setRescheduleSubmitting(true);
+    setRescheduleError(null);
+    try {
+      const newStartTime = `${rescheduleDate}T${rescheduleTime}:00`;
+      await rescheduleBooking(rescheduleTarget.id, {
+        startTime: newStartTime,
+        staffId: isOwner ? (rescheduleStaffId || undefined) : undefined,
+      });
+      setRescheduleTarget(null);
+      await fetchBookings();
+      if (detailBooking && detailBooking.id === rescheduleTarget.id) {
+        handleOpenDetail(detailBooking.id);
+      }
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { status?: number; data?: { message?: string } } };
+      if (errorObj.response?.status === 409) {
+        setRescheduleError(errorObj.response.data?.message || 'Thời gian đã chọn bị trùng lịch hẹn khác.');
+      } else {
+        setRescheduleError(errorObj.response?.data?.message || 'Không thể dời lịch hẹn. Vui lòng kiểm tra lại thời gian.');
+      }
+    } finally {
+      setRescheduleSubmitting(false);
+    }
+  };
+
+  // Open Cancel Modal
+  const handleOpenCancel = (booking: Booking | BookingDetail) => {
+    setCancelTarget(booking);
+    setCancelReason('');
+    setCancelError(null);
+  };
+
+  const handleConfirmCancel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cancelTarget) return;
+
+    setCancelSubmitting(true);
+    setCancelError(null);
+    try {
+      await cancelBooking(cancelTarget.id, {
+        reason: cancelReason.trim() ? cancelReason.trim() : undefined,
+      });
+      setCancelTarget(null);
+      await fetchBookings();
+      if (detailBooking && detailBooking.id === cancelTarget.id) {
+        handleOpenDetail(detailBooking.id);
+      }
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { message?: string } } };
+      setCancelError(errorObj.response?.data?.message || 'Không thể hủy lịch hẹn.');
+    } finally {
+      setCancelSubmitting(false);
+    }
+  };
+
+  // Open No-Show Modal
+  const handleOpenNoShow = (booking: Booking | BookingDetail) => {
+    setNoShowTarget(booking);
+    setNoShowError(null);
+  };
+
+  const handleConfirmNoShow = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noShowTarget) return;
+
+    setNoShowSubmitting(true);
+    setNoShowError(null);
+    try {
+      await noShowBooking(noShowTarget.id);
+      setNoShowTarget(null);
+      await fetchBookings();
+      if (detailBooking && detailBooking.id === noShowTarget.id) {
+        handleOpenDetail(noShowTarget.id);
+      }
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { message?: string } } };
+      setNoShowError(errorObj.response?.data?.message || 'Không thể đánh dấu khách không đến.');
+    } finally {
+      setNoShowSubmitting(false);
     }
   };
 
@@ -268,7 +461,7 @@ const Bookings = () => {
           title={isOwner ? 'Quản lý Lịch hẹn' : 'Lịch hẹn của tôi'}
           description={
             isOwner
-              ? 'Theo dõi, phê duyệt và điều phối lịch hẹn tại TIKEY SPA.'
+              ? 'Theo dõi, phê duyệt và vận hành quy trình lịch hẹn tại TIKEY SPA.'
               : 'Danh sách các cuộc hẹn chăm sóc khách hàng được phân công cho bạn.'
           }
         />
@@ -296,8 +489,8 @@ const Bookings = () => {
       {/* Filter Tabs & Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
         {/* Status Tabs */}
-        <div className="flex items-center gap-1 p-1 bg-stone-100 rounded-xl overflow-x-auto">
-          {(['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'] as FilterStatus[]).map((st) => {
+        <div className="flex items-center gap-1 p-1 bg-stone-100 rounded-xl overflow-x-auto scrollbar-none">
+          {FILTER_TABS.map((st) => {
             const label = st === 'ALL' ? 'Tất cả' : STATUS_CONFIG[st].label;
             const count = st === 'ALL' ? bookings.length : bookings.filter((b) => b.status === st).length;
             const active = statusFilter === st;
@@ -373,7 +566,7 @@ const Bookings = () => {
         <div className="grid grid-cols-1 gap-3.5">
           {filteredBookings.map((booking) => {
             const status = STATUS_CONFIG[booking.status];
-            const isBusy = busy?.id === booking.id;
+            const isBusy = busyOp?.id === booking.id;
             return (
               <Card key={booking.id} className="border-[#e7e2d8] hover:border-[#c6d8c9] transition-all">
                 <CardContent className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
@@ -404,12 +597,12 @@ const Bookings = () => {
                       </span>
                       <span className="inline-flex items-center gap-1.5">
                         <UserRound aria-hidden="true" size={14} className="text-stone-400" />
-                        <span>KTV: <strong className="text-stone-800">{booking.staffName}</strong></span>
+                        <span>KTV: <strong className="text-stone-800">{booking.staffName || 'Chưa phân công'}</strong></span>
                       </span>
                     </div>
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions Bar */}
                   <div className="flex flex-wrap items-center gap-2 lg:shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-stone-100">
                     <Button
                       variant="secondary"
@@ -420,14 +613,15 @@ const Bookings = () => {
                       Chi tiết
                     </Button>
 
-                    {isOwner && (
+                    {/* OWNER-ONLY Management: Assign & Edit (only for active, non-terminal bookings) */}
+                    {isOwner && booking.status !== 'COMPLETED' && booking.status !== 'CANCELLED' && booking.status !== 'NO_SHOW' && (
                       <>
                         <Button
                           variant="secondary"
                           size="sm"
                           onClick={() => handleOpenAssign(booking)}
-                          disabled={isBusy || booking.status === 'COMPLETED' || booking.status === 'CANCELLED'}
-                          title={booking.status === 'COMPLETED' || booking.status === 'CANCELLED' ? 'Không thể phân công lịch đã kết thúc' : 'Phân công nhân viên'}
+                          disabled={isBusy}
+                          title="Phân công nhân viên"
                         >
                           <UserCheck size={14} className="mr-1" />
                           Phân công
@@ -444,23 +638,29 @@ const Bookings = () => {
                       </>
                     )}
 
+                    {/* PENDING Operations */}
                     {booking.status === 'PENDING' && (
                       <>
                         <Button
                           size="sm"
-                          onClick={() => handleStatusChange(booking.id, 'CONFIRMED')}
+                          onClick={() => handleConfirmBooking(booking.id)}
                           disabled={isBusy}
-                          aria-busy={busy?.id === booking.id && busy.status === 'CONFIRMED'}
                         >
-                          {busy?.id === booking.id && busy.status === 'CONFIRMED' ? 'Đang duyệt...' : 'Xác nhận'}
+                          {isBusy && busyOp?.action === 'confirm' ? 'Đang duyệt...' : 'Xác nhận'}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleOpenReschedule(booking)}
+                          disabled={isBusy}
+                        >
+                          <CalendarClock size={13} className="mr-1" />
+                          Đổi giờ
                         </Button>
                         <Button
                           variant="danger-outline"
                           size="sm"
-                          onClick={() => {
-                            setCancelError(null);
-                            setCancelTarget(booking);
-                          }}
+                          onClick={() => handleOpenCancel(booking)}
                           disabled={isBusy}
                         >
                           Hủy
@@ -468,28 +668,80 @@ const Bookings = () => {
                       </>
                     )}
 
+                    {/* CONFIRMED Operations */}
                     {booking.status === 'CONFIRMED' && (
                       <>
                         <Button
                           size="sm"
-                          onClick={() => handleStatusChange(booking.id, 'COMPLETED')}
+                          onClick={() => handleCheckIn(booking.id)}
                           disabled={isBusy}
-                          aria-busy={busy?.id === booking.id && busy.status === 'COMPLETED'}
                         >
-                          {busy?.id === booking.id && busy.status === 'COMPLETED' ? 'Đang lưu...' : 'Hoàn thành'}
+                          {isBusy && busyOp?.action === 'checkin' ? 'Đang xử lý...' : 'Check-in'}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleOpenReschedule(booking)}
+                          disabled={isBusy}
+                        >
+                          <CalendarClock size={13} className="mr-1" />
+                          Đổi giờ
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleOpenNoShow(booking)}
+                          disabled={isBusy}
+                          className="text-stone-600 hover:text-stone-900"
+                        >
+                          <UserX size={13} className="mr-1" />
+                          No-show
                         </Button>
                         <Button
                           variant="danger-outline"
                           size="sm"
-                          onClick={() => {
-                            setCancelError(null);
-                            setCancelTarget(booking);
-                          }}
+                          onClick={() => handleOpenCancel(booking)}
                           disabled={isBusy}
                         >
                           Hủy
                         </Button>
                       </>
+                    )}
+
+                    {/* CHECKED_IN Operations */}
+                    {booking.status === 'CHECKED_IN' && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleStart(booking.id)}
+                          disabled={isBusy}
+                          className="bg-indigo-700 hover:bg-indigo-800 text-white"
+                        >
+                          <Play size={13} className="mr-1" />
+                          {isBusy && busyOp?.action === 'start' ? 'Đang bắt đầu...' : 'Bắt đầu'}
+                        </Button>
+                        <Button
+                          variant="danger-outline"
+                          size="sm"
+                          onClick={() => handleOpenCancel(booking)}
+                          disabled={isBusy}
+                        >
+                          Hủy
+                        </Button>
+                      </>
+                    )}
+
+                    {/* IN_PROGRESS Operations */}
+                    {booking.status === 'IN_PROGRESS' && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleComplete(booking.id)}
+                        disabled={isBusy}
+                        className="bg-emerald-700 hover:bg-emerald-800 text-white"
+                      >
+                        <CheckCircle2 size={13} className="mr-1" />
+                        {isBusy && busyOp?.action === 'complete' ? 'Đang hoàn tất...' : 'Hoàn thành'}
+                      </Button>
                     )}
                   </div>
                 </CardContent>
@@ -501,7 +753,7 @@ const Bookings = () => {
 
       {/* Booking Detail Modal */}
       {(detailBooking || detailLoading) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs">
           <div className="bg-white rounded-2xl border border-stone-200 max-w-xl w-full p-6 sm:p-7 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <button
               type="button"
@@ -515,7 +767,7 @@ const Bookings = () => {
             {detailLoading ? (
               <div className="py-16 text-center text-sm text-stone-500">Đang tải chi tiết cuộc hẹn...</div>
             ) : detailBooking && (
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {/* Header */}
                 <div className="pr-8">
                   <div className="flex flex-wrap items-center gap-2 mb-1.5">
@@ -546,7 +798,190 @@ const Bookings = () => {
                   </div>
                 </div>
 
-                {/* Section 1: Customer Information */}
+                {/* Operations Bar in Detail Modal */}
+                <div className="p-3 bg-stone-100/80 rounded-xl border border-stone-200 flex flex-wrap items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-stone-700">Trạng thái:</span>
+                    <Badge tone={STATUS_CONFIG[detailBooking.status].tone}>
+                      {STATUS_CONFIG[detailBooking.status].label}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {detailBooking.status === 'PENDING' && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleConfirmBooking(detailBooking.id)}
+                          disabled={busyOp?.id === detailBooking.id}
+                        >
+                          Xác nhận
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleOpenReschedule(detailBooking)}
+                          disabled={busyOp?.id === detailBooking.id}
+                        >
+                          <CalendarClock size={13} className="mr-1" />
+                          Đổi giờ
+                        </Button>
+                        <Button
+                          variant="danger-outline"
+                          size="sm"
+                          onClick={() => handleOpenCancel(detailBooking)}
+                          disabled={busyOp?.id === detailBooking.id}
+                        >
+                          Hủy
+                        </Button>
+                      </>
+                    )}
+
+                    {detailBooking.status === 'CONFIRMED' && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleCheckIn(detailBooking.id)}
+                          disabled={busyOp?.id === detailBooking.id}
+                        >
+                          Check-in
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleOpenReschedule(detailBooking)}
+                          disabled={busyOp?.id === detailBooking.id}
+                        >
+                          <CalendarClock size={13} className="mr-1" />
+                          Đổi giờ
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleOpenNoShow(detailBooking)}
+                          disabled={busyOp?.id === detailBooking.id}
+                        >
+                          <UserX size={13} className="mr-1" />
+                          No-show
+                        </Button>
+                        <Button
+                          variant="danger-outline"
+                          size="sm"
+                          onClick={() => handleOpenCancel(detailBooking)}
+                          disabled={busyOp?.id === detailBooking.id}
+                        >
+                          Hủy
+                        </Button>
+                      </>
+                    )}
+
+                    {detailBooking.status === 'CHECKED_IN' && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleStart(detailBooking.id)}
+                          disabled={busyOp?.id === detailBooking.id}
+                          className="bg-indigo-700 hover:bg-indigo-800 text-white"
+                        >
+                          <Play size={13} className="mr-1" />
+                          Bắt đầu
+                        </Button>
+                        <Button
+                          variant="danger-outline"
+                          size="sm"
+                          onClick={() => handleOpenCancel(detailBooking)}
+                          disabled={busyOp?.id === detailBooking.id}
+                        >
+                          Hủy
+                        </Button>
+                      </>
+                    )}
+
+                    {detailBooking.status === 'IN_PROGRESS' && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleComplete(detailBooking.id)}
+                        disabled={busyOp?.id === detailBooking.id}
+                        className="bg-emerald-700 hover:bg-emerald-800 text-white"
+                      >
+                        <CheckCircle2 size={13} className="mr-1" />
+                        Hoàn thành
+                      </Button>
+                    )}
+
+                    {detailBooking.status === 'COMPLETED' && (
+                      <span className="text-xs text-stone-500 italic">Đã hoàn thành dịch vụ</span>
+                    )}
+
+                    {detailBooking.status === 'CANCELLED' && (
+                      <span className="text-xs text-rose-600 font-medium">Lịch hẹn đã hủy</span>
+                    )}
+
+                    {detailBooking.status === 'NO_SHOW' && (
+                      <span className="text-xs text-stone-500 font-medium">Khách không đến</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Operations History Timestamps */}
+                {(detailBooking.confirmedAt ||
+                  detailBooking.checkedInAt ||
+                  detailBooking.startedAt ||
+                  detailBooking.completedAt ||
+                  detailBooking.cancelledAt ||
+                  detailBooking.noShowAt ||
+                  detailBooking.cancellationReason) && (
+                  <div className="bg-stone-50 rounded-xl p-3.5 border border-stone-200/70 space-y-2">
+                    <span className="text-[11px] uppercase font-bold text-stone-400 tracking-wider flex items-center gap-1.5">
+                      <Clock size={13} /> Lịch sử vận hành
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {detailBooking.confirmedAt && (
+                        <div>
+                          <span className="text-stone-400 block text-[11px]">Xác nhận lúc</span>
+                          <span className="text-stone-800 font-medium">{new Date(detailBooking.confirmedAt).toLocaleString('vi-VN')}</span>
+                        </div>
+                      )}
+                      {detailBooking.checkedInAt && (
+                        <div>
+                          <span className="text-stone-400 block text-[11px]">Check-in lúc</span>
+                          <span className="text-stone-800 font-medium">{new Date(detailBooking.checkedInAt).toLocaleString('vi-VN')}</span>
+                        </div>
+                      )}
+                      {detailBooking.startedAt && (
+                        <div>
+                          <span className="text-stone-400 block text-[11px]">Bắt đầu làm lúc</span>
+                          <span className="text-stone-800 font-medium">{new Date(detailBooking.startedAt).toLocaleString('vi-VN')}</span>
+                        </div>
+                      )}
+                      {detailBooking.completedAt && (
+                        <div>
+                          <span className="text-stone-400 block text-[11px]">Hoàn thành lúc</span>
+                          <span className="text-stone-800 font-medium">{new Date(detailBooking.completedAt).toLocaleString('vi-VN')}</span>
+                        </div>
+                      )}
+                      {detailBooking.cancelledAt && (
+                        <div>
+                          <span className="text-stone-400 block text-[11px]">Hủy lúc</span>
+                          <span className="text-stone-800 font-medium">{new Date(detailBooking.cancelledAt).toLocaleString('vi-VN')}</span>
+                        </div>
+                      )}
+                      {detailBooking.noShowAt && (
+                        <div>
+                          <span className="text-stone-400 block text-[11px]">Đánh dấu No-show lúc</span>
+                          <span className="text-stone-800 font-medium">{new Date(detailBooking.noShowAt).toLocaleString('vi-VN')}</span>
+                        </div>
+                      )}
+                      {detailBooking.cancellationReason && (
+                        <div className="sm:col-span-2 pt-1 border-t border-stone-200/50">
+                          <span className="text-stone-400 block text-[11px]">Lý do hủy</span>
+                          <p className="text-rose-700 italic">{detailBooking.cancellationReason}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Customer Information */}
                 <div className="bg-stone-50 rounded-xl p-4 border border-stone-200/70 space-y-2.5">
                   <span className="text-[11px] uppercase font-bold text-stone-400 tracking-wider flex items-center gap-1.5">
                     <UserRound size={13} /> Thông tin khách hàng
@@ -577,7 +1012,7 @@ const Bookings = () => {
                   </div>
                 </div>
 
-                {/* Section 2: Service & Schedule */}
+                {/* Service & Schedule */}
                 <div className="bg-stone-50 rounded-xl p-4 border border-stone-200/70 space-y-3">
                   <span className="text-[11px] uppercase font-bold text-stone-400 tracking-wider flex items-center gap-1.5">
                     <Sparkles size={13} /> Dịch vụ & Lịch hẹn
@@ -619,7 +1054,7 @@ const Bookings = () => {
                   )}
                 </div>
 
-                {/* Section 3: Assigned Staff */}
+                {/* Assigned Staff */}
                 <div className="bg-stone-50 rounded-xl p-4 border border-stone-200/70 space-y-2">
                   <span className="text-[11px] uppercase font-bold text-stone-400 tracking-wider flex items-center gap-1.5">
                     <UserCheck size={13} /> Kỹ thuật viên phụ trách
@@ -633,16 +1068,14 @@ const Bookings = () => {
                         </p>
                       )}
                     </div>
-                    {isOwner && detailBooking.status === 'PENDING' && (
+                    {isOwner && detailBooking.status !== 'COMPLETED' && detailBooking.status !== 'CANCELLED' && detailBooking.status !== 'NO_SHOW' && (
                       <Button
                         size="sm"
                         variant="secondary"
                         onClick={() => {
-                          const target = bookings.find(b => b.id === detailBooking.id);
-                          if (target) {
-                            setDetailBooking(null);
-                            handleOpenAssign(target);
-                          }
+                          const target = bookings.find((b) => b.id === detailBooking.id) || detailBooking;
+                          setDetailBooking(null);
+                          handleOpenAssign(target);
                         }}
                       >
                         Đổi nhân viên
@@ -651,7 +1084,7 @@ const Bookings = () => {
                   </div>
                 </div>
 
-                {/* Section 4: Payment Details */}
+                {/* Payment Details */}
                 <div className="bg-stone-50 rounded-xl p-4 border border-stone-200/70 space-y-2.5">
                   <span className="text-[11px] uppercase font-bold text-stone-400 tracking-wider flex items-center gap-1.5">
                     <CreditCard size={13} /> Thông tin thanh toán
@@ -728,6 +1161,287 @@ const Bookings = () => {
         </div>
       )}
 
+      {/* Reschedule Modal */}
+      {rescheduleTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl border border-stone-200 max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-serif-title font-semibold text-lg text-stone-900 flex items-center gap-2">
+                <CalendarClock size={20} className="text-[#465d4c]" />
+                Dời lịch hẹn (Reschedule)
+              </h3>
+              <button
+                type="button"
+                onClick={() => setRescheduleTarget(null)}
+                className="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-100 transition-colors"
+                aria-label="Đóng"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/70 mb-4 text-xs space-y-1">
+              <div>
+                <span className="text-stone-500">Khách hàng: </span>
+                <strong className="text-stone-900">{rescheduleTarget.customerName}</strong>
+                {rescheduleTarget.bookingCode && (
+                  <span className="ml-2 font-mono text-[11px] text-stone-500">({rescheduleTarget.bookingCode})</span>
+                )}
+              </div>
+              <div>
+                <span className="text-stone-500">Dịch vụ: </span>
+                <strong className="text-stone-800">{rescheduleTarget.serviceName}</strong>
+              </div>
+              <div>
+                <span className="text-stone-500">Thời gian hiện tại: </span>
+                <span className="text-stone-700 font-medium">
+                  {formatTimeRange(rescheduleTarget.startTime, rescheduleTarget.endTime)}
+                </span>
+              </div>
+            </div>
+
+            {rescheduleError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs mb-4 flex items-start gap-2">
+                <AlertCircle size={15} className="shrink-0 mt-0.5 text-rose-600" />
+                <span>{rescheduleError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmReschedule} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
+                    Ngày hẹn mới
+                  </label>
+                  <input
+                    type="date"
+                    value={rescheduleDate}
+                    onChange={(e) => setRescheduleDate(e.target.value)}
+                    required
+                    className="w-full h-11 px-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
+                    Giờ bắt đầu mới
+                  </label>
+                  <input
+                    type="time"
+                    value={rescheduleTime}
+                    onChange={(e) => setRescheduleTime(e.target.value)}
+                    required
+                    className="w-full h-11 px-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c]"
+                  />
+                </div>
+              </div>
+
+              {isOwner && activeStaffList.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
+                    Kỹ thuật viên phụ trách
+                  </label>
+                  <select
+                    value={rescheduleStaffId || ''}
+                    onChange={(e) => setRescheduleStaffId(Number(e.target.value) || null)}
+                    className="w-full h-11 px-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm focus:outline-none focus:border-[#465d4c]"
+                  >
+                    <option value="">Giữ kỹ thuật viên hiện tại</option>
+                    {activeStaffList.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.name} {st.phone ? `(${st.phone})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <p className="text-[11px] text-stone-400">
+                Hệ thống sẽ giữ nguyên mã booking, thông tin thanh toán và tự động kiểm tra trùng giờ.
+              </p>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-stone-100">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setRescheduleTarget(null)}
+                  disabled={rescheduleSubmitting}
+                >
+                  Quay lại
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={rescheduleSubmitting}
+                >
+                  {rescheduleSubmitting ? 'Đang cập nhật...' : 'Xác nhận dời lịch'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {cancelTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl border border-stone-200 max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-serif-title font-semibold text-lg text-stone-900 flex items-center gap-2">
+                <Ban size={20} className="text-rose-600" />
+                Hủy lịch hẹn?
+              </h3>
+              <button
+                type="button"
+                onClick={() => setCancelTarget(null)}
+                className="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-100 transition-colors"
+                aria-label="Đóng"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/70 mb-4 text-xs space-y-1.5">
+              <div>
+                <span className="text-stone-500">Mã booking: </span>
+                <strong className="font-mono text-stone-900">{cancelTarget.bookingCode || `#${cancelTarget.id}`}</strong>
+              </div>
+              <div>
+                <span className="text-stone-500">Khách hàng: </span>
+                <strong className="text-stone-900">{cancelTarget.customerName}</strong>
+              </div>
+              <div>
+                <span className="text-stone-500">Dịch vụ: </span>
+                <strong className="text-stone-800">{cancelTarget.serviceName}</strong>
+              </div>
+              <div>
+                <span className="text-stone-500">Thời gian: </span>
+                <span className="text-stone-700 font-medium">
+                  {formatTimeRange(cancelTarget.startTime, cancelTarget.endTime)}
+                </span>
+              </div>
+            </div>
+
+            {cancelError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs mb-4 flex items-start gap-2">
+                <AlertCircle size={15} className="shrink-0 mt-0.5 text-rose-600" />
+                <span>{cancelError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmCancel} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
+                  Lý do hủy (không bắt buộc)
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Ví dụ: Khách bận đột xuất, Khách yêu cầu dời lịch khác..."
+                  rows={2}
+                  className="w-full p-2.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-xs focus:outline-none focus:border-rose-500 resize-none"
+                />
+              </div>
+
+              <p className="text-[11px] text-stone-500 italic">
+                Lịch hẹn sẽ được chuyển sang trạng thái <strong>Đã hủy (CANCELLED)</strong> và lưu lại lịch sử. Dữ liệu thanh toán được bảo lưu.
+              </p>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-stone-100">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setCancelTarget(null)}
+                  disabled={cancelSubmitting}
+                >
+                  Quay lại
+                </Button>
+                <Button
+                  type="submit"
+                  variant="danger"
+                  disabled={cancelSubmitting}
+                >
+                  {cancelSubmitting ? 'Đang hủy...' : 'Xác nhận hủy'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* No-Show Confirmation Modal */}
+      {noShowTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl border border-stone-200 max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-serif-title font-semibold text-lg text-stone-900 flex items-center gap-2">
+                <UserX size={20} className="text-amber-600" />
+                Xác nhận khách không đến?
+              </h3>
+              <button
+                type="button"
+                onClick={() => setNoShowTarget(null)}
+                className="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-100 transition-colors"
+                aria-label="Đóng"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/70 mb-4 text-xs space-y-1.5">
+              <div>
+                <span className="text-stone-500">Mã booking: </span>
+                <strong className="font-mono text-stone-900">{noShowTarget.bookingCode || `#${noShowTarget.id}`}</strong>
+              </div>
+              <div>
+                <span className="text-stone-500">Khách hàng: </span>
+                <strong className="text-stone-900">{noShowTarget.customerName}</strong>
+              </div>
+              <div>
+                <span className="text-stone-500">Dịch vụ: </span>
+                <strong className="text-stone-800">{noShowTarget.serviceName}</strong>
+              </div>
+              <div>
+                <span className="text-stone-500">Thời gian hẹn: </span>
+                <span className="text-stone-700 font-medium">
+                  {formatTimeRange(noShowTarget.startTime, noShowTarget.endTime)}
+                </span>
+              </div>
+            </div>
+
+            {noShowError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs mb-4 flex items-start gap-2">
+                <AlertCircle size={15} className="shrink-0 mt-0.5 text-rose-600" />
+                <span>{noShowError}</span>
+              </div>
+            )}
+
+            <p className="text-xs text-stone-600 leading-relaxed mb-4">
+              Lịch hẹn sẽ được chuyển sang trạng thái <strong>Không đến (NO_SHOW)</strong>. Lịch này sẽ <strong className="text-stone-900">không được tính vào doanh thu</strong> hoàn thành và không cập nhật ngày đến gần nhất của khách hàng.
+            </p>
+
+            <form onSubmit={handleConfirmNoShow}>
+              <div className="flex justify-end gap-2 pt-2 border-t border-stone-100">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setNoShowTarget(null)}
+                  disabled={noShowSubmitting}
+                >
+                  Quay lại
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={noShowSubmitting}
+                  className="bg-stone-800 hover:bg-stone-900 text-white"
+                >
+                  {noShowSubmitting ? 'Đang lưu...' : 'Đánh dấu No-show'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Staff Assignment Modal (OWNER ONLY) */}
       {assigningBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs">
@@ -789,31 +1503,6 @@ const Bookings = () => {
           </div>
         </div>
       )}
-
-      {/* Cancel Confirmation Dialog */}
-      <ConfirmDialog
-        open={cancelTarget !== null}
-        title="Hủy lịch hẹn?"
-        description={
-          cancelTarget && (
-            <>
-              Lịch hẹn của <strong className="text-stone-900">{cancelTarget.customerName}</strong>{' '}
-              ({cancelTarget.serviceName}, {formatTimeRange(cancelTarget.startTime, cancelTarget.endTime)}) sẽ
-              được chuyển sang trạng thái <strong className="text-stone-900">Đã hủy</strong>.
-              Thao tác này không thể hoàn tác.
-            </>
-          )
-        }
-        confirmLabel="Hủy lịch hẹn"
-        cancelLabel="Giữ lịch hẹn"
-        onConfirm={handleConfirmCancel}
-        onCancel={() => {
-          setCancelTarget(null);
-          setCancelError(null);
-        }}
-        busy={busy !== null && cancelTarget !== null && busy.id === cancelTarget.id}
-        error={cancelError}
-      />
     </AppShell>
   );
 };
