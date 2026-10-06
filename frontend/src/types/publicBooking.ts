@@ -98,6 +98,9 @@ export interface PublicBookingDetailResponse {
   paymentStatus: string;
   paidAmount?: number | null;
   paidAt?: string | null;
+  refundAmount?: number | null;
+  refundStatus?: string | null;
+  cancellationFee?: number | null;
   spaName: string;
   spaPhone: string;
   spaAddress: string;
