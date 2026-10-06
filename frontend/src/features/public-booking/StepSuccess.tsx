@@ -26,15 +26,45 @@ export function StepSuccess() {
   };
 
   const handleGoToLookup = () => {
+    // 1. Update URL query params cleanly to lookup context only
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('serviceId');
+    currentUrl.searchParams.delete('lookupCode');
+    currentUrl.searchParams.set('code', displayCode);
+    currentUrl.hash = 'tra-cuu';
+    window.history.pushState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+
+    // 2. Clear booking wizard session
+    handleRestart();
+
+    // 3. Scroll to lookup section
     const lookupElement = document.getElementById('tra-cuu');
     if (lookupElement) {
       lookupElement.scrollIntoView({ behavior: 'smooth' });
-      const input = document.getElementById('public-lookup-input') as HTMLInputElement | null;
-      if (input) {
-        input.value = displayCode;
-        input.focus();
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      }
+    }
+
+    // 4. Dispatch event to trigger immediate search in PublicBookingLookup
+    window.dispatchEvent(
+      new CustomEvent('public-booking-lookup', {
+        detail: { code: displayCode },
+      })
+    );
+  };
+
+  const handleStartAnotherBooking = () => {
+    // Clear URL query parameters completely
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('serviceId');
+    currentUrl.searchParams.delete('code');
+    currentUrl.searchParams.delete('lookupCode');
+    currentUrl.hash = 'booking';
+    window.history.pushState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+
+    handleRestart();
+
+    const bookingEl = document.getElementById('booking');
+    if (bookingEl) {
+      bookingEl.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -281,8 +311,8 @@ export function StepSuccess() {
 
         <button
           type="button"
-          onClick={handleRestart}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-stone-200 text-stone-700 text-sm font-medium rounded-xl hover:bg-stone-50 hover:text-stone-900 transition-colors"
+          onClick={handleStartAnotherBooking}
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-stone-200 text-stone-700 text-sm font-medium rounded-xl hover:bg-stone-50 hover:text-stone-900 transition-colors cursor-pointer"
         >
           <RotateCcw className="w-4 h-4" aria-hidden="true" />
           Đặt lịch khác

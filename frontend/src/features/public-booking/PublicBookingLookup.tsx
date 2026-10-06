@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getPublicBookingByCode } from '../../lib/api/publicBooking';
 import type { PublicBookingDetailResponse } from '../../types/publicBooking';
 import { formatCurrency, formatTimeRange, formatDateLongFromYMD } from '../../lib/format';
@@ -20,6 +21,7 @@ import {
   Sparkles,
   Tag,
   ShieldCheck,
+  ArrowRight,
 } from 'lucide-react';
 
 interface PublicBookingLookupProps {
@@ -81,20 +83,34 @@ const PAYMENT_STATUS_DETAILS: Record<string, { label: string; tone: string; desc
 };
 
 export function PublicBookingLookup({ slug, spaName, spaPhone, defaultCode = '' }: PublicBookingLookupProps) {
-  const [code, setCode] = useState(defaultCode);
+  const [searchParams] = useSearchParams();
+  const urlLookupCode = searchParams.get('lookupCode') || searchParams.get('code') || '';
+  const initialCode = urlLookupCode || defaultCode;
+
+  const [code, setCode] = useState(initialCode);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PublicBookingDetailResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const lastLookupRef = useRef<string>('');
 
-  const handleLookup = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const cleanCode = code.trim();
+  const executeLookup = useCallback(async (codeToLookup: string, syncUrl: boolean = true) => {
+    const cleanCode = codeToLookup.trim();
     if (!cleanCode) {
       setError('Vui lòng nhập mã lịch hẹn (ví dụ: BK-...)');
       return;
     }
 
+    if (syncUrl) {
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete('serviceId');
+      currentUrl.searchParams.delete('lookupCode');
+      currentUrl.searchParams.set('code', cleanCode);
+      currentUrl.hash = 'tra-cuu';
+      window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+    }
+
+    lastLookupRef.current = cleanCode;
     setLoading(true);
     setError(null);
     setResult(null);
@@ -111,6 +127,61 @@ export function PublicBookingLookup({ slug, spaName, spaPhone, defaultCode = '' 
       }
     } finally {
       setLoading(false);
+    }
+  }, [slug]);
+
+  // Handle URL param or defaultCode changes dynamically
+  useEffect(() => {
+    const targetCode = (urlLookupCode || defaultCode).trim();
+    if (targetCode && targetCode !== lastLookupRef.current) {
+      setCode(targetCode);
+      executeLookup(targetCode, false);
+    }
+  }, [urlLookupCode, defaultCode, executeLookup]);
+
+  // Listen to custom window event for in-page immediate lookup without remount
+  useEffect(() => {
+    const handleImmediateLookupEvent = (e: CustomEvent<{ code: string }>) => {
+      const targetCode = e.detail?.code?.trim();
+      if (targetCode) {
+        setCode(targetCode);
+        executeLookup(targetCode, true);
+      }
+    };
+
+    window.addEventListener('public-booking-lookup', handleImmediateLookupEvent as EventListener);
+    return () => {
+      window.removeEventListener('public-booking-lookup', handleImmediateLookupEvent as EventListener);
+    };
+  }, [executeLookup]);
+
+  const handleLookup = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    await executeLookup(code, true);
+  };
+
+  const handleClear = () => {
+    setCode('');
+    setResult(null);
+    setError(null);
+    lastLookupRef.current = '';
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('code');
+    currentUrl.searchParams.delete('lookupCode');
+    window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+  };
+
+  const handleStartFreshBooking = () => {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('serviceId');
+    currentUrl.searchParams.delete('code');
+    currentUrl.searchParams.delete('lookupCode');
+    currentUrl.hash = 'booking';
+    window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+    window.dispatchEvent(new CustomEvent('reset-booking-session'));
+    const el = document.getElementById('booking');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -207,7 +278,7 @@ export function PublicBookingLookup({ slug, spaName, spaPhone, defaultCode = '' 
             {code && (
               <button
                 type="button"
-                onClick={() => { setCode(''); setResult(null); setError(null); }}
+                onClick={handleClear}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400 hover:text-stone-700 cursor-pointer"
               >
                 Xóa
@@ -482,6 +553,18 @@ export function PublicBookingLookup({ slug, spaName, spaPhone, defaultCode = '' 
                   )}
                 </div>
               )}
+
+              {/* Action: Start fresh booking */}
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleStartFreshBooking}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stone-900 text-white text-xs font-semibold hover:bg-stone-800 transition-colors cursor-pointer shadow-xs"
+                >
+                  <span>Đặt lịch mới</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         )}

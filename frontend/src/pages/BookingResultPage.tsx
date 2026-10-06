@@ -437,7 +437,7 @@ export default function BookingResultPage() {
           {/* Action Buttons */}
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-stone-100">
             <Link
-              to="/tra-cuu"
+              to={`/tra-cuu?code=${encodeURIComponent(booking.bookingCode)}#tra-cuu`}
               className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-stone-200 text-stone-700 text-xs font-semibold hover:bg-stone-50 transition-colors text-center inline-flex items-center justify-center gap-1.5"
             >
               <Search size={14} /> Tra cứu lịch hẹn
@@ -451,7 +451,7 @@ export default function BookingResultPage() {
               </Link>
               <button
                 type="button"
-                onClick={() => navigate('/#booking-flow')}
+                onClick={() => navigate('/#booking')}
                 className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-stone-900 text-white text-xs font-semibold hover:bg-stone-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 Đặt lịch mới <ArrowRight size={14} />

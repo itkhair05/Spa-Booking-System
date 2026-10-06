@@ -24,6 +24,8 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     Optional<Customer> findByPhoneAndTenantId(String phone, Long tenantId);
 
+    Optional<Customer> findFirstByPhoneAndTenantIdOrderByIdAsc(String phone, Long tenantId);
+
     @org.springframework.data.jpa.repository.Query("SELECT c FROM Customer c WHERE c.tenant.id = :tenantId AND c.isActive = true " +
            "AND (:query IS NULL OR :query = '' " +
            "     OR LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) " +

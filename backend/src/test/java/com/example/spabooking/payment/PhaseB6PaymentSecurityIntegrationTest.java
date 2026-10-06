@@ -691,6 +691,179 @@ public class PhaseB6PaymentSecurityIntegrationTest {
                 .andExpect(jsonPath("$.errors.customerPhone", is("Số điện thoại phải gồm đúng 10 chữ số")));
     }
 
+    // =========================================================================
+    // 7. RETURNING CUSTOMER REUSE & TENANT ISOLATION REGRESSION TESTS
+    // =========================================================================
+
+    @Test
+    @DisplayName("Regression: Returning customer with existing phone in same tenant reuses customer record")
+    void testReturningCustomer_ReuseCustomerRecordInSameTenant() throws Exception {
+        String phone = "0908112233";
+
+        // Step 1: First booking -> Creates Customer #1
+        Map<String, Object> booking1 = new HashMap<>();
+        booking1.put("serviceId", serviceA.getId());
+        booking1.put("staffId", staffA.getId());
+        booking1.put("startTime", LocalDateTime.now().plusDays(5).withHour(9).withMinute(0).toString());
+        booking1.put("customerName", "Nguyen Thi Mai");
+        booking1.put("customerPhone", phone);
+        booking1.put("customerEmail", "mai@example.com");
+        booking1.put("paymentMethod", "PAY_AT_SPA");
+
+        mockMvc.perform(post("/api/v1/public/spas/" + tenantA.getSlug() + "/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(booking1)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingCode", notNullValue()));
+
+        Customer firstCustomer = customerRepository.findByPhoneAndTenantId(phone, tenantA.getId()).orElse(null);
+        assertNotNull(firstCustomer, "Customer should be created");
+        Long originalCustomerId = firstCustomer.getId();
+        assertEquals("Nguyen Thi Mai", firstCustomer.getName());
+        assertEquals("mai@example.com", firstCustomer.getEmail());
+
+        // Step 2: Second booking with same phone -> Should reuse customer, NOT throw 400
+        Map<String, Object> booking2 = new HashMap<>();
+        booking2.put("serviceId", serviceA.getId());
+        booking2.put("staffId", staffA.getId());
+        booking2.put("startTime", LocalDateTime.now().plusDays(6).withHour(14).withMinute(0).toString());
+        booking2.put("customerName", "Nguyen Mai (Returning)");
+        booking2.put("customerPhone", phone);
+        booking2.put("customerEmail", "mai@example.com");
+        booking2.put("paymentMethod", "PAY_AT_SPA");
+
+        mockMvc.perform(post("/api/v1/public/spas/" + tenantA.getSlug() + "/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(booking2)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingCode", notNullValue()));
+
+        // Step 3: Third booking with same phone at a different time
+        Map<String, Object> booking3 = new HashMap<>();
+        booking3.put("serviceId", serviceA.getId());
+        booking3.put("staffId", staffA.getId());
+        booking3.put("startTime", LocalDateTime.now().plusDays(7).withHour(11).withMinute(0).toString());
+        booking3.put("customerName", "Nguyen Mai");
+        booking3.put("customerPhone", phone);
+        booking3.put("customerEmail", "mai@example.com");
+        booking3.put("paymentMethod", "PAY_AT_SPA");
+
+        mockMvc.perform(post("/api/v1/public/spas/" + tenantA.getSlug() + "/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(booking3)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingCode", notNullValue()));
+
+        // Verify: Exactly 1 customer record exists for this phone in tenantA
+        List<Customer> allMatching = customerRepository.findAllByTenantId(tenantA.getId()).stream()
+                .filter(c -> phone.equals(c.getPhone()))
+                .toList();
+        assertEquals(1, allMatching.size(), "Only 1 customer should exist for this phone number");
+        assertEquals(originalCustomerId, allMatching.get(0).getId(), "Customer ID must be reused across bookings");
+        // Existing customer name should be preserved safely
+        assertEquals("Nguyen Thi Mai", allMatching.get(0).getName(), "Original customer name must not be overwritten arbitrarily");
+    }
+
+    @Test
+    @DisplayName("Regression: Same phone across different tenants is NOT reused (Strict Tenant Isolation)")
+    void testReturningCustomer_StrictTenantIsolation() throws Exception {
+        String phone = "0909555666";
+
+        // Create booking in Tenant A
+        Map<String, Object> bookingTenantA = new HashMap<>();
+        bookingTenantA.put("serviceId", serviceA.getId());
+        bookingTenantA.put("staffId", staffA.getId());
+        bookingTenantA.put("startTime", LocalDateTime.now().plusDays(8).withHour(10).withMinute(0).toString());
+        bookingTenantA.put("customerName", "Customer of Tenant A");
+        bookingTenantA.put("customerPhone", phone);
+        bookingTenantA.put("customerEmail", "custA@example.com");
+        bookingTenantA.put("paymentMethod", "PAY_AT_SPA");
+
+        mockMvc.perform(post("/api/v1/public/spas/" + tenantA.getSlug() + "/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookingTenantA)))
+                .andExpect(status().isCreated());
+
+        Customer custA = customerRepository.findByPhoneAndTenantId(phone, tenantA.getId()).orElse(null);
+        assertNotNull(custA);
+
+        // Create service and staff for Tenant B
+        Service serviceB = new Service();
+        serviceB.setTenant(tenantB);
+        serviceB.setName("Dịch vụ Tenant B");
+        serviceB.setDurationMinutes(60);
+        serviceB.setPrice(new BigDecimal("300000.00"));
+        serviceB.setIsActive(true);
+        serviceB = serviceRepository.saveAndFlush(serviceB);
+
+        Staff staffB = new Staff();
+        staffB.setTenant(tenantB);
+        staffB.setName("Nhân viên Tenant B");
+        staffB.setEmail("staffb@other.com");
+        staffB.setPhone("0922334455");
+        staffB.setIsActive(true);
+        staffB.setIsDeleted(false);
+        staffB = staffRepository.saveAndFlush(staffB);
+
+        // Create booking in Tenant B with the EXACT SAME phone
+        Map<String, Object> bookingTenantB = new HashMap<>();
+        bookingTenantB.put("serviceId", serviceB.getId());
+        bookingTenantB.put("staffId", staffB.getId());
+        bookingTenantB.put("startTime", LocalDateTime.now().plusDays(8).withHour(10).withMinute(0).toString());
+        bookingTenantB.put("customerName", "Customer of Tenant B");
+        bookingTenantB.put("customerPhone", phone);
+        bookingTenantB.put("customerEmail", "custB@example.com");
+        bookingTenantB.put("paymentMethod", "PAY_AT_SPA");
+
+        mockMvc.perform(post("/api/v1/public/spas/" + tenantB.getSlug() + "/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookingTenantB)))
+                .andExpect(status().isCreated());
+
+        Customer custB = customerRepository.findByPhoneAndTenantId(phone, tenantB.getId()).orElse(null);
+        assertNotNull(custB);
+
+        // Verify: Tenant A customer and Tenant B customer are distinct entities
+        assertNotEquals(custA.getId(), custB.getId(), "Customers in different tenants must NEVER be reused");
+        assertEquals(tenantA.getId(), custA.getTenant().getId());
+        assertEquals(tenantB.getId(), custB.getTenant().getId());
+    }
+
+    @Test
+    @DisplayName("Regression: Previously deactivated customer account is safely reactivated on public booking")
+    void testReturningCustomer_InactiveAccountReactivatedSafely() throws Exception {
+        String phone = "0907888999";
+
+        // Pre-create an inactive customer in Tenant A
+        Customer inactiveCust = new Customer();
+        inactiveCust.setName("Nguyen Cu Khach");
+        inactiveCust.setPhone(phone);
+        inactiveCust.setEmail("cu@example.com");
+        inactiveCust.setTenant(tenantA);
+        inactiveCust.setIsActive(false);
+        customerRepository.saveAndFlush(inactiveCust);
+
+        Map<String, Object> booking = new HashMap<>();
+        booking.put("serviceId", serviceA.getId());
+        booking.put("staffId", staffA.getId());
+        booking.put("startTime", LocalDateTime.now().plusDays(9).withHour(15).withMinute(0).toString());
+        booking.put("customerName", "Nguyen Cu Khach");
+        booking.put("customerPhone", phone);
+        booking.put("customerEmail", "cu@example.com");
+        booking.put("paymentMethod", "PAY_AT_SPA");
+
+        // Should succeed and NOT return 400 Bad Request
+        mockMvc.perform(post("/api/v1/public/spas/" + tenantA.getSlug() + "/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(booking)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingCode", notNullValue()));
+
+        Customer reloaded = customerRepository.findById(inactiveCust.getId()).orElse(null);
+        assertNotNull(reloaded);
+        assertTrue(reloaded.getIsActive(), "Customer account should be reactivated for new booking");
+    }
+
     @Test
     @DisplayName("Admin Booking Detail: OWNER sees payment info, service process steps and category without exposing secrets")
     void testAdminBookingDetail_OwnerSeesPaymentAndProcess() throws Exception {

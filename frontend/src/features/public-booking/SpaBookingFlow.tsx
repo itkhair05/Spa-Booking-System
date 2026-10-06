@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { SpaBookingContext, type BookingState } from './SpaBookingContext';
 import { StepServices } from './StepServices';
 import { StepStaff } from './StepStaff';
@@ -6,8 +7,8 @@ import { StepDateTime } from './StepDateTime';
 import { StepCustomer } from './StepCustomer';
 import { StepReview } from './StepReview';
 import { StepSuccess } from './StepSuccess';
-import { verifyVNPayCallback, getPublicBookingByCode } from '../../lib/api/publicBooking';
-import type { PublicSpaInfoResponse } from '../../types/publicBooking';
+import { verifyVNPayCallback, getPublicBookingByCode, getPublicServices } from '../../lib/api/publicBooking';
+import type { PublicSpaInfoResponse, PublicServiceResponse } from '../../types/publicBooking';
 
 interface SpaBookingFlowProps {
   slug: string;
@@ -107,14 +108,117 @@ export function SpaBookingFlow({ slug, spa }: SpaBookingFlowProps) {
                 vnpayMessage: result.message,
               }));
             }
+
+            const nextUrl = new URL(window.location.href);
+            const toDelete: string[] = [];
+            nextUrl.searchParams.forEach((_, k) => {
+              if (k.startsWith('vnp_') || k === 'serviceId' || k === 'lookupCode') {
+                toDelete.push(k);
+              }
+            });
+            toDelete.forEach((k) => nextUrl.searchParams.delete(k));
+            nextUrl.searchParams.set('code', result.bookingCode);
+            nextUrl.hash = 'tra-cuu';
+            window.history.replaceState({}, document.title, nextUrl.pathname + nextUrl.search + nextUrl.hash);
+            window.dispatchEvent(
+              new CustomEvent('public-booking-lookup', {
+                detail: { code: result.bookingCode },
+              })
+            );
+          } else {
+            window.history.replaceState({}, document.title, window.location.pathname);
           }
-          window.history.replaceState({}, document.title, window.location.pathname);
         })
         .catch(() => {
           window.history.replaceState({}, document.title, window.location.pathname);
         });
     }
   }, [slug]);
+
+  const [searchParams] = useSearchParams();
+  const serviceIdParam = searchParams.get('serviceId');
+
+  const preselectServiceById = useCallback(async (serviceIdStr: string) => {
+    const targetId = Number(serviceIdStr);
+    if (isNaN(targetId) || targetId <= 0) return;
+
+    try {
+      const services = await getPublicServices(slug);
+      const matched = services.find((s: PublicServiceResponse) => s.id === targetId);
+      if (matched) {
+        setState({
+          ...INITIAL_STATE,
+          service: matched,
+          step: 2, // Skip step 1 and advance directly to step 2
+        });
+      } else {
+        // Fallback safely to step 1
+        setState(INITIAL_STATE);
+      }
+    } catch {
+      // If error occurs, fallback safely to step 1
+      setState(INITIAL_STATE);
+    }
+  }, [slug]);
+
+  // Handle serviceId from query params
+  useEffect(() => {
+    if (serviceIdParam) {
+      // Ensure code is removed if serviceId is provided
+      const currentUrl = new URL(window.location.href);
+      if (currentUrl.searchParams.has('code') || currentUrl.searchParams.has('lookupCode')) {
+        currentUrl.searchParams.delete('code');
+        currentUrl.searchParams.delete('lookupCode');
+        window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      preselectServiceById(serviceIdParam);
+    }
+  }, [serviceIdParam, preselectServiceById]);
+
+  // Listen for reset-booking-session event to clear booking wizard
+  useEffect(() => {
+    const handleReset = () => {
+      setState(INITIAL_STATE);
+    };
+    window.addEventListener('reset-booking-session', handleReset);
+    return () => {
+      window.removeEventListener('reset-booking-session', handleReset);
+    };
+  }, []);
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const currentParams = new URLSearchParams(window.location.search);
+      const currentHash = window.location.hash;
+      if (currentHash === '#tra-cuu') {
+        setState(INITIAL_STATE);
+      } else if (currentHash === '#booking') {
+        if (!currentParams.has('serviceId')) {
+          setState((prev) => (prev.bookingCode || prev.step === 6 ? INITIAL_STATE : prev));
+        }
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  // Handle in-page direct booking event from service cards without reload
+  useEffect(() => {
+    const handleSelectServiceEvent = (e: CustomEvent<{ serviceId: number }>) => {
+      if (e.detail?.serviceId) {
+        preselectServiceById(String(e.detail.serviceId));
+      }
+    };
+
+    window.addEventListener('select-service-booking', handleSelectServiceEvent as EventListener);
+    return () => {
+      window.removeEventListener('select-service-booking', handleSelectServiceEvent as EventListener);
+    };
+  }, [preselectServiceById]);
 
   useEffect(() => {
     // Only focus the panel when user actively advances to a new step, preventing initial page scroll
