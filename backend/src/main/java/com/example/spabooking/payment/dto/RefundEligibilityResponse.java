@@ -15,6 +15,8 @@ public class RefundEligibilityResponse {
     private BigDecimal refundAmount;
     private BigDecimal cancellationFee;
     private Integer policyPercentage;
+    private Integer refundPercentage;
+    private Integer cancellationFeePercentage;
     private String policyDescription;
     private LocalDateTime deadline;
     private boolean refundEligible;
@@ -49,7 +51,30 @@ public class RefundEligibilityResponse {
     public void setCancellationFee(BigDecimal cancellationFee) { this.cancellationFee = cancellationFee; }
 
     public Integer getPolicyPercentage() { return policyPercentage; }
-    public void setPolicyPercentage(Integer policyPercentage) { this.policyPercentage = policyPercentage; }
+    public void setPolicyPercentage(Integer policyPercentage) {
+        this.policyPercentage = policyPercentage;
+        this.refundPercentage = policyPercentage;
+        if (policyPercentage != null) {
+            this.cancellationFeePercentage = 100 - policyPercentage;
+        }
+    }
+
+    public Integer getRefundPercentage() {
+        return refundPercentage != null ? refundPercentage : policyPercentage;
+    }
+    public void setRefundPercentage(Integer refundPercentage) {
+        this.refundPercentage = refundPercentage;
+    }
+
+    public Integer getCancellationFeePercentage() {
+        if (cancellationFeePercentage != null) {
+            return cancellationFeePercentage;
+        }
+        return policyPercentage != null ? 100 - policyPercentage : null;
+    }
+    public void setCancellationFeePercentage(Integer cancellationFeePercentage) {
+        this.cancellationFeePercentage = cancellationFeePercentage;
+    }
 
     public String getPolicyDescription() { return policyDescription; }
     public void setPolicyDescription(String policyDescription) { this.policyDescription = policyDescription; }

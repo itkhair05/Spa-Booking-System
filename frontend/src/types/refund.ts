@@ -5,7 +5,9 @@ export interface RefundEligibilityResponse {
   originalPaidAmount: number;
   refundAmount: number;
   cancellationFee: number;
-  refundPercentage: number;
+  policyPercentage?: number;
+  refundPercentage?: number;
+  cancellationFeePercentage?: number;
   deadline: string | null;
   policyDescription: string;
   ineligibleReason?: string | null;
