@@ -1,5 +1,6 @@
 package com.example.spabooking.payment.controller;
 
+import com.example.spabooking.booking.service.BookingService;
 import com.example.spabooking.common.exception.ResourceNotFoundException;
 import com.example.spabooking.payment.dto.PaymentResponse;
 import com.example.spabooking.payment.entity.Payment;
@@ -16,9 +17,11 @@ import java.util.stream.Collectors;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final BookingService bookingService;
 
-    public PaymentController(PaymentService paymentService) {
+    public PaymentController(PaymentService paymentService, BookingService bookingService) {
         this.paymentService = paymentService;
+        this.bookingService = bookingService;
     }
 
     @GetMapping
@@ -34,6 +37,9 @@ public class PaymentController {
     @GetMapping("/booking/{bookingId}")
     @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
     public ResponseEntity<PaymentResponse> getPaymentByBookingId(@PathVariable Long bookingId) {
+        // findById enforces staff-own booking access before payment data is exposed
+        bookingService.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
         Payment payment = paymentService.findByBookingId(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found for booking: " + bookingId));
         return ResponseEntity.ok(PaymentResponse.fromEntity(payment));

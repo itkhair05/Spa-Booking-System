@@ -4,13 +4,13 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Alert } from '../components/ui/Alert';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { getArticles, deleteArticle, publishArticle, unpublishArticle } from '../lib/api/articles';
 import type { Article } from '../types/article';
 import { ArticleForm } from './ArticleForm';
+import RestrictedAccess from '../components/RestrictedAccess';
 import { BookOpen, Plus, Trash2, Globe, EyeOff, Calendar } from 'lucide-react';
 import { useAuth } from '../app/auth/useAuth';
 
@@ -46,9 +46,11 @@ const Articles = () => {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchArticles();
-  }, [fetchArticles]);
+    if (isOwner) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchArticles();
+    }
+  }, [fetchArticles, isOwner]);
 
   const handleOpenForm = (article?: Article) => {
     if (!isOwner) return;
@@ -102,6 +104,16 @@ const Articles = () => {
     }
   };
 
+  if (!isOwner) {
+    return (
+      <RestrictedAccess
+        shellTitle="Góc chăm sóc"
+        icon={<BookOpen className="w-7 h-7" />}
+        message="Khu vực quản lý bài viết — Góc chăm sóc chỉ dành riêng cho Quản trị viên (OWNER)."
+      />
+    );
+  }
+
   if (isFormOpen && isOwner) {
     return (
       <AppShell title="Góc chăm sóc">
@@ -131,12 +143,6 @@ const Articles = () => {
           </Button>
         )}
       </div>
-
-      {!isOwner && (
-        <Alert tone="info" className="mb-6">
-          Chỉ chủ cơ sở mới có quyền quản lý bài viết.
-        </Alert>
-      )}
 
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">

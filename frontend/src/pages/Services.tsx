@@ -19,6 +19,7 @@ import { formatCurrency } from '../lib/format';
 import type { Service } from '../types/service';
 import type { ServiceCategory } from '../types/serviceCategory';
 import { ServiceForm } from './ServiceForm';
+import RestrictedAccess from '../components/RestrictedAccess';
 import { Scissors, Trash2, Plus, Sparkles, FolderTree, X, Edit2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../app/auth/useAuth';
 
@@ -77,9 +78,11 @@ const Services = () => {
   }, [isOwner]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchServices();
-  }, [fetchServices]);
+    if (isOwner) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchServices();
+    }
+  }, [fetchServices, isOwner]);
 
   const handleOpenForm = (service?: Service) => {
     if (!isOwner) return;
@@ -202,6 +205,16 @@ const Services = () => {
     }
   };
 
+  if (!isOwner) {
+    return (
+      <RestrictedAccess
+        shellTitle="Dịch vụ"
+        icon={<Scissors className="w-7 h-7" />}
+        message="Khu vực quản lý dịch vụ chỉ dành riêng cho Quản trị viên (OWNER)."
+      />
+    );
+  }
+
   if (isFormOpen && isOwner) {
     return (
       <AppShell title="Dịch vụ">
@@ -237,12 +250,6 @@ const Services = () => {
           </div>
         )}
       </div>
-
-      {!isOwner && (
-        <Alert tone="info" className="mb-6">
-          Chỉ chủ cơ sở có thể thêm hoặc chỉnh sửa dịch vụ.
-        </Alert>
-      )}
 
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse" aria-busy="true">

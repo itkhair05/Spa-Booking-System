@@ -10,6 +10,7 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { getReviews, publishReview, unpublishReview, updateReview, deleteReview } from '../lib/api/reviews';
 import { formatDateDMY } from '../lib/format';
 import type { Review } from '../types/review';
+import RestrictedAccess from '../components/RestrictedAccess';
 import { Star, Eye, EyeOff, Trash2, Edit2, X } from 'lucide-react';
 import { useAuth } from '../app/auth/useAuth';
 
@@ -47,9 +48,11 @@ const ReviewsPage = () => {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchReviews();
-  }, [fetchReviews]);
+    if (isOwner) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchReviews();
+    }
+  }, [fetchReviews, isOwner]);
 
   const handleTogglePublish = async (review: Review) => {
     if (!isOwner) return;
@@ -113,17 +116,11 @@ const ReviewsPage = () => {
 
   if (!isOwner) {
     return (
-      <AppShell title="Đánh giá">
-        <div className="max-w-2xl mx-auto py-16 text-center px-4">
-          <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center mx-auto mb-4 border border-amber-200">
-            <Star className="w-7 h-7" />
-          </div>
-          <h2 className="text-xl font-serif-title font-semibold text-stone-900 mb-2">Quyền truy cập hạn chế</h2>
-          <p className="text-stone-600 text-sm leading-relaxed mb-6">
-            Khu vực kiểm duyệt đánh giá khách hàng chỉ dành riêng cho Quản trị viên (OWNER).
-          </p>
-        </div>
-      </AppShell>
+      <RestrictedAccess
+        shellTitle="Đánh giá"
+        icon={<Star className="w-7 h-7" />}
+        message="Khu vực kiểm duyệt đánh giá khách hàng chỉ dành riêng cho Quản trị viên (OWNER)."
+      />
     );
   }
 

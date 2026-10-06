@@ -186,6 +186,20 @@ public class PhaseB5IntegrationTest {
     }
 
     @Test
+    @DisplayName("STAFF retains read-only access to service catalog data (services, categories)")
+    void testStaffCanReadServiceCatalog() throws Exception {
+        // Service category read stays available to STAFF (read-only catalog data)
+        mockMvc.perform(get("/api/v1/service-categories")
+                        .header("Authorization", "Bearer " + staffTokenA))
+                .andExpect(status().isOk());
+
+        // Service read stays available to STAFF (read-only catalog data)
+        mockMvc.perform(get("/api/v1/services")
+                        .header("Authorization", "Bearer " + staffTokenA))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("OWNER can update Service featured, category, and process steps; STAFF cannot manage")
     void testServiceFeaturedCategoryAndSteps() throws Exception {
         // Create category for Tenant A

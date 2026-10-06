@@ -73,12 +73,13 @@ public class BookingService {
         if (userDetailsOpt.isPresent() && userDetailsOpt.get().isStaff()) {
             CustomUserDetails userDetails = userDetailsOpt.get();
             Long linkedStaffId = userDetails.getStaffId();
-            if (linkedStaffId != null) {
-                if (requestedStaffId != null && !requestedStaffId.equals(linkedStaffId)) {
-                    throw new AccessDeniedException("Staff can only view their own bookings");
-                }
-                effectiveStaffId = linkedStaffId;
+            if (linkedStaffId == null) {
+                throw new AccessDeniedException("Staff account is not linked to a staff record");
             }
+            if (requestedStaffId != null && !requestedStaffId.equals(linkedStaffId)) {
+                throw new AccessDeniedException("Staff can only view their own bookings");
+            }
+            effectiveStaffId = linkedStaffId;
         }
 
         if (startDate != null && endDate != null) {
@@ -108,10 +109,11 @@ public class BookingService {
         if (userDetailsOpt.isPresent() && userDetailsOpt.get().isStaff()) {
             CustomUserDetails userDetails = userDetailsOpt.get();
             Long linkedStaffId = userDetails.getStaffId();
-            if (linkedStaffId != null) {
-                if (booking.getStaff() == null || !linkedStaffId.equals(booking.getStaff().getId())) {
-                    throw new AccessDeniedException("Staff cannot access bookings assigned to another staff member");
-                }
+            if (linkedStaffId == null) {
+                throw new AccessDeniedException("Staff account is not linked to a staff record");
+            }
+            if (booking.getStaff() == null || !linkedStaffId.equals(booking.getStaff().getId())) {
+                throw new AccessDeniedException("Staff cannot access bookings assigned to another staff member");
             }
         }
         return Optional.of(booking);
@@ -138,12 +140,13 @@ public class BookingService {
         if (userDetailsOpt.isPresent() && userDetailsOpt.get().isStaff()) {
             CustomUserDetails userDetails = userDetailsOpt.get();
             Long linkedStaffId = userDetails.getStaffId();
-            if (linkedStaffId != null) {
-                if (request.getStaffId() != null && !request.getStaffId().equals(linkedStaffId)) {
-                    throw new AccessDeniedException("Staff can only create bookings for themselves");
-                }
-                request.setStaffId(linkedStaffId);
+            if (linkedStaffId == null) {
+                throw new AccessDeniedException("Staff account is not linked to a staff record");
             }
+            if (request.getStaffId() != null && !request.getStaffId().equals(linkedStaffId)) {
+                throw new AccessDeniedException("Staff can only create bookings for themselves");
+            }
+            request.setStaffId(linkedStaffId);
         }
 
         // Lock ordering: Customer -> Staff
@@ -192,15 +195,16 @@ public class BookingService {
         if (userDetailsOpt.isPresent() && userDetailsOpt.get().isStaff()) {
             CustomUserDetails userDetails = userDetailsOpt.get();
             Long linkedStaffId = userDetails.getStaffId();
-            if (linkedStaffId != null) {
-                if (existingBooking.getStaff() == null || !linkedStaffId.equals(existingBooking.getStaff().getId())) {
-                    throw new AccessDeniedException("Staff cannot update bookings assigned to another staff member");
-                }
-                if (request.getStaffId() != null && !request.getStaffId().equals(linkedStaffId)) {
-                    throw new AccessDeniedException("Staff cannot reassign booking to another staff member");
-                }
-                request.setStaffId(linkedStaffId);
+            if (linkedStaffId == null) {
+                throw new AccessDeniedException("Staff account is not linked to a staff record");
             }
+            if (existingBooking.getStaff() == null || !linkedStaffId.equals(existingBooking.getStaff().getId())) {
+                throw new AccessDeniedException("Staff cannot update bookings assigned to another staff member");
+            }
+            if (request.getStaffId() != null && !request.getStaffId().equals(linkedStaffId)) {
+                throw new AccessDeniedException("Staff cannot reassign booking to another staff member");
+            }
+            request.setStaffId(linkedStaffId);
         }
 
         // Lock ordering: Customer -> Staff
@@ -439,13 +443,14 @@ public class BookingService {
         if (userDetailsOpt.isPresent() && userDetailsOpt.get().isStaff()) {
             CustomUserDetails userDetails = userDetailsOpt.get();
             Long linkedStaffId = userDetails.getStaffId();
-            if (linkedStaffId != null) {
-                if (booking.getStaff() == null || !linkedStaffId.equals(booking.getStaff().getId())) {
-                    throw new AccessDeniedException("Staff cannot modify bookings assigned to another staff member");
-                }
-                if (targetStaffId != null && !targetStaffId.equals(linkedStaffId)) {
-                    throw new AccessDeniedException("Staff cannot reassign booking to another staff member");
-                }
+            if (linkedStaffId == null) {
+                throw new AccessDeniedException("Staff account is not linked to a staff record");
+            }
+            if (booking.getStaff() == null || !linkedStaffId.equals(booking.getStaff().getId())) {
+                throw new AccessDeniedException("Staff cannot modify bookings assigned to another staff member");
+            }
+            if (targetStaffId != null && !targetStaffId.equals(linkedStaffId)) {
+                throw new AccessDeniedException("Staff cannot reassign booking to another staff member");
             }
         }
     }

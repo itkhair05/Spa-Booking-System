@@ -132,12 +132,25 @@ public class StaffControllerTest {
     }
 
     @Test
-    void testStaffGetStaff() throws Exception {
+    void testStaffGetStaffIsForbidden() throws Exception {
         mockMvc.perform(get("/api/v1/staff")
                         .header("Authorization", "Bearer " + staffJwt))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testOwnerGetStaffById() throws Exception {
+        mockMvc.perform(get("/api/v1/staff/" + staffA.getId())
+                        .header("Authorization", "Bearer " + ownerJwt))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name", is("Alice")));
+                .andExpect(jsonPath("$.name", is("Alice")));
+    }
+
+    @Test
+    void testStaffGetStaffByIdIsForbidden() throws Exception {
+        mockMvc.perform(get("/api/v1/staff/" + staffA.getId())
+                        .header("Authorization", "Bearer " + staffJwt))
+                .andExpect(status().isForbidden());
     }
 
     @Test
