@@ -176,7 +176,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.tenant.id = :tenantId " +
            "AND b.staff.id = :staffId " +
-           "AND b.status != 'CANCELLED' " +
+           "AND b.status IN ('PENDING', 'CONFIRMED', 'CHECKED_IN', 'IN_PROGRESS') " +
            "AND b.startTime < :endTime AND b.endTime > :startTime " +
            "AND (:excludeBookingId IS NULL OR b.id != :excludeBookingId)")
     long countOverlappingStaffBookings(
@@ -188,7 +188,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.tenant.id = :tenantId " +
            "AND b.customer.id = :customerId " +
-           "AND b.status != 'CANCELLED' " +
+           "AND b.status IN ('PENDING', 'CONFIRMED', 'CHECKED_IN', 'IN_PROGRESS') " +
            "AND b.startTime < :endTime AND b.endTime > :startTime " +
            "AND (:excludeBookingId IS NULL OR b.id != :excludeBookingId)")
     long countOverlappingCustomerBookings(
@@ -197,6 +197,16 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime,
             @Param("excludeBookingId") Long excludeBookingId);
+
+    @Query("SELECT b FROM Booking b WHERE b.tenant.id = :tenantId " +
+           "AND b.startTime >= :startOfDay AND b.startTime < :endOfDay " +
+           "AND (:staffId IS NULL OR b.staff.id = :staffId) " +
+           "ORDER BY b.startTime ASC")
+    List<Booking> findDailySchedule(
+            @Param("tenantId") Long tenantId,
+            @Param("startOfDay") LocalDateTime startOfDay,
+            @Param("endOfDay") LocalDateTime endOfDay,
+            @Param("staffId") Long staffId);
 
     @Query("SELECT b.customer.id, COUNT(b), MAX(b.startTime) FROM Booking b WHERE b.tenant.id = :tenantId GROUP BY b.customer.id")
     List<Object[]> findCustomerBookingStatsByTenantId(@Param("tenantId") Long tenantId);

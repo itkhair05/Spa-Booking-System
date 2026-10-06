@@ -11,7 +11,9 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { getStaff, deleteStaff, updateStaff, createStaffAccount } from '../lib/api/staff';
 import type { Staff as StaffType } from '../types/staff';
 import { StaffForm } from './StaffForm';
-import { UserRound, Trash2, Plus, KeyRound, ShieldAlert, Check, Phone, Mail, Globe } from 'lucide-react';
+import { StaffScheduleModal } from './StaffScheduleModal';
+import { DailyScheduleView } from './DailyScheduleView';
+import { UserRound, Trash2, Plus, KeyRound, ShieldAlert, Check, Phone, Mail, Globe, Clock, Calendar } from 'lucide-react';
 import { useAuth } from '../app/auth/useAuth';
 
 const Staff = () => {
@@ -42,6 +44,21 @@ const Staff = () => {
   const [deletingMember, setDeletingMember] = useState<StaffType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Scheduling State (Phase B.8)
+  const [activeTab, setActiveTab] = useState<'staffList' | 'dailySchedule'>('staffList');
+  const [scheduleStaff, setScheduleStaff] = useState<StaffType | null>(null);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+
+  const handleOpenScheduleModal = (member: StaffType) => {
+    setScheduleStaff(member);
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleCloseScheduleModal = () => {
+    setIsScheduleModalOpen(false);
+    setScheduleStaff(null);
+  };
 
   const fetchStaff = useCallback(async () => {
     setIsLoading(true);
@@ -202,17 +219,55 @@ const Staff = () => {
         )}
       </div>
 
-      {!isOwner && (
-        <Alert tone="info" className="mb-6">
-          Chỉ chủ cơ sở có thể thêm, chỉnh sửa hoặc cấp tài khoản nhân viên.
-        </Alert>
+      {/* Navigation Tabs */}
+      <div className="flex border-b border-stone-200 mb-6">
+        <button
+          type="button"
+          onClick={() => setActiveTab('staffList')}
+          className={`flex items-center gap-2 py-3 px-4 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+            activeTab === 'staffList'
+              ? 'border-stone-900 text-stone-900'
+              : 'border-transparent text-stone-500 hover:text-stone-800'
+          }`}
+        >
+          <UserRound size={16} />
+          Danh sách nhân viên ({staffList.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('dailySchedule')}
+          className={`flex items-center gap-2 py-3 px-4 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+            activeTab === 'dailySchedule'
+              ? 'border-stone-900 text-stone-900'
+              : 'border-transparent text-stone-500 hover:text-stone-800'
+          }`}
+        >
+          <Calendar size={16} />
+          Lịch trực ngày
+        </button>
+      </div>
+
+      {activeTab === 'dailySchedule' && (
+        <DailyScheduleView
+          staffList={staffList}
+          isOwner={isOwner}
+          currentStaffId={null}
+        />
       )}
 
-      {accountSuccess && (
-        <Alert tone="success" className="mb-6">
-          {accountSuccess}
-        </Alert>
-      )}
+      {activeTab === 'staffList' && (
+        <>
+          {!isOwner && (
+            <Alert tone="info" className="mb-6">
+              Chỉ chủ cơ sở có thể thêm, chỉnh sửa hoặc cấp tài khoản nhân viên.
+            </Alert>
+          )}
+
+          {accountSuccess && (
+            <Alert tone="success" className="mb-6">
+              {accountSuccess}
+            </Alert>
+          )}
 
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse" aria-busy="true">
@@ -348,6 +403,19 @@ const Staff = () => {
                   </div>
                 </div>
 
+                {/* Schedule & Days Off Action */}
+                <div className="pt-2 border-t border-stone-100">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="w-full text-xs justify-center"
+                    onClick={() => handleOpenScheduleModal(member)}
+                  >
+                    <Clock size={13} className="mr-1.5 text-stone-500" />
+                    {isOwner ? 'Lịch làm việc & Ngày nghỉ' : 'Xem lịch làm việc'}
+                  </Button>
+                </div>
+
                 {isOwner && (
                   <div className="mt-auto flex flex-col gap-2 pt-3 border-t border-stone-100">
                     {!member.username && (
@@ -395,6 +463,8 @@ const Staff = () => {
             </Card>
           ))}
         </div>
+      )}
+      </>
       )}
 
       {/* Create Staff Account Modal */}
@@ -516,6 +586,14 @@ const Staff = () => {
         onCancel={() => setDeletingMember(null)}
         busy={isDeleting}
         error={deleteError}
+      />
+
+      {/* Staff Schedule & Days Off Modal (Phase B.8) */}
+      <StaffScheduleModal
+        staff={scheduleStaff}
+        isOpen={isScheduleModalOpen}
+        onClose={handleCloseScheduleModal}
+        isOwner={isOwner}
       />
     </AppShell>
   );

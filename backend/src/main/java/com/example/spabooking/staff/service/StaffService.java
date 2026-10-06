@@ -38,6 +38,7 @@ public class StaffService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final BookingRepository bookingRepository;
+    private final StaffScheduleService staffScheduleService;
 
     @Autowired
     public StaffService(StaffRepository staffRepository,
@@ -45,13 +46,15 @@ public class StaffService {
                         UserRepository userRepository,
                         PasswordEncoder passwordEncoder,
                         JwtUtils jwtUtils,
-                        BookingRepository bookingRepository) {
+                        BookingRepository bookingRepository,
+                        StaffScheduleService staffScheduleService) {
         this.staffRepository = staffRepository;
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
         this.bookingRepository = bookingRepository;
+        this.staffScheduleService = staffScheduleService;
     }
 
     public List<StaffResponse> findAllWithAccounts() {
@@ -95,7 +98,9 @@ public class StaffService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
         staff.setTenant(tenant);
         staff.setIsDeleted(false);
-        return staffRepository.save(staff);
+        Staff saved = staffRepository.save(staff);
+        staffScheduleService.initDefaultWorkingHours(saved);
+        return saved;
     }
 
     @Transactional

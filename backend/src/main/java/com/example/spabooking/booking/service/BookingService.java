@@ -42,6 +42,7 @@ public class BookingService {
     private final ServiceRepository serviceRepository;
     private final TenantRepository tenantRepository;
     private final PaymentRepository paymentRepository;
+    private final com.example.spabooking.staff.service.StaffScheduleService staffScheduleService;
 
     @Autowired
     public BookingService(BookingRepository bookingRepository,
@@ -49,13 +50,15 @@ public class BookingService {
                           StaffRepository staffRepository,
                           ServiceRepository serviceRepository,
                           TenantRepository tenantRepository,
-                          PaymentRepository paymentRepository) {
+                          PaymentRepository paymentRepository,
+                          com.example.spabooking.staff.service.StaffScheduleService staffScheduleService) {
         this.bookingRepository = bookingRepository;
         this.customerRepository = customerRepository;
         this.staffRepository = staffRepository;
         this.serviceRepository = serviceRepository;
         this.tenantRepository = tenantRepository;
         this.paymentRepository = paymentRepository;
+        this.staffScheduleService = staffScheduleService;
     }
 
     @Transactional(readOnly = true)
@@ -153,7 +156,8 @@ public class BookingService {
         // endTime is derived from the service duration; any client-supplied value is ignored.
         LocalDateTime endTime = request.getStartTime().plusMinutes(service.getDurationMinutes());
 
-        checkOverlaps(tenantId, staff.getId(), customer.getId(), request.getStartTime(), endTime, null);
+        staffScheduleService.validateStaffAvailability(tenantId, staff.getId(), request.getStartTime(), endTime, null);
+        checkCustomerOverlaps(tenantId, customer.getId(), request.getStartTime(), endTime, null);
 
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
@@ -214,7 +218,8 @@ public class BookingService {
         // endTime is derived from the (possibly changed) service duration; any client-supplied value is ignored.
         LocalDateTime endTime = request.getStartTime().plusMinutes(service.getDurationMinutes());
 
-        checkOverlaps(tenantId, staff.getId(), customer.getId(), request.getStartTime(), endTime, id);
+        staffScheduleService.validateStaffAvailability(tenantId, staff.getId(), request.getStartTime(), endTime, id);
+        checkCustomerOverlaps(tenantId, customer.getId(), request.getStartTime(), endTime, id);
 
         existingBooking.setCustomer(customer);
         existingBooking.setStaff(staff);
@@ -396,7 +401,8 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found or inactive"));
 
         LocalDateTime endTime = request.getStartTime().plusMinutes(booking.getService().getDurationMinutes());
-        checkOverlaps(tenantId, staff.getId(), booking.getCustomer().getId(), request.getStartTime(), endTime, booking.getId());
+        staffScheduleService.validateStaffAvailability(tenantId, staff.getId(), request.getStartTime(), endTime, booking.getId());
+        checkCustomerOverlaps(tenantId, booking.getCustomer().getId(), request.getStartTime(), endTime, booking.getId());
 
         booking.setStartTime(request.getStartTime());
         booking.setEndTime(endTime);
@@ -452,22 +458,14 @@ public class BookingService {
         Staff newStaff = staffRepository.findByIdAndTenantIdAndIsActiveTrueForUpdate(staffId, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found or inactive"));
 
-        long staffOverlaps = bookingRepository.countOverlappingStaffBookings(
+        staffScheduleService.validateStaffAvailability(
                 tenantId, newStaff.getId(), existingBooking.getStartTime(), existingBooking.getEndTime(), existingBooking.getId());
-        if (staffOverlaps > 0) {
-            throw new BookingConflictException("Staff member is already booked for this time slot");
-        }
 
         existingBooking.setStaff(newStaff);
         return bookingRepository.save(existingBooking);
     }
 
-    private void checkOverlaps(Long tenantId, Long staffId, Long customerId, LocalDateTime start, LocalDateTime end, Long excludeBookingId) {
-        long staffOverlaps = bookingRepository.countOverlappingStaffBookings(tenantId, staffId, start, end, excludeBookingId);
-        if (staffOverlaps > 0) {
-            throw new BookingConflictException("Staff member is already booked for this time slot");
-        }
-
+    private void checkCustomerOverlaps(Long tenantId, Long customerId, LocalDateTime start, LocalDateTime end, Long excludeBookingId) {
         long customerOverlaps = bookingRepository.countOverlappingCustomerBookings(tenantId, customerId, start, end, excludeBookingId);
         if (customerOverlaps > 0) {
             throw new BookingConflictException("Customer is already booked for this time slot");

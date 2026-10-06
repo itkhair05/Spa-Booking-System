@@ -41,6 +41,7 @@ public class PublicBookingService {
     private final com.example.spabooking.payment.service.PaymentService paymentService;
     private final com.example.spabooking.payment.repository.PaymentRepository paymentRepository;
     private final com.example.spabooking.payment.service.VNPayService vnPayService;
+    private final com.example.spabooking.staff.service.StaffScheduleService staffScheduleService;
 
     @Autowired
     public PublicBookingService(TenantRepository tenantRepository,
@@ -54,7 +55,8 @@ public class PublicBookingService {
                                 com.example.spabooking.review.service.ReviewService reviewService,
                                 com.example.spabooking.payment.service.PaymentService paymentService,
                                 com.example.spabooking.payment.repository.PaymentRepository paymentRepository,
-                                com.example.spabooking.payment.service.VNPayService vnPayService) {
+                                com.example.spabooking.payment.service.VNPayService vnPayService,
+                                com.example.spabooking.staff.service.StaffScheduleService staffScheduleService) {
         this.tenantRepository = tenantRepository;
         this.serviceRepository = serviceRepository;
         this.serviceCategoryRepository = serviceCategoryRepository;
@@ -67,6 +69,7 @@ public class PublicBookingService {
         this.paymentService = paymentService;
         this.paymentRepository = paymentRepository;
         this.vnPayService = vnPayService;
+        this.staffScheduleService = staffScheduleService;
     }
 
     public PublicSpaInfoResponse getSpaInfo() {
@@ -130,70 +133,12 @@ public class PublicBookingService {
 
     public List<LocalDateTime> getAvailability(Long serviceId, LocalDate date, Long staffId) {
         Long tenantId = TenantContext.requireTenantId();
-        
-        Service service = serviceRepository.findByIdAndTenantId(serviceId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
-                
-        if (!service.getIsActive()) {
-            throw new IllegalArgumentException("Service is not active");
-        }
 
         if (date.isBefore(LocalDate.now())) {
             throw new IllegalArgumentException("Date cannot be in the past");
         }
 
-        List<Staff> staffToCheck = new ArrayList<>();
-        if (staffId != null) {
-            Staff staff = staffRepository.findByIdAndTenantIdAndIsActiveTrue(staffId, tenantId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Staff not found or not active"));
-            staffToCheck.add(staff);
-        } else {
-            staffToCheck = staffRepository.findAllByTenantIdAndIsActiveTrue(tenantId);
-        }
-
-        if (staffToCheck.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        List<LocalDateTime> availableSlots = new ArrayList<>();
-        
-        // Simple business hours: 09:00 to 18:00
-        LocalTime openTime = LocalTime.of(9, 0);
-        LocalTime closeTime = LocalTime.of(18, 0);
-        
-        LocalDateTime startOfDay = date.atTime(openTime);
-        LocalDateTime endOfDay = date.atTime(closeTime);
-        
-        // Check slots every 30 minutes
-        LocalDateTime currentSlot = startOfDay;
-        LocalDateTime now = LocalDateTime.now();
-
-        while (currentSlot.plusMinutes(service.getDurationMinutes()).isBefore(endOfDay) || currentSlot.plusMinutes(service.getDurationMinutes()).equals(endOfDay)) {
-            
-            if (currentSlot.isBefore(now)) {
-                currentSlot = currentSlot.plusMinutes(30);
-                continue;
-            }
-
-            LocalDateTime slotEnd = currentSlot.plusMinutes(service.getDurationMinutes());
-            
-            boolean isAvailable = false;
-            for (Staff staff : staffToCheck) {
-                long overlaps = bookingRepository.countOverlappingStaffBookings(tenantId, staff.getId(), currentSlot, slotEnd, null);
-                if (overlaps == 0) {
-                    isAvailable = true;
-                    break;
-                }
-            }
-            
-            if (isAvailable) {
-                availableSlots.add(currentSlot);
-            }
-            
-            currentSlot = currentSlot.plusMinutes(30);
-        }
-
-        return availableSlots;
+        return staffScheduleService.getAvailableSlots(tenantId, serviceId, date, staffId);
     }
 
     @Transactional
