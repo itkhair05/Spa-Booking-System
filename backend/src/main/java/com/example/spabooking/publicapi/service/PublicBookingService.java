@@ -40,6 +40,7 @@ public class PublicBookingService {
     private final com.example.spabooking.review.service.ReviewService reviewService;
     private final com.example.spabooking.payment.service.PaymentService paymentService;
     private final com.example.spabooking.payment.repository.PaymentRepository paymentRepository;
+    private final com.example.spabooking.payment.repository.RefundRepository refundRepository;
     private final com.example.spabooking.payment.service.VNPayService vnPayService;
     private final com.example.spabooking.staff.service.StaffScheduleService staffScheduleService;
 
@@ -55,6 +56,7 @@ public class PublicBookingService {
                                 com.example.spabooking.review.service.ReviewService reviewService,
                                 com.example.spabooking.payment.service.PaymentService paymentService,
                                 com.example.spabooking.payment.repository.PaymentRepository paymentRepository,
+                                com.example.spabooking.payment.repository.RefundRepository refundRepository,
                                 com.example.spabooking.payment.service.VNPayService vnPayService,
                                 com.example.spabooking.staff.service.StaffScheduleService staffScheduleService) {
         this.tenantRepository = tenantRepository;
@@ -68,6 +70,7 @@ public class PublicBookingService {
         this.reviewService = reviewService;
         this.paymentService = paymentService;
         this.paymentRepository = paymentRepository;
+        this.refundRepository = refundRepository;
         this.vnPayService = vnPayService;
         this.staffScheduleService = staffScheduleService;
     }
@@ -220,7 +223,10 @@ public class PublicBookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
         com.example.spabooking.payment.entity.Payment payment =
                 paymentRepository.findByBookingIdAndTenantId(booking.getId(), tenantId).orElse(null);
-        return PublicBookingDetailResponse.fromEntity(booking, payment);
+        com.example.spabooking.payment.entity.Refund refund = payment != null
+                ? refundRepository.findByPaymentIdAndTenantId(payment.getId(), tenantId).orElse(null)
+                : null;
+        return PublicBookingDetailResponse.fromEntity(booking, payment, refund);
     }
 
     @Transactional

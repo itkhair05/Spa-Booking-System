@@ -59,11 +59,24 @@ public class BookingDetailResponse {
     private String bankCode;
     private String cardType;
 
+    // Refund (Phase B.8.1)
+    private BigDecimal refundAmount;
+    private BigDecimal cancellationFee;
+    private String refundStatus;
+    private Integer refundPolicyPercentage;
+    private String refundReason;
+    private String refundRequestId;
+    private LocalDateTime refundProcessedAt;
+
     public static BookingDetailResponse fromEntity(Booking booking, boolean isOwner) {
-        return fromEntity(booking, null, isOwner);
+        return fromEntity(booking, null, null, isOwner);
     }
 
     public static BookingDetailResponse fromEntity(Booking booking, Payment payment, boolean isOwner) {
+        return fromEntity(booking, payment, null, isOwner);
+    }
+
+    public static BookingDetailResponse fromEntity(Booking booking, Payment payment, com.example.spabooking.payment.entity.Refund refund, boolean isOwner) {
         BookingDetailResponse response = new BookingDetailResponse();
         response.setId(booking.getId());
         response.setBookingCode(booking.getBookingCode());
@@ -130,6 +143,16 @@ public class BookingDetailResponse {
             response.setPaymentProvider("SPA");
             response.setPaymentStatus("UNPAID");
             response.setPaidAmount(booking.getPrice());
+        }
+
+        if (refund != null) {
+            response.setRefundAmount(refund.getRefundAmount());
+            response.setCancellationFee(refund.getCancellationFee());
+            response.setRefundStatus(refund.getStatus().name());
+            response.setRefundPolicyPercentage(refund.getPolicyPercentage());
+            response.setRefundReason(refund.getReason());
+            response.setRefundRequestId(refund.getRefundRequestId());
+            response.setRefundProcessedAt(refund.getProcessedAt());
         }
 
         return response;
@@ -257,4 +280,25 @@ public class BookingDetailResponse {
 
     public String getCardType() { return cardType; }
     public void setCardType(String cardType) { this.cardType = cardType; }
+
+    public BigDecimal getRefundAmount() { return refundAmount; }
+    public void setRefundAmount(BigDecimal refundAmount) { this.refundAmount = refundAmount; }
+
+    public BigDecimal getCancellationFee() { return cancellationFee; }
+    public void setCancellationFee(BigDecimal cancellationFee) { this.cancellationFee = cancellationFee; }
+
+    public String getRefundStatus() { return refundStatus; }
+    public void setRefundStatus(String refundStatus) { this.refundStatus = refundStatus; }
+
+    public Integer getRefundPolicyPercentage() { return refundPolicyPercentage; }
+    public void setRefundPolicyPercentage(Integer refundPolicyPercentage) { this.refundPolicyPercentage = refundPolicyPercentage; }
+
+    public String getRefundReason() { return refundReason; }
+    public void setRefundReason(String refundReason) { this.refundReason = refundReason; }
+
+    public String getRefundRequestId() { return refundRequestId; }
+    public void setRefundRequestId(String refundRequestId) { this.refundRequestId = refundRequestId; }
+
+    public LocalDateTime getRefundProcessedAt() { return refundProcessedAt; }
+    public void setRefundProcessedAt(LocalDateTime refundProcessedAt) { this.refundProcessedAt = refundProcessedAt; }
 }

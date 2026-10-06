@@ -82,6 +82,13 @@ export interface BookingDetail {
   transactionNo?: string;
   bankCode?: string;
   cardType?: string;
+
+  // Refund
+  refundAmount?: number;
+  cancellationFee?: number;
+  refundStatus?: string;
+  refundPolicyPercentage?: number;
+  refundReason?: string;
 }
 
 export interface AssignBookingRequest {

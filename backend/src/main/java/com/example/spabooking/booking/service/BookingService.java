@@ -42,6 +42,7 @@ public class BookingService {
     private final ServiceRepository serviceRepository;
     private final TenantRepository tenantRepository;
     private final PaymentRepository paymentRepository;
+    private final com.example.spabooking.payment.repository.RefundRepository refundRepository;
     private final com.example.spabooking.staff.service.StaffScheduleService staffScheduleService;
 
     @Autowired
@@ -51,6 +52,7 @@ public class BookingService {
                           ServiceRepository serviceRepository,
                           TenantRepository tenantRepository,
                           PaymentRepository paymentRepository,
+                          com.example.spabooking.payment.repository.RefundRepository refundRepository,
                           com.example.spabooking.staff.service.StaffScheduleService staffScheduleService) {
         this.bookingRepository = bookingRepository;
         this.customerRepository = customerRepository;
@@ -58,6 +60,7 @@ public class BookingService {
         this.serviceRepository = serviceRepository;
         this.tenantRepository = tenantRepository;
         this.paymentRepository = paymentRepository;
+        this.refundRepository = refundRepository;
         this.staffScheduleService = staffScheduleService;
     }
 
@@ -121,7 +124,10 @@ public class BookingService {
         boolean isOwner = getCurrentUserDetails().map(CustomUserDetails::isOwner).orElse(false);
         Long tenantId = TenantContext.requireTenantId();
         Payment payment = paymentRepository.findByBookingIdAndTenantId(booking.getId(), tenantId).orElse(null);
-        return BookingDetailResponse.fromEntity(booking, payment, isOwner);
+        com.example.spabooking.payment.entity.Refund refund = payment != null
+                ? refundRepository.findByPaymentIdAndTenantId(payment.getId(), tenantId).orElse(null)
+                : null;
+        return BookingDetailResponse.fromEntity(booking, payment, refund, isOwner);
     }
 
     @Transactional

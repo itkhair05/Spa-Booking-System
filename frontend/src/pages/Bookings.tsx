@@ -20,8 +20,10 @@ import {
   rescheduleBooking,
   assignBookingStaff
 } from '../lib/api/bookings';
+import { getRefundEligibility, initiateRefund } from '../lib/api/refund';
 import { getStaff } from '../lib/api/staff';
 import type { Booking, BookingDetail, BookingStatus } from '../types/booking';
+import type { RefundEligibilityResponse } from '../types/refund';
 import type { Staff } from '../types/staff';
 import { BookingForm } from './BookingForm';
 import { formatCurrency, formatTimeRange } from '../lib/format';
@@ -46,7 +48,8 @@ import {
   UserX,
   Play,
   CheckCircle2,
-  Ban
+  Ban,
+  RotateCcw
 } from 'lucide-react';
 
 const STATUS_CONFIG: Record<BookingStatus, { label: string; tone: BadgeTone }> = {
@@ -130,6 +133,16 @@ const Bookings = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelEligibility, setCancelEligibility] = useState<RefundEligibilityResponse | null>(null);
+  const [cancelEligibilityLoading, setCancelEligibilityLoading] = useState(false);
+
+  // Refund Modal (Owner only)
+  const [refundTarget, setRefundTarget] = useState<BookingDetail | null>(null);
+  const [refundEligibility, setRefundEligibility] = useState<RefundEligibilityResponse | null>(null);
+  const [refundLoading, setRefundLoading] = useState(false);
+  const [refundReason, setRefundReason] = useState('');
+  const [refundSubmitting, setRefundSubmitting] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
 
   // No-Show Modal
   const [noShowTarget, setNoShowTarget] = useState<Booking | BookingDetail | null>(null);
@@ -365,10 +378,24 @@ const Bookings = () => {
   };
 
   // Open Cancel Modal
-  const handleOpenCancel = (booking: Booking | BookingDetail) => {
+  const handleOpenCancel = async (booking: Booking | BookingDetail) => {
     setCancelTarget(booking);
     setCancelReason('');
     setCancelError(null);
+    setCancelEligibility(null);
+
+    // If paid, preview policy calculation
+    if (booking.price > 0) {
+      setCancelEligibilityLoading(true);
+      try {
+        const elig = await getRefundEligibility(booking.id);
+        setCancelEligibility(elig);
+      } catch {
+        // Silently skip if not eligible or error
+      } finally {
+        setCancelEligibilityLoading(false);
+      }
+    }
   };
 
   const handleConfirmCancel = async (e: React.FormEvent) => {
@@ -391,6 +418,46 @@ const Bookings = () => {
       setCancelError(errorObj.response?.data?.message || 'Không thể hủy lịch hẹn.');
     } finally {
       setCancelSubmitting(false);
+    }
+  };
+
+  // Open Refund Modal (Owner only)
+  const handleOpenRefund = async (booking: BookingDetail) => {
+    setRefundTarget(booking);
+    setRefundReason(booking.cancellationReason || 'Khách yêu cầu hủy');
+    setRefundError(null);
+    setRefundEligibility(null);
+    setRefundLoading(true);
+    try {
+      const elig = await getRefundEligibility(booking.id);
+      setRefundEligibility(elig);
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { message?: string } } };
+      setRefundError(errorObj.response?.data?.message || 'Không thể tải điều kiện hoàn tiền.');
+    } finally {
+      setRefundLoading(false);
+    }
+  };
+
+  const handleConfirmRefund = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!refundTarget) return;
+
+    setRefundSubmitting(true);
+    setRefundError(null);
+    try {
+      await initiateRefund(refundTarget.id, {
+        reason: refundReason.trim() || undefined,
+      });
+      const targetId = refundTarget.id;
+      setRefundTarget(null);
+      await fetchBookings();
+      handleOpenDetail(targetId);
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { message?: string } } };
+      setRefundError(errorObj.response?.data?.message || 'Không thể thực hiện yêu cầu hoàn tiền.');
+    } finally {
+      setRefundSubmitting(false);
     }
   };
 
@@ -1147,6 +1214,75 @@ const Bookings = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Refund Information Block if applicable */}
+                  {detailBooking.refundStatus && (
+                    <div className="mt-3 pt-3 border-t border-stone-200/60 bg-white/70 p-3 rounded-lg border space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+                          <RotateCcw size={13} className="text-[#8a704c]" />
+                          Thông tin hoàn tiền (VNPay Refund)
+                        </span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
+                          detailBooking.refundStatus === 'REFUNDED'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : detailBooking.refundStatus === 'REFUND_PENDING'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {detailBooking.refundStatus === 'REFUNDED'
+                            ? 'Đã hoàn tiền (REFUNDED)'
+                            : detailBooking.refundStatus === 'REFUND_PENDING'
+                            ? 'Đang xử lý (REFUND_PENDING)'
+                            : 'Hoàn tiền thất bại (REFUND_FAILED)'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-stone-400 block text-[11px]">Số tiền hoàn thực tế</span>
+                          <strong className="text-emerald-700 text-sm font-serif-title">
+                            {formatCurrency(detailBooking.refundAmount || 0)}
+                          </strong>
+                        </div>
+                        <div>
+                          <span className="text-stone-400 block text-[11px]">Phí hủy lịch (TIKEY SPA)</span>
+                          <strong className="text-stone-800 text-sm font-serif-title">
+                            {formatCurrency(detailBooking.cancellationFee || 0)}
+                          </strong>
+                        </div>
+                        {detailBooking.refundPolicyPercentage != null && (
+                          <div>
+                            <span className="text-stone-400 block text-[11px]">Tỷ lệ hoàn</span>
+                            <span className="text-stone-800 font-medium">{detailBooking.refundPolicyPercentage}%</span>
+                          </div>
+                        )}
+                        {detailBooking.refundReason && (
+                          <div className="sm:col-span-2">
+                            <span className="text-stone-400 block text-[11px]">Lý do hoàn</span>
+                            <span className="text-stone-700 italic">{detailBooking.refundReason}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Owner Refund Button if Cancelled and paid online but not yet refunded */}
+                  {isOwner &&
+                    detailBooking.paymentMethod === 'VNPAY' &&
+                    detailBooking.status === 'CANCELLED' &&
+                    (!detailBooking.refundStatus || detailBooking.refundStatus === 'REFUND_FAILED') && (
+                      <div className="mt-3 pt-2 border-t border-stone-200/60 flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => handleOpenRefund(detailBooking)}
+                        >
+                          <RotateCcw size={13} className="mr-1" />
+                          {detailBooking.refundStatus === 'REFUND_FAILED' ? 'Thử lại hoàn tiền' : 'Hoàn tiền qua VNPay'}
+                        </Button>
+                      </div>
+                    )}
                 </div>
 
                 {/* Footer Buttons */}
@@ -1321,6 +1457,39 @@ const Bookings = () => {
               </div>
             </div>
 
+            {/* Refund Policy Preview if Paid Online */}
+            {cancelEligibilityLoading ? (
+              <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/70 mb-4 text-xs text-stone-500 italic">
+                Đang đối soát chính sách hoàn tiền...
+              </div>
+            ) : cancelEligibility && cancelEligibility.refundEligible && (
+              <div className="p-3.5 bg-amber-50/70 rounded-xl border border-amber-200/80 mb-4 text-xs space-y-1.5 text-stone-800">
+                <div className="font-semibold text-amber-900 flex items-center gap-1.5">
+                  <RotateCcw size={14} className="text-amber-700" />
+                  Chính sách hủy & hoàn tiền TIKEY SPA
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div>
+                    <span className="text-stone-500 block text-[11px]">Đã thanh toán</span>
+                    <strong className="text-stone-900">{formatCurrency(cancelEligibility.originalPaidAmount)}</strong>
+                  </div>
+                  <div>
+                    <span className="text-stone-500 block text-[11px]">Dự kiến hoàn ({cancelEligibility.refundPercentage}%)</span>
+                    <strong className="text-emerald-700">{formatCurrency(cancelEligibility.refundAmount)}</strong>
+                  </div>
+                  {cancelEligibility.cancellationFee > 0 && (
+                    <div className="col-span-2 text-stone-600 pt-0.5">
+                      <span className="text-stone-500">Phí hủy lịch ({100 - cancelEligibility.refundPercentage}%): </span>
+                      <span className="font-semibold text-rose-700">{formatCurrency(cancelEligibility.cancellationFee)}</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-[11px] text-stone-600 italic pt-1 border-t border-amber-200/50">
+                  {cancelEligibility.policyDescription}
+                </p>
+              </div>
+            )}
+
             {cancelError && (
               <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs mb-4 flex items-start gap-2">
                 <AlertCircle size={15} className="shrink-0 mt-0.5 text-rose-600" />
@@ -1361,6 +1530,125 @@ const Bookings = () => {
                   disabled={cancelSubmitting}
                 >
                   {cancelSubmitting ? 'Đang hủy...' : 'Xác nhận hủy'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Owner VNPay Refund Modal */}
+      {refundTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl border border-stone-200 max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-serif-title font-semibold text-lg text-stone-900 flex items-center gap-2">
+                <RotateCcw size={20} className="text-amber-600" />
+                Xác nhận hoàn tiền qua VNPay
+              </h3>
+              <button
+                type="button"
+                onClick={() => setRefundTarget(null)}
+                className="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-100 transition-colors"
+                aria-label="Đóng"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/70 mb-4 text-xs space-y-1.5">
+              <div>
+                <span className="text-stone-500">Mã booking: </span>
+                <strong className="font-mono text-stone-900">{refundTarget.bookingCode || `#${refundTarget.id}`}</strong>
+              </div>
+              <div>
+                <span className="text-stone-500">Khách hàng: </span>
+                <strong className="text-stone-900">{refundTarget.customerName}</strong>
+              </div>
+              <div>
+                <span className="text-stone-500">Dịch vụ: </span>
+                <strong className="text-stone-800">{refundTarget.serviceName}</strong>
+              </div>
+            </div>
+
+            {/* Authoritative Refund Policy Breakdown */}
+            {refundLoading ? (
+              <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 text-xs text-stone-500 text-center">
+                Đang xác minh điều kiện hoàn tiền từ máy chủ...
+              </div>
+            ) : refundEligibility ? (
+              <div className="p-4 bg-gradient-to-br from-amber-50/80 to-stone-50 rounded-xl border border-amber-200/80 mb-4 text-xs space-y-2 text-stone-800">
+                <div className="flex items-center justify-between border-b border-amber-200/60 pb-2">
+                  <span className="text-stone-600">Đã thanh toán (VNPay):</span>
+                  <span className="font-bold text-stone-900 text-sm">
+                    {formatCurrency(refundEligibility.originalPaidAmount)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-stone-600">
+                    Số tiền dự kiến hoàn ({refundEligibility.refundPercentage}%):
+                  </span>
+                  <strong className="text-emerald-700 text-base font-serif-title">
+                    {formatCurrency(refundEligibility.refundAmount)}
+                  </strong>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-stone-600">
+                    Phí hủy lịch ({100 - refundEligibility.refundPercentage}%):
+                  </span>
+                  <span className="text-rose-700 font-semibold">
+                    {formatCurrency(refundEligibility.cancellationFee)}
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-stone-600 italic pt-1.5 border-t border-amber-200/60">
+                  {refundEligibility.policyDescription}
+                </p>
+              </div>
+            ) : null}
+
+            {refundError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs mb-4 flex items-start gap-2">
+                <AlertCircle size={15} className="shrink-0 mt-0.5 text-rose-600" />
+                <span>{refundError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmRefund} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
+                  Lý do hoàn tiền
+                </label>
+                <textarea
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  placeholder="Khách yêu cầu hủy lịch..."
+                  rows={2}
+                  className="w-full p-2.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-xs focus:outline-none focus:border-amber-500 resize-none"
+                />
+              </div>
+
+              <p className="text-[11px] text-stone-500 italic">
+                Hệ thống sẽ gửi yêu cầu hoàn tiền đến cổng VNPay Sandbox với mã giao dịch duy nhất (idempotent). Số tiền hoàn được tính toán tự động từ máy chủ.
+              </p>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-stone-100">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setRefundTarget(null)}
+                  disabled={refundSubmitting}
+                >
+                  Hủy bỏ
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={refundSubmitting || refundLoading || (refundEligibility !== null && !refundEligibility.refundEligible)}
+                  className="bg-amber-700 hover:bg-amber-800 text-white"
+                >
+                  {refundSubmitting ? 'Đang gửi yêu cầu hoàn tiền...' : 'Xác nhận hoàn tiền'}
                 </Button>
               </div>
             </form>

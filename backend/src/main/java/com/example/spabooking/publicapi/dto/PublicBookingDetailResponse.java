@@ -29,6 +29,11 @@ public class PublicBookingDetailResponse {
     private BigDecimal paidAmount;
     private LocalDateTime paidAt;
 
+    // Refund (Phase B.8.1)
+    private BigDecimal refundAmount;
+    private String refundStatus;
+    private BigDecimal cancellationFee;
+
     // Spa
     private String spaName;
     private String spaAddress;
@@ -40,6 +45,10 @@ public class PublicBookingDetailResponse {
     private String processSteps;
 
     public static PublicBookingDetailResponse fromEntity(Booking booking, Payment payment) {
+        return fromEntity(booking, payment, null);
+    }
+
+    public static PublicBookingDetailResponse fromEntity(Booking booking, Payment payment, com.example.spabooking.payment.entity.Refund refund) {
         PublicBookingDetailResponse resp = new PublicBookingDetailResponse();
         resp.setBookingCode(booking.getBookingCode());
         resp.setStatus(booking.getStatus().name());
@@ -77,6 +86,12 @@ public class PublicBookingDetailResponse {
             resp.setPaymentMethod("PAY_AT_SPA");
             resp.setPaymentStatus("UNPAID");
             resp.setPaidAmount(booking.getPrice());
+        }
+
+        if (refund != null) {
+            resp.setRefundAmount(refund.getRefundAmount());
+            resp.setRefundStatus(refund.getStatus().name());
+            resp.setCancellationFee(refund.getCancellationFee());
         }
 
         if (booking.getTenant() != null) {
@@ -155,4 +170,13 @@ public class PublicBookingDetailResponse {
 
     public String getProcessSteps() { return processSteps; }
     public void setProcessSteps(String processSteps) { this.processSteps = processSteps; }
+
+    public BigDecimal getRefundAmount() { return refundAmount; }
+    public void setRefundAmount(BigDecimal refundAmount) { this.refundAmount = refundAmount; }
+
+    public String getRefundStatus() { return refundStatus; }
+    public void setRefundStatus(String refundStatus) { this.refundStatus = refundStatus; }
+
+    public BigDecimal getCancellationFee() { return cancellationFee; }
+    public void setCancellationFee(BigDecimal cancellationFee) { this.cancellationFee = cancellationFee; }
 }

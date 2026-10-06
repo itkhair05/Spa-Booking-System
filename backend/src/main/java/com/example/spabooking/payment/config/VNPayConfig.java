@@ -25,6 +25,9 @@ public class VNPayConfig {
     @Value("${vnpay.ipn-url:}")
     private String ipnUrl;
 
+    @Value("${vnpay.refund-url:https://sandbox.vnpayment.vn/merchant_webapi/api/transaction}")
+    private String refundUrl;
+
     public String getTmnCode() {
         return tmnCode;
     }
@@ -43,6 +46,10 @@ public class VNPayConfig {
 
     public String getIpnUrl() {
         return ipnUrl;
+    }
+
+    public String getRefundUrl() {
+        return refundUrl;
     }
 
     public static String hmacSHA512(String key, String data) {

@@ -491,6 +491,42 @@ export function PublicBookingLookup({ slug, spaName, spaPhone, defaultCode = '' 
                       </div>
                     )}
 
+                    {/* Refund Information if applicable */}
+                    {result.refundStatus && (
+                      <div className="pt-2 border-t border-stone-200/50 space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-stone-500 font-medium">Trạng thái hoàn tiền:</span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
+                            result.refundStatus === 'REFUNDED'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : result.refundStatus === 'REFUND_PENDING'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          }`}>
+                            {result.refundStatus === 'REFUNDED'
+                              ? 'Đã hoàn tiền'
+                              : result.refundStatus === 'REFUND_PENDING'
+                              ? 'Đang xử lý'
+                              : 'Hoàn tiền thất bại'}
+                          </span>
+                        </div>
+                        {result.refundAmount != null && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-stone-500">Số tiền hoàn:</span>
+                            <span className="font-semibold text-emerald-700">
+                              {formatCurrency(result.refundAmount)}
+                            </span>
+                          </div>
+                        )}
+                        {result.cancellationFee != null && result.cancellationFee > 0 && (
+                          <div className="flex justify-between items-center text-xs text-stone-500">
+                            <span>Phí hủy:</span>
+                            <span>{formatCurrency(result.cancellationFee)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {paymentStatusConfig?.desc && (
                       <p className="text-[11px] text-stone-500 italic pt-1 leading-snug">
                         {paymentStatusConfig.desc}
