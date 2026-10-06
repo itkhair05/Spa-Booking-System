@@ -460,4 +460,175 @@ public class PhaseB81RefundSecurityIntegrationTest {
                 .andExpect(jsonPath("$.refundRequestId").doesNotExist())
                 .andExpect(jsonPath("$.txnRef").doesNotExist());
     }
+
+    // =========================================================================
+    // 4. REAL-WORLD REGRESSION & PAYMENT STATE MACHINE TESTS
+    // =========================================================================
+
+    @Test
+    @DisplayName("Real-world scenario: BK-C826390C5B (350k, VNPay 15696680) with Provider Pending results in REFUND_PENDING, never UNPAID or REFUNDED prematurely")
+    void testRealWorldBooking_ProviderPending_ResultsInRefundPending() throws Exception {
+        LocalDateTime appointmentTime = LocalDateTime.now().plusHours(12); // < 24h -> 90%
+        Booking booking = createBooking(tenantA, customerA, staffA1, serviceA, appointmentTime, BookingStatus.CANCELLED, BigDecimal.valueOf(350000));
+        String regressionBookingCode = "BK-C826390C5B-TEST-" + System.currentTimeMillis();
+        booking.setBookingCode(regressionBookingCode);
+        bookingRepository.save(booking);
+
+        Payment payment = new Payment();
+        payment.setTenant(tenantA);
+        payment.setBooking(booking);
+        payment.setPaymentMethod(PaymentMethod.VNPAY);
+        payment.setProvider(PaymentProvider.VNPAY);
+        payment.setAmount(BigDecimal.valueOf(350000));
+        payment.setStatus(PaymentStatus.PAID);
+        payment.setTxnRef("TIKEY-" + regressionBookingCode);
+        payment.setTransactionNo("15696680");
+        payment.setPaidAt(LocalDateTime.now().minusHours(1));
+        paymentRepository.save(payment);
+
+        // Provider returns REFUND_PENDING (vnp_ResponseCode=00, Merchant Portal: "CHỜ DUYỆT")
+        when(mockPaymentProviderService.refund(any(), any(), any(), any(), any()))
+                .thenReturn(new ProviderRefundResult(RefundStatus.REFUND_PENDING, "00", "Yêu cầu hoàn tiền đã được VNPay tiếp nhận (Chờ duyệt / Đang xử lý)", "15696685"));
+
+        // 1. Check eligibility response
+        mockMvc.perform(get("/api/v1/bookings/{id}/refund-eligibility", booking.getId())
+                        .header("Authorization", "Bearer " + ownerAJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.refundEligible", is(true)))
+                .andExpect(jsonPath("$.originalPaidAmount", is(350000)))
+                .andExpect(jsonPath("$.refundAmount", is(315000)))
+                .andExpect(jsonPath("$.cancellationFee", is(35000)))
+                .andExpect(jsonPath("$.policyPercentage", is(90)))
+                .andExpect(jsonPath("$.refundPercentage", is(90)))
+                .andExpect(jsonPath("$.cancellationFeePercentage", is(10)));
+
+        // 2. Initiate refund
+        mockMvc.perform(post("/api/v1/bookings/{id}/refund", booking.getId())
+                        .header("Authorization", "Bearer " + ownerAJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Khách yêu cầu hủy\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("REFUND_PENDING")))
+                .andExpect(jsonPath("$.refundAmount", is(315000)))
+                .andExpect(jsonPath("$.cancellationFee", is(35000)))
+                .andExpect(jsonPath("$.policyPercentage", is(90)))
+                .andExpect(jsonPath("$.providerResponseCode", is("00")));
+
+        // 3. Verify Database state
+        Payment updatedPayment = paymentRepository.findById(payment.getId()).orElseThrow();
+        assertEquals(PaymentStatus.REFUND_PENDING, updatedPayment.getStatus());
+        assertNotEquals(PaymentStatus.UNPAID, updatedPayment.getStatus());
+        assertNotEquals(PaymentStatus.REFUNDED, updatedPayment.getStatus());
+
+        Refund updatedRefund = refundRepository.findByPaymentIdAndTenantId(payment.getId(), tenantA.getId()).orElseThrow();
+        assertEquals(RefundStatus.REFUND_PENDING, updatedRefund.getStatus());
+        assertEquals("15696685", updatedRefund.getProviderTransactionReference());
+        assertNull(updatedRefund.getProcessedAt()); // Not processed until confirmed
+
+        Booking updatedBooking = bookingRepository.findById(booking.getId()).orElseThrow();
+        assertEquals(BookingStatus.CANCELLED, updatedBooking.getStatus());
+
+        // 4. Verify Admin Booking Detail
+        mockMvc.perform(get("/api/v1/bookings/{id}", booking.getId())
+                        .header("Authorization", "Bearer " + ownerAJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus", is("REFUND_PENDING")))
+                .andExpect(jsonPath("$.refundStatus", is("REFUND_PENDING")))
+                .andExpect(jsonPath("$.paidAmount", is(350000)))
+                .andExpect(jsonPath("$.refundAmount", is(315000)))
+                .andExpect(jsonPath("$.cancellationFee", is(35000)))
+                .andExpect(jsonPath("$.transactionNo", is("15696680")))
+                .andExpect(jsonPath("$.txnRef", is("TIKEY-" + regressionBookingCode)));
+
+        // 5. Verify Public Booking Lookup
+        mockMvc.perform(get("/api/v1/public/spas/{slug}/bookings/{bookingCode}", tenantA.getSlug(), booking.getBookingCode()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus", is("REFUND_PENDING")))
+                .andExpect(jsonPath("$.refundStatus", is("REFUND_PENDING")))
+                .andExpect(jsonPath("$.refundAmount", is(315000)))
+                .andExpect(jsonPath("$.cancellationFee", is(35000)));
+    }
+
+    @Test
+    @DisplayName("Invalid payment states cannot be refunded: UNPAID, FAILED, and CANCELLED must be rejected")
+    void testInvalidPaymentStates_CannotBeRefunded() throws Exception {
+        LocalDateTime appointmentTime = LocalDateTime.now().plusHours(10);
+
+        // Case 1: UNPAID payment
+        Booking bookingUnpaid = createBooking(tenantA, customerA, staffA1, serviceA, appointmentTime, BookingStatus.CANCELLED, BigDecimal.valueOf(300000));
+        Payment paymentUnpaid = new Payment();
+        paymentUnpaid.setTenant(tenantA);
+        paymentUnpaid.setBooking(bookingUnpaid);
+        paymentUnpaid.setPaymentMethod(PaymentMethod.PAY_AT_SPA);
+        paymentUnpaid.setProvider(PaymentProvider.LOCAL);
+        paymentUnpaid.setAmount(BigDecimal.valueOf(300000));
+        paymentUnpaid.setStatus(PaymentStatus.UNPAID);
+        paymentUnpaid.setTxnRef("TIKEY-LOCAL-" + bookingUnpaid.getBookingCode());
+        paymentRepository.save(paymentUnpaid);
+
+        mockMvc.perform(post("/api/v1/bookings/{id}/refund", bookingUnpaid.getId())
+                        .header("Authorization", "Bearer " + ownerAJwt))
+                .andExpect(status().isBadRequest());
+
+        // Case 2: FAILED payment
+        Booking bookingFailed = createBooking(tenantA, customerA, staffA1, serviceA, appointmentTime, BookingStatus.CANCELLED, BigDecimal.valueOf(300000));
+        Payment paymentFailed = new Payment();
+        paymentFailed.setTenant(tenantA);
+        paymentFailed.setBooking(bookingFailed);
+        paymentFailed.setPaymentMethod(PaymentMethod.VNPAY);
+        paymentFailed.setProvider(PaymentProvider.VNPAY);
+        paymentFailed.setAmount(BigDecimal.valueOf(300000));
+        paymentFailed.setStatus(PaymentStatus.FAILED);
+        paymentFailed.setTxnRef("TIKEY-FAILED-" + bookingFailed.getBookingCode());
+        paymentRepository.save(paymentFailed);
+
+        mockMvc.perform(post("/api/v1/bookings/{id}/refund", bookingFailed.getId())
+                        .header("Authorization", "Bearer " + ownerAJwt))
+                .andExpect(status().isBadRequest());
+
+        // Case 3: CANCELLED payment
+        Booking bookingCancelled = createBooking(tenantA, customerA, staffA1, serviceA, appointmentTime, BookingStatus.CANCELLED, BigDecimal.valueOf(300000));
+        Payment paymentCancelled = new Payment();
+        paymentCancelled.setTenant(tenantA);
+        paymentCancelled.setBooking(bookingCancelled);
+        paymentCancelled.setPaymentMethod(PaymentMethod.VNPAY);
+        paymentCancelled.setProvider(PaymentProvider.VNPAY);
+        paymentCancelled.setAmount(BigDecimal.valueOf(300000));
+        paymentCancelled.setStatus(PaymentStatus.CANCELLED);
+        paymentCancelled.setTxnRef("TIKEY-CANCELLED-" + bookingCancelled.getBookingCode());
+        paymentRepository.save(paymentCancelled);
+
+        mockMvc.perform(post("/api/v1/bookings/{id}/refund", bookingCancelled.getId())
+                        .header("Authorization", "Bearer " + ownerAJwt))
+                .andExpect(status().isBadRequest());
+
+        // Provider should never have been invoked for any of these
+        verify(mockPaymentProviderService, never()).refund(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Idempotency: When refund is REFUND_PENDING, duplicate refund request returns existing without provider call")
+    void testRefundPending_IdempotencyReturnsExistingRecord() throws Exception {
+        LocalDateTime appointmentTime = LocalDateTime.now().plusHours(48);
+        Booking booking = createBooking(tenantA, customerA, staffA1, serviceA, appointmentTime, BookingStatus.CONFIRMED, BigDecimal.valueOf(500000));
+        createPaidVNPayPayment(booking, BigDecimal.valueOf(500000));
+
+        when(mockPaymentProviderService.refund(any(), any(), any(), any(), any()))
+                .thenReturn(new ProviderRefundResult(RefundStatus.REFUND_PENDING, "00", "Dang cho duyet", "REF_PENDING_TXN"));
+
+        // Call #1
+        mockMvc.perform(post("/api/v1/bookings/{id}/refund", booking.getId())
+                        .header("Authorization", "Bearer " + ownerAJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("REFUND_PENDING")));
+
+        // Call #2
+        mockMvc.perform(post("/api/v1/bookings/{id}/refund", booking.getId())
+                        .header("Authorization", "Bearer " + ownerAJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("REFUND_PENDING")));
+
+        // Verify provider was only called once
+        verify(mockPaymentProviderService, times(1)).refund(any(), any(), any(), any(), any());
+    }
 }

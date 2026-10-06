@@ -85,13 +85,28 @@ const PAYMENT_STATUS_DETAILS: Record<string, { label: string; tone: string; desc
     tone: 'bg-emerald-50 text-emerald-800 border-emerald-200',
     desc: 'Giao dịch đã được xác nhận thanh toán thành công qua cổng thanh toán.',
   },
+  REFUND_PENDING: {
+    label: 'Đang xử lý hoàn tiền',
+    tone: 'bg-amber-50 text-amber-800 border-amber-200',
+    desc: 'Yêu cầu hoàn tiền đang được xử lý qua cổng thanh toán VNPay.',
+  },
+  REFUNDED: {
+    label: 'Đã hoàn tiền',
+    tone: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    desc: 'Giao dịch hoàn tiền đã hoàn tất theo chính sách hủy lịch của TIKEY SPA.',
+  },
+  REFUND_FAILED: {
+    label: 'Hoàn tiền thất bại',
+    tone: 'bg-rose-50 text-rose-700 border-rose-200',
+    desc: 'Yêu cầu hoàn tiền không thành công. Quý khách vui lòng liên hệ hotline spa.',
+  },
   CANCELLED: {
     label: 'Thanh toán thất bại / Đã hủy',
     tone: 'bg-rose-50 text-rose-700 border-rose-200',
     desc: 'Giao dịch trực tuyến đã bị hủy. Quý khách có thể thanh toán tại spa khi đến.',
   },
   FAILED: {
-    label: 'Thanh toán thất bại / Đã hủy',
+    label: 'Thanh toán thất bại',
     tone: 'bg-rose-50 text-rose-700 border-rose-200',
     desc: 'Giao dịch thanh toán không thành công. Quý khách có thể thanh toán tại spa khi đến.',
   },
@@ -506,7 +521,7 @@ export function PublicBookingLookup({ slug, spaName, spaPhone, defaultCode = '' 
                             {result.refundStatus === 'REFUNDED'
                               ? 'Đã hoàn tiền'
                               : result.refundStatus === 'REFUND_PENDING'
-                              ? 'Đang xử lý'
+                              ? 'Đang xử lý hoàn tiền'
                               : 'Hoàn tiền thất bại'}
                           </span>
                         </div>

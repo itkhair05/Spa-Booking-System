@@ -1168,15 +1168,33 @@ const Bookings = () => {
                       <span className={`inline-block font-semibold px-2 py-0.5 rounded text-[11px] ${
                         detailBooking.paymentStatus === 'PAID'
                           ? 'bg-emerald-100 text-emerald-800'
+                          : detailBooking.paymentStatus === 'REFUND_PENDING'
+                          ? 'bg-amber-100 text-amber-800'
+                          : detailBooking.paymentStatus === 'REFUNDED'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : detailBooking.paymentStatus === 'REFUND_FAILED'
+                          ? 'bg-rose-100 text-rose-800'
                           : detailBooking.paymentStatus === 'CANCELLED'
                           ? 'bg-rose-100 text-rose-800'
-                          : 'bg-amber-100 text-amber-800'
+                          : detailBooking.paymentStatus === 'FAILED'
+                          ? 'bg-rose-100 text-rose-800'
+                          : 'bg-stone-100 text-stone-700'
                       }`}>
                         {detailBooking.paymentStatus === 'PAID'
-                          ? 'Đã thanh toán (PAID)'
+                          ? 'Đã thanh toán'
+                          : detailBooking.paymentStatus === 'REFUND_PENDING'
+                          ? 'Đang xử lý hoàn tiền'
+                          : detailBooking.paymentStatus === 'REFUNDED'
+                          ? 'Đã hoàn tiền'
+                          : detailBooking.paymentStatus === 'REFUND_FAILED'
+                          ? 'Hoàn tiền thất bại'
                           : detailBooking.paymentStatus === 'CANCELLED'
-                          ? 'Đã hủy (CANCELLED)'
-                          : 'Chờ thanh toán (UNPAID)'}
+                          ? 'Đã hủy'
+                          : detailBooking.paymentStatus === 'FAILED'
+                          ? 'Thất bại'
+                          : detailBooking.paymentStatus === 'PENDING'
+                          ? 'Đang xử lý'
+                          : 'Chờ thanh toán'}
                       </span>
                     </div>
                     <div>
@@ -1221,7 +1239,7 @@ const Bookings = () => {
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
                           <RotateCcw size={13} className="text-[#8a704c]" />
-                          Thông tin hoàn tiền (VNPay Refund)
+                          Thông tin hoàn tiền
                         </span>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
                           detailBooking.refundStatus === 'REFUNDED'
@@ -1231,22 +1249,22 @@ const Bookings = () => {
                             : 'bg-rose-100 text-rose-800'
                         }`}>
                           {detailBooking.refundStatus === 'REFUNDED'
-                            ? 'Đã hoàn tiền (REFUNDED)'
+                            ? 'Đã hoàn tiền'
                             : detailBooking.refundStatus === 'REFUND_PENDING'
-                            ? 'Đang xử lý (REFUND_PENDING)'
-                            : 'Hoàn tiền thất bại (REFUND_FAILED)'}
+                            ? 'Đang xử lý'
+                            : 'Hoàn tiền thất bại'}
                         </span>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                         <div>
-                          <span className="text-stone-400 block text-[11px]">Số tiền hoàn thực tế</span>
+                          <span className="text-stone-400 block text-[11px]">Số tiền hoàn</span>
                           <strong className="text-emerald-700 text-sm font-serif-title">
                             {formatCurrency(detailBooking.refundAmount || 0)}
                           </strong>
                         </div>
                         <div>
-                          <span className="text-stone-400 block text-[11px]">Phí hủy lịch (TIKEY SPA)</span>
+                          <span className="text-stone-400 block text-[11px]">Phí hủy lịch</span>
                           <strong className="text-stone-800 text-sm font-serif-title">
                             {formatCurrency(detailBooking.cancellationFee || 0)}
                           </strong>
@@ -1259,7 +1277,7 @@ const Bookings = () => {
                         )}
                         {detailBooking.refundReason && (
                           <div className="sm:col-span-2">
-                            <span className="text-stone-400 block text-[11px]">Lý do hoàn</span>
+                            <span className="text-stone-400 block text-[11px]">Lý do</span>
                             <span className="text-stone-700 italic">{detailBooking.refundReason}</span>
                           </div>
                         )}
@@ -1474,12 +1492,32 @@ const Bookings = () => {
                     <strong className="text-stone-900">{formatCurrency(cancelEligibility.originalPaidAmount)}</strong>
                   </div>
                   <div>
-                    <span className="text-stone-500 block text-[11px]">Dự kiến hoàn ({cancelEligibility.refundPercentage}%)</span>
+                    <span className="text-stone-500 block text-[11px]">
+                      Dự kiến hoàn {(() => {
+                        const pct = typeof cancelEligibility.policyPercentage === 'number'
+                          ? cancelEligibility.policyPercentage
+                          : typeof cancelEligibility.refundPercentage === 'number'
+                          ? cancelEligibility.refundPercentage
+                          : null;
+                        return pct != null && !isNaN(pct) ? `(${pct}%)` : '';
+                      })()}
+                    </span>
                     <strong className="text-emerald-700">{formatCurrency(cancelEligibility.refundAmount)}</strong>
                   </div>
                   {cancelEligibility.cancellationFee > 0 && (
                     <div className="col-span-2 text-stone-600 pt-0.5">
-                      <span className="text-stone-500">Phí hủy lịch ({100 - cancelEligibility.refundPercentage}%): </span>
+                      <span className="text-stone-500">
+                        Phí hủy lịch {(() => {
+                          const feePct = typeof cancelEligibility.cancellationFeePercentage === 'number'
+                            ? cancelEligibility.cancellationFeePercentage
+                            : typeof cancelEligibility.policyPercentage === 'number'
+                            ? 100 - cancelEligibility.policyPercentage
+                            : typeof cancelEligibility.refundPercentage === 'number'
+                            ? 100 - cancelEligibility.refundPercentage
+                            : null;
+                          return feePct != null && !isNaN(feePct) ? `(${feePct}%)` : '';
+                        })()}:{' '}
+                      </span>
                       <span className="font-semibold text-rose-700">{formatCurrency(cancelEligibility.cancellationFee)}</span>
                     </div>
                   )}
@@ -1587,7 +1625,14 @@ const Bookings = () => {
 
                 <div className="flex items-center justify-between">
                   <span className="text-stone-600">
-                    Số tiền dự kiến hoàn ({refundEligibility.refundPercentage}%):
+                    Số tiền dự kiến hoàn {(() => {
+                      const pct = typeof refundEligibility.policyPercentage === 'number'
+                        ? refundEligibility.policyPercentage
+                        : typeof refundEligibility.refundPercentage === 'number'
+                        ? refundEligibility.refundPercentage
+                        : null;
+                      return pct != null && !isNaN(pct) ? `(${pct}%)` : '';
+                    })()}:
                   </span>
                   <strong className="text-emerald-700 text-base font-serif-title">
                     {formatCurrency(refundEligibility.refundAmount)}
@@ -1596,7 +1641,16 @@ const Bookings = () => {
 
                 <div className="flex items-center justify-between">
                   <span className="text-stone-600">
-                    Phí hủy lịch ({100 - refundEligibility.refundPercentage}%):
+                    Phí hủy lịch {(() => {
+                      const feePct = typeof refundEligibility.cancellationFeePercentage === 'number'
+                        ? refundEligibility.cancellationFeePercentage
+                        : typeof refundEligibility.policyPercentage === 'number'
+                        ? 100 - refundEligibility.policyPercentage
+                        : typeof refundEligibility.refundPercentage === 'number'
+                        ? 100 - refundEligibility.refundPercentage
+                        : null;
+                      return feePct != null && !isNaN(feePct) ? `(${feePct}%)` : '';
+                    })()}:
                   </span>
                   <span className="text-rose-700 font-semibold">
                     {formatCurrency(refundEligibility.cancellationFee)}

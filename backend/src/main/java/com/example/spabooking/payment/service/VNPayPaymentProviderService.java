@@ -173,7 +173,8 @@ public class VNPayPaymentProviderService implements PaymentProviderService {
                 }
             }
 
-            return mapResponseCode(responseCode, responseMessage, providerTxnNo);
+            String transactionStatus = respMap.get("vnp_TransactionStatus");
+            return mapResponse(responseCode, transactionStatus, responseMessage, providerTxnNo);
 
         } catch (Exception ex) {
             log.error("Exception during VNPay refund request: {}", ex.getMessage());
@@ -181,16 +182,12 @@ public class VNPayPaymentProviderService implements PaymentProviderService {
         }
     }
 
-    private ProviderRefundResult mapResponseCode(String responseCode, String message, String providerTxnRef) {
+    public ProviderRefundResult mapResponse(String responseCode, String transactionStatus, String message, String providerTxnRef) {
         if (responseCode == null) {
             return new ProviderRefundResult(RefundStatus.REFUND_FAILED, "ERR_NO_CODE", "Không có mã phản hồi từ cổng VNPay", providerTxnRef);
         }
 
         switch (responseCode) {
-            case "00":
-                return new ProviderRefundResult(RefundStatus.REFUNDED, responseCode, "Hoàn tiền thành công qua VNPay", providerTxnRef);
-            case "94":
-                return new ProviderRefundResult(RefundStatus.REFUND_PENDING, responseCode, "Yêu cầu hoàn tiền đang được VNPay xử lý", providerTxnRef);
             case "02":
                 return new ProviderRefundResult(RefundStatus.REFUND_FAILED, responseCode, "Mã định danh kết nối (TmnCode) không hợp lệ", providerTxnRef);
             case "03":
@@ -207,6 +204,19 @@ public class VNPayPaymentProviderService implements PaymentProviderService {
                 return new ProviderRefundResult(RefundStatus.REFUND_FAILED, responseCode, "Giao dịch gốc không thành công, không thể hoàn", providerTxnRef);
             case "97":
                 return new ProviderRefundResult(RefundStatus.REFUND_FAILED, responseCode, "Chữ ký kiểm tra không hợp lệ", providerTxnRef);
+            case "94":
+                return new ProviderRefundResult(RefundStatus.REFUND_PENDING, responseCode, "Yêu cầu hoàn tiền đang được VNPay xử lý", providerTxnRef);
+            case "00":
+                // VNPay refund response 00 means refund request was accepted and queued.
+                // It must NOT be treated as REFUNDED unless transactionStatus is authoritatively confirmed completed ("00").
+                if ("00".equals(transactionStatus)) {
+                    return new ProviderRefundResult(RefundStatus.REFUNDED, responseCode, "Hoàn tiền thành công qua VNPay", providerTxnRef);
+                } else if ("09".equals(transactionStatus)) {
+                    return new ProviderRefundResult(RefundStatus.REFUND_FAILED, responseCode, "Giao dịch hoàn tiền bị từ chối bởi VNPay / Ngân hàng", providerTxnRef);
+                } else {
+                    // transactionStatus is "05" (Chờ duyệt), "06" (Chuyển ngân hàng), null, or pending
+                    return new ProviderRefundResult(RefundStatus.REFUND_PENDING, responseCode, "Yêu cầu hoàn tiền đã được VNPay tiếp nhận (Chờ duyệt / Đang xử lý)", providerTxnRef);
+                }
             default:
                 String desc = message != null && !message.isBlank() ? message : "Lỗi hoàn tiền VNPay (Mã " + responseCode + ")";
                 return new ProviderRefundResult(RefundStatus.REFUND_FAILED, responseCode, desc, providerTxnRef);

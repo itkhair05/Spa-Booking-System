@@ -184,6 +184,11 @@ public class RefundService {
             }
         }
 
+        // Enforce payment state machine invariants: Refund must ONLY originate from PAID (or retry of REFUND_FAILED)
+        if (payment.getStatus() != PaymentStatus.PAID && payment.getStatus() != PaymentStatus.REFUND_FAILED) {
+            throw new IllegalArgumentException("Chỉ có thể hoàn tiền cho giao dịch đã thanh toán thành công (PAID)");
+        }
+
         // Verify eligibility
         RefundEligibilityResponse eligibility = calculateEligibility(booking, tenantId, null);
         if (!eligibility.isRefundEligible()) {
