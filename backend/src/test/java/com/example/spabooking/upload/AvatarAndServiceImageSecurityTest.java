@@ -1,5 +1,7 @@
 package com.example.spabooking.upload;
 
+import com.example.spabooking.article.entity.Article;
+import com.example.spabooking.article.repository.ArticleRepository;
 import com.example.spabooking.auth.entity.User;
 import com.example.spabooking.auth.enums.UserRole;
 import com.example.spabooking.auth.repository.UserRepository;
@@ -50,6 +52,8 @@ public class AvatarAndServiceImageSecurityTest {
     @Autowired
     private ServiceRepository serviceRepository;
     @Autowired
+    private ArticleRepository articleRepository;
+    @Autowired
     private JwtUtils jwtUtils;
 
     private MockMvc mockMvc;
@@ -58,6 +62,7 @@ public class AvatarAndServiceImageSecurityTest {
     private Staff staff1;
     private Staff staff2;
     private Service service;
+    private Article article;
 
     private String ownerJwt;
     private String staff1Jwt;
@@ -111,6 +116,13 @@ public class AvatarAndServiceImageSecurityTest {
         service.setTenant(tenant);
         service.setIsActive(true);
         service = serviceRepository.saveAndFlush(service);
+
+        article = new Article();
+        article.setTenant(tenant);
+        article.setTitle("Bài viết kiểm thử ảnh bìa");
+        article.setSlug("bai-viet-test-" + UUID.randomUUID());
+        article.setContent("Nội dung bài viết kiểm thử");
+        article = articleRepository.saveAndFlush(article);
 
         ownerJwt = jwtUtils.generateJwtToken(new UsernamePasswordAuthenticationToken(
                 new CustomUserDetails(owner), null, new CustomUserDetails(owner).getAuthorities()));
@@ -207,5 +219,36 @@ public class AvatarAndServiceImageSecurityTest {
     void testPathTraversalRejected() throws Exception {
         mockMvc.perform(get("/api/v1/uploads/avatars/..%2F..%2Fsecret.txt"))
                 .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void testOwnerCanUploadArticleCoverAndDownloadIt() throws Exception {
+        MockMultipartFile validImage = new MockMultipartFile(
+                "file", "cover.png", "image/png", VALID_PNG_BYTES
+        );
+
+        String responseString = mockMvc.perform(multipart("/api/v1/articles/" + article.getId() + "/cover")
+                        .file(validImage)
+                        .header("Authorization", "Bearer " + ownerJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.coverImage", containsString("/api/v1/uploads/articles/")))
+                .andReturn().getResponse().getContentAsString();
+
+        String coverUrl = responseString.split("\"coverImage\":\"")[1].split("\"")[0];
+
+        mockMvc.perform(get(coverUrl))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void testStaffCannotUploadArticleCover() throws Exception {
+        MockMultipartFile validImage = new MockMultipartFile(
+                "file", "cover.png", "image/png", VALID_PNG_BYTES
+        );
+
+        mockMvc.perform(multipart("/api/v1/articles/" + article.getId() + "/cover")
+                        .file(validImage)
+                        .header("Authorization", "Bearer " + staff1Jwt))
+                .andExpect(status().isForbidden());
     }
 }

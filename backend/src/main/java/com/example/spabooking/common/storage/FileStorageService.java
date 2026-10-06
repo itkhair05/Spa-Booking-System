@@ -26,7 +26,7 @@ public class FileStorageService {
     private static final Logger logger = LoggerFactory.getLogger(FileStorageService.class);
 
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-    private static final Set<String> ALLOWED_CATEGORIES = Set.of("avatars", "services");
+    private static final Set<String> ALLOWED_CATEGORIES = Set.of("avatars", "services", "articles");
     private static final Pattern SAFE_FILENAME_PATTERN = Pattern.compile("^[a-zA-Z0-9\\-]+\\.(jpg|jpeg|png|webp)$");
 
     private final Path rootLocation;
@@ -36,6 +36,7 @@ public class FileStorageService {
         try {
             Files.createDirectories(this.rootLocation.resolve("avatars"));
             Files.createDirectories(this.rootLocation.resolve("services"));
+            Files.createDirectories(this.rootLocation.resolve("articles"));
         } catch (IOException e) {
             logger.warn("Could not pre-create upload directories: {}", e.getMessage());
         }

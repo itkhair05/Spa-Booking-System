@@ -44,6 +44,43 @@ class JwtUtilsTest {
     }
 
     @Test
+    void testValidateJwtToken_TamperedSignature() {
+        User user = new User();
+        user.setUsername("testuser");
+        user.setRole(UserRole.OWNER);
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        Authentication auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
+        String token = jwtUtils.generateJwtToken(auth);
+        char lastChar = token.charAt(token.length() - 1);
+        char replacement = lastChar == 'A' ? 'B' : 'A';
+        String tamperedToken = token.substring(0, token.length() - 1) + replacement;
+
+        assertFalse(jwtUtils.validateJwtToken(tamperedToken));
+    }
+
+    @Test
+    void testValidateJwtToken_TamperedClaims() {
+        User user = new User();
+        user.setUsername("testuser");
+        user.setRole(UserRole.OWNER);
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        Authentication auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
+        String token = jwtUtils.generateJwtToken(auth);
+        String[] parts = token.split("\\.");
+        assertEquals(3, parts.length);
+
+        // Flip the first character of the payload segment; the original signature stays valid for the old payload only
+        char original = parts[1].charAt(0);
+        char different = original == 'A' ? 'B' : 'A';
+        String tamperedPayload = different + parts[1].substring(1);
+        String tamperedToken = parts[0] + "." + tamperedPayload + "." + parts[2];
+
+        assertFalse(jwtUtils.validateJwtToken(tamperedToken));
+    }
+
+    @Test
     void testValidateJwtToken_Expired() throws InterruptedException {
         ReflectionTestUtils.setField(jwtUtils, "jwtExpirationMs", 1); // 1 ms expiration
 

@@ -160,4 +160,28 @@ class AuthControllerTest {
                 .header("Authorization", "Bearer invalid.jwt.token"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void testProtectedEndpoint_WithTamperedJwt_ShouldReturn401() throws Exception {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("testowner");
+        request.setPassword("password123");
+
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andReturn();
+
+        String token = objectMapper.readTree(result.getResponse().getContentAsString()).get("accessToken").asText();
+
+        // Flip the first character of the payload segment, keeping the original signature
+        String[] parts = token.split("\\.");
+        char original = parts[1].charAt(0);
+        char different = original == 'A' ? 'B' : 'A';
+        String tamperedToken = parts[0] + "." + different + parts[1].substring(1) + "." + parts[2];
+
+        mockMvc.perform(get("/api/v1/some-protected-endpoint")
+                .header("Authorization", "Bearer " + tamperedToken))
+                .andExpect(status().isUnauthorized());
+    }
 }
