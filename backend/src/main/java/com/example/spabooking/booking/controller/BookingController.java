@@ -78,6 +78,59 @@ public class BookingController {
         return ResponseEntity.ok(BookingResponse.fromEntity(updatedBooking));
     }
 
+    @PostMapping("/{id}/confirm")
+    @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
+    public ResponseEntity<BookingResponse> confirmBooking(@PathVariable Long id) {
+        Booking updated = bookingService.confirm(id);
+        return ResponseEntity.ok(BookingResponse.fromEntity(updated));
+    }
+
+    @PostMapping("/{id}/check-in")
+    @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
+    public ResponseEntity<BookingResponse> checkInBooking(@PathVariable Long id) {
+        Booking updated = bookingService.checkIn(id);
+        return ResponseEntity.ok(BookingResponse.fromEntity(updated));
+    }
+
+    @PostMapping("/{id}/start")
+    @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
+    public ResponseEntity<BookingResponse> startBooking(@PathVariable Long id) {
+        Booking updated = bookingService.start(id);
+        return ResponseEntity.ok(BookingResponse.fromEntity(updated));
+    }
+
+    @PostMapping("/{id}/complete")
+    @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
+    public ResponseEntity<BookingResponse> completeBooking(@PathVariable Long id) {
+        Booking updated = bookingService.complete(id);
+        return ResponseEntity.ok(BookingResponse.fromEntity(updated));
+    }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
+    public ResponseEntity<BookingResponse> cancelBooking(
+            @PathVariable Long id,
+            @RequestBody(required = false) com.example.spabooking.booking.dto.CancelBookingRequest request) {
+        Booking updated = bookingService.cancel(id, request != null ? request.getReason() : null);
+        return ResponseEntity.ok(BookingResponse.fromEntity(updated));
+    }
+
+    @PostMapping("/{id}/no-show")
+    @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
+    public ResponseEntity<BookingResponse> noShowBooking(@PathVariable Long id) {
+        Booking updated = bookingService.noShow(id);
+        return ResponseEntity.ok(BookingResponse.fromEntity(updated));
+    }
+
+    @PostMapping("/{id}/reschedule")
+    @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
+    public ResponseEntity<BookingResponse> rescheduleBooking(
+            @PathVariable Long id,
+            @Valid @RequestBody com.example.spabooking.booking.dto.RescheduleBookingRequest request) {
+        Booking updated = bookingService.reschedule(id, request);
+        return ResponseEntity.ok(BookingResponse.fromEntity(updated));
+    }
+
     @PatchMapping("/{id}/assign")
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<BookingResponse> assignBooking(

@@ -227,44 +227,215 @@ public class BookingService {
     }
 
     @Transactional
-    public Booking updateStatus(Long id, UpdateBookingStatusRequest request) {
+    public Booking confirm(Long id) {
         Long tenantId = TenantContext.requireTenantId();
-        Booking existingBooking = bookingRepository.findByIdAndTenantId(id, tenantId)
+        Booking booking = bookingRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        ensureStaffAccess(booking, null);
+
+        BookingStatus current = booking.getStatus();
+        if (current == BookingStatus.CONFIRMED) {
+            return booking;
+        }
+        if (current != BookingStatus.PENDING) {
+            throw new IllegalArgumentException("Invalid status transition to CONFIRMED from " + current);
+        }
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        if (booking.getConfirmedAt() == null) {
+            booking.setConfirmedAt(LocalDateTime.now());
+        }
+        return bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public Booking checkIn(Long id) {
+        Long tenantId = TenantContext.requireTenantId();
+        Booking booking = bookingRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        ensureStaffAccess(booking, null);
+
+        BookingStatus current = booking.getStatus();
+        if (current == BookingStatus.CHECKED_IN) {
+            return booking;
+        }
+        if (current != BookingStatus.CONFIRMED) {
+            throw new IllegalArgumentException("Invalid status transition to CHECKED_IN from " + current);
+        }
+
+        booking.setStatus(BookingStatus.CHECKED_IN);
+        if (booking.getCheckedInAt() == null) {
+            booking.setCheckedInAt(LocalDateTime.now());
+        }
+        return bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public Booking start(Long id) {
+        Long tenantId = TenantContext.requireTenantId();
+        Booking booking = bookingRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        ensureStaffAccess(booking, null);
+
+        BookingStatus current = booking.getStatus();
+        if (current == BookingStatus.IN_PROGRESS) {
+            return booking;
+        }
+        if (current != BookingStatus.CHECKED_IN) {
+            throw new IllegalArgumentException("Invalid status transition to IN_PROGRESS from " + current);
+        }
+
+        booking.setStatus(BookingStatus.IN_PROGRESS);
+        if (booking.getStartedAt() == null) {
+            booking.setStartedAt(LocalDateTime.now());
+        }
+        return bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public Booking complete(Long id) {
+        Long tenantId = TenantContext.requireTenantId();
+        Booking booking = bookingRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        ensureStaffAccess(booking, null);
+
+        BookingStatus current = booking.getStatus();
+        if (current == BookingStatus.COMPLETED) {
+            return booking;
+        }
+        if (current != BookingStatus.IN_PROGRESS) {
+            throw new IllegalArgumentException("Invalid status transition to COMPLETED from " + current);
+        }
+
+        booking.setStatus(BookingStatus.COMPLETED);
+        if (booking.getCompletedAt() == null) {
+            booking.setCompletedAt(LocalDateTime.now());
+        }
+        if (booking.getCustomer() != null) {
+            booking.getCustomer().setLastVisit(LocalDateTime.now());
+        }
+
+        // Settle payment if Pay at Spa and unpaid
+        paymentRepository.findByBookingIdAndTenantId(booking.getId(), tenantId).ifPresent(payment -> {
+            if (payment.getPaymentMethod() == com.example.spabooking.payment.enums.PaymentMethod.PAY_AT_SPA
+                    && payment.getStatus() == com.example.spabooking.payment.enums.PaymentStatus.UNPAID) {
+                payment.setStatus(com.example.spabooking.payment.enums.PaymentStatus.PAID);
+                payment.setPaidAt(LocalDateTime.now());
+                paymentRepository.save(payment);
+            }
+        });
+
+        return bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public Booking cancel(Long id, String reason) {
+        Long tenantId = TenantContext.requireTenantId();
+        Booking booking = bookingRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        ensureStaffAccess(booking, null);
+
+        BookingStatus current = booking.getStatus();
+        if (current == BookingStatus.CANCELLED) {
+            return booking;
+        }
+        if (current != BookingStatus.PENDING && current != BookingStatus.CONFIRMED && current != BookingStatus.CHECKED_IN) {
+            throw new IllegalArgumentException("Cannot cancel booking with status " + current);
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        if (booking.getCancelledAt() == null) {
+            booking.setCancelledAt(LocalDateTime.now());
+        }
+        if (reason != null && !reason.trim().isEmpty()) {
+            booking.setCancellationReason(reason.trim());
+        }
+        return bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public Booking noShow(Long id) {
+        Long tenantId = TenantContext.requireTenantId();
+        Booking booking = bookingRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        ensureStaffAccess(booking, null);
+
+        BookingStatus current = booking.getStatus();
+        if (current == BookingStatus.NO_SHOW) {
+            return booking;
+        }
+        if (current != BookingStatus.CONFIRMED) {
+            throw new IllegalArgumentException("Cannot mark no-show for booking with status " + current);
+        }
+
+        booking.setStatus(BookingStatus.NO_SHOW);
+        if (booking.getNoShowAt() == null) {
+            booking.setNoShowAt(LocalDateTime.now());
+        }
+        return bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public Booking reschedule(Long id, com.example.spabooking.booking.dto.RescheduleBookingRequest request) {
+        Long tenantId = TenantContext.requireTenantId();
+        Booking booking = bookingRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
+        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw new IllegalArgumentException("Cannot reschedule booking with status " + booking.getStatus());
+        }
+
+        if (request == null || request.getStartTime() == null) {
+            throw new IllegalArgumentException("Start time is required for rescheduling");
+        }
+
+        Long targetStaffId = request.getStaffId() != null ? request.getStaffId() : booking.getStaff().getId();
+        ensureStaffAccess(booking, targetStaffId);
+
+        Staff staff = staffRepository.findByIdAndTenantIdAndIsActiveTrueForUpdate(targetStaffId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found or inactive"));
+
+        LocalDateTime endTime = request.getStartTime().plusMinutes(booking.getService().getDurationMinutes());
+        checkOverlaps(tenantId, staff.getId(), booking.getCustomer().getId(), request.getStartTime(), endTime, booking.getId());
+
+        booking.setStartTime(request.getStartTime());
+        booking.setEndTime(endTime);
+        booking.setStaff(staff);
+        booking.setIsReminded(false);
+
+        return bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public Booking updateStatus(Long id, UpdateBookingStatusRequest request) {
+        if (request == null || request.getStatus() == null) {
+            throw new IllegalArgumentException("Status is required");
+        }
+        return switch (request.getStatus()) {
+            case CONFIRMED -> confirm(id);
+            case CHECKED_IN -> checkIn(id);
+            case IN_PROGRESS -> start(id);
+            case COMPLETED -> complete(id);
+            case CANCELLED -> cancel(id, null);
+            case NO_SHOW -> noShow(id);
+            default -> throw new IllegalArgumentException("Unsupported status transition to " + request.getStatus());
+        };
+    }
+
+    private void ensureStaffAccess(Booking booking, Long targetStaffId) {
         Optional<CustomUserDetails> userDetailsOpt = getCurrentUserDetails();
         if (userDetailsOpt.isPresent() && userDetailsOpt.get().isStaff()) {
             CustomUserDetails userDetails = userDetailsOpt.get();
             Long linkedStaffId = userDetails.getStaffId();
             if (linkedStaffId != null) {
-                if (existingBooking.getStaff() == null || !linkedStaffId.equals(existingBooking.getStaff().getId())) {
-                    throw new AccessDeniedException("Staff cannot modify status of bookings assigned to another staff member");
+                if (booking.getStaff() == null || !linkedStaffId.equals(booking.getStaff().getId())) {
+                    throw new AccessDeniedException("Staff cannot modify bookings assigned to another staff member");
+                }
+                if (targetStaffId != null && !targetStaffId.equals(linkedStaffId)) {
+                    throw new AccessDeniedException("Staff cannot reassign booking to another staff member");
                 }
             }
         }
-
-        BookingStatus current = existingBooking.getStatus();
-        BookingStatus target = request.getStatus();
-
-        if (current == BookingStatus.CANCELLED || current == BookingStatus.COMPLETED) {
-            throw new IllegalArgumentException("Cannot change status of a terminal booking");
-        }
-
-        if (current == BookingStatus.PENDING) {
-            if (target != BookingStatus.CONFIRMED && target != BookingStatus.CANCELLED) {
-                throw new IllegalArgumentException("Invalid status transition from PENDING");
-            }
-        } else if (current == BookingStatus.CONFIRMED) {
-            if (target != BookingStatus.COMPLETED && target != BookingStatus.CANCELLED) {
-                throw new IllegalArgumentException("Invalid status transition from CONFIRMED");
-            }
-        }
-
-        existingBooking.setStatus(target);
-        if (target == BookingStatus.COMPLETED && existingBooking.getCustomer() != null) {
-            existingBooking.getCustomer().setLastVisit(LocalDateTime.now());
-        }
-        return bookingRepository.save(existingBooking);
     }
 
     @Transactional

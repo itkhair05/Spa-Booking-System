@@ -1,4 +1,11 @@
-export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+export type BookingStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'CHECKED_IN'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'NO_SHOW';
 
 export interface Booking {
   id: number;
@@ -14,6 +21,13 @@ export interface Booking {
   status: BookingStatus;
   price: number;
   isReminded: boolean;
+  confirmedAt?: string;
+  checkedInAt?: string;
+  startedAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  noShowAt?: string;
+  cancellationReason?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +41,13 @@ export interface BookingDetail {
   durationMinutes?: number;
   price: number;
   isReminded: boolean;
+  confirmedAt?: string;
+  checkedInAt?: string;
+  startedAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  noShowAt?: string;
+  cancellationReason?: string;
   createdAt: string;
   updatedAt: string;
 
@@ -93,4 +114,13 @@ export interface UpdateBookingRequest {
 
 export interface UpdateBookingStatusRequest {
   status: BookingStatus;
+}
+
+export interface CancelBookingRequest {
+  reason?: string;
+}
+
+export interface RescheduleBookingRequest {
+  startTime: string;
+  staffId?: number;
 }

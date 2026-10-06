@@ -44,15 +44,21 @@ interface StatTileProps {
 const STATUS_BADGES: Record<BookingStatus, { label: string; tone: 'warning' | 'info' | 'success' | 'neutral' }> = {
   PENDING: { label: 'Chờ xác nhận', tone: 'warning' },
   CONFIRMED: { label: 'Đã xác nhận', tone: 'info' },
+  CHECKED_IN: { label: 'Đã check-in', tone: 'info' },
+  IN_PROGRESS: { label: 'Đang thực hiện', tone: 'info' },
   COMPLETED: { label: 'Đã hoàn thành', tone: 'success' },
   CANCELLED: { label: 'Đã hủy', tone: 'neutral' },
+  NO_SHOW: { label: 'Không đến', tone: 'neutral' },
 };
 
 const CHART_STATUS_META: Record<string, { label: string; color: string }> = {
   PENDING: { label: 'Chờ xác nhận', color: '#B8976C' },
   CONFIRMED: { label: 'Đã xác nhận', color: '#465d4c' },
+  CHECKED_IN: { label: 'Đã check-in', color: '#3b82f6' },
+  IN_PROGRESS: { label: 'Đang thực hiện', color: '#6366f1' },
   COMPLETED: { label: 'Hoàn thành', color: '#7a9a85' },
   CANCELLED: { label: 'Đã hủy', color: '#a8a29e' },
+  NO_SHOW: { label: 'Không đến', color: '#ef4444' },
 };
 
 const EXPORT_OPTIONS: Array<{ kind: ExportKind; label: string; icon: LucideIcon }> = [

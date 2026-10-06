@@ -33,7 +33,7 @@ interface PublicBookingLookupProps {
 
 const APPOINTMENT_STATUS_DETAILS: Record<string, { label: string; tone: string; desc: string }> = {
   PENDING: {
-    label: 'Chờ xác nhận',
+    label: 'Đang chờ xác nhận',
     tone: 'bg-amber-50 text-amber-800 border-amber-200',
     desc: 'Lịch hẹn đã được tiếp nhận. Nhân viên TIKEY SPA sẽ liên hệ xác nhận trong thời gian sớm nhất.',
   },
@@ -42,8 +42,18 @@ const APPOINTMENT_STATUS_DETAILS: Record<string, { label: string; tone: string; 
     tone: 'bg-emerald-50 text-emerald-800 border-emerald-200',
     desc: 'Lịch hẹn đã được xác nhận. Rất hân hạnh được đón tiếp quý khách đúng giờ.',
   },
+  CHECKED_IN: {
+    label: 'Đã check-in',
+    tone: 'bg-blue-50 text-blue-800 border-blue-200',
+    desc: 'Quý khách đã có mặt tại cơ sở. Chuyên viên đang chuẩn bị sẵn sàng phục vụ quý khách.',
+  },
+  IN_PROGRESS: {
+    label: 'Đang thực hiện',
+    tone: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+    desc: 'Liệu trình đang được thực hiện. Chúc quý khách có những giây phút thư giãn tuyệt vời.',
+  },
   COMPLETED: {
-    label: 'Đã hoàn thành',
+    label: 'Đã hoàn tất',
     tone: 'bg-stone-100 text-stone-700 border-stone-200',
     desc: 'Lịch hẹn đã hoàn tất. Cảm ơn quý khách đã tin tưởng dịch vụ tại TIKEY SPA.',
   },
@@ -51,6 +61,11 @@ const APPOINTMENT_STATUS_DETAILS: Record<string, { label: string; tone: string; 
     label: 'Đã hủy',
     tone: 'bg-rose-50 text-rose-700 border-rose-200',
     desc: 'Lịch hẹn đã được hủy. Quý khách có thể đặt lại lịch hẹn mới bất cứ lúc nào.',
+  },
+  NO_SHOW: {
+    label: 'Không đến',
+    tone: 'bg-stone-100 text-stone-600 border-stone-300',
+    desc: 'Lịch hẹn được ghi nhận quý khách không đến. Quý khách vui lòng liên hệ hotline nếu cần hỗ trợ.',
   },
 };
 

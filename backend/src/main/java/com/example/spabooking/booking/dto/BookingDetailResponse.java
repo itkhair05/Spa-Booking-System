@@ -17,6 +17,13 @@ public class BookingDetailResponse {
     private Integer durationMinutes;
     private BigDecimal price;
     private Boolean isReminded;
+    private LocalDateTime confirmedAt;
+    private LocalDateTime checkedInAt;
+    private LocalDateTime startedAt;
+    private LocalDateTime completedAt;
+    private LocalDateTime cancelledAt;
+    private LocalDateTime noShowAt;
+    private String cancellationReason;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -66,6 +73,13 @@ public class BookingDetailResponse {
         response.setDurationMinutes(booking.getService() != null ? booking.getService().getDurationMinutes() : null);
         response.setPrice(booking.getPrice());
         response.setIsReminded(booking.getIsReminded());
+        response.setConfirmedAt(booking.getConfirmedAt());
+        response.setCheckedInAt(booking.getCheckedInAt());
+        response.setStartedAt(booking.getStartedAt());
+        response.setCompletedAt(booking.getCompletedAt());
+        response.setCancelledAt(booking.getCancelledAt());
+        response.setNoShowAt(booking.getNoShowAt());
+        response.setCancellationReason(booking.getCancellationReason());
         response.setCreatedAt(booking.getCreatedAt());
         response.setUpdatedAt(booking.getUpdatedAt());
 
@@ -144,6 +158,27 @@ public class BookingDetailResponse {
 
     public Boolean getIsReminded() { return isReminded; }
     public void setIsReminded(Boolean isReminded) { this.isReminded = isReminded; }
+
+    public LocalDateTime getConfirmedAt() { return confirmedAt; }
+    public void setConfirmedAt(LocalDateTime confirmedAt) { this.confirmedAt = confirmedAt; }
+
+    public LocalDateTime getCheckedInAt() { return checkedInAt; }
+    public void setCheckedInAt(LocalDateTime checkedInAt) { this.checkedInAt = checkedInAt; }
+
+    public LocalDateTime getStartedAt() { return startedAt; }
+    public void setStartedAt(LocalDateTime startedAt) { this.startedAt = startedAt; }
+
+    public LocalDateTime getCompletedAt() { return completedAt; }
+    public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
+
+    public LocalDateTime getCancelledAt() { return cancelledAt; }
+    public void setCancelledAt(LocalDateTime cancelledAt) { this.cancelledAt = cancelledAt; }
+
+    public LocalDateTime getNoShowAt() { return noShowAt; }
+    public void setNoShowAt(LocalDateTime noShowAt) { this.noShowAt = noShowAt; }
+
+    public String getCancellationReason() { return cancellationReason; }
+    public void setCancellationReason(String cancellationReason) { this.cancellationReason = cancellationReason; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
