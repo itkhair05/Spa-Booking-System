@@ -305,6 +305,62 @@ public class PhaseB6PaymentSecurityIntegrationTest {
         assertEquals(new BigDecimal("450000.00"), payment.getAmount());
     }
 
+    @Test
+    @DisplayName("Public booking ignores client-supplied customerId, tenantId and status (mass assignment blocked)")
+    void testPublicBookingIgnoresCustomerIdAndStatusInjection() throws Exception {
+        Customer victim = createCustomer("Khách Hàng Bị Mạo Danh", "0901111222", "victim@a.com", tenantA);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("serviceId", serviceA.getId());
+        payload.put("staffId", staffA.getId());
+        payload.put("startTime", LocalDateTime.now().plusDays(5).withHour(9).withMinute(0).toString());
+        payload.put("customerName", "Kẻ Mạo Danh");
+        payload.put("customerPhone", "0909998877");
+        payload.put("paymentMethod", "PAY_AT_SPA");
+        payload.put("customerId", victim.getId());   // attempt to impersonate an existing customer
+        payload.put("tenantId", tenantB.getId());    // attempt to inject another tenant
+        payload.put("status", "COMPLETED");          // attempt to bypass the lifecycle
+        payload.put("price", 1);
+
+        MvcResult result = mockMvc.perform(post("/api/v1/public/spas/" + tenantA.getSlug() + "/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status", is("PENDING")))
+                .andExpect(jsonPath("$.price", is(450000.00)))
+                .andReturn();
+
+        String code = objectMapper.readTree(result.getResponse().getContentAsString()).get("bookingCode").asText();
+        Booking booking = bookingRepository.findByBookingCodeAndTenantId(code, tenantA.getId()).orElseThrow();
+
+        assertEquals(BookingStatus.PENDING, booking.getStatus());
+        assertEquals(new BigDecimal("450000.00"), booking.getPrice());
+        assertEquals(tenantA.getId(), booking.getTenant().getId());
+        assertNotEquals(victim.getId(), booking.getCustomer().getId(),
+                "Client-supplied customerId must not be honored");
+        assertEquals("Kẻ Mạo Danh", booking.getCustomer().getName());
+        assertEquals("0909998877", booking.getCustomer().getPhone());
+    }
+
+    @Test
+    @DisplayName("Admin create booking with a cross-tenant customerId returns 404 (IDOR blocked)")
+    void testAdminCreateBookingCrossTenantCustomerRejected() throws Exception {
+        Customer customerB = createCustomer("Khách Tenant B", "0907777888", "cb@b.com", tenantB);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("customerId", customerB.getId());
+        payload.put("serviceId", serviceA.getId());
+        payload.put("staffId", staffA.getId());
+        payload.put("startTime", LocalDateTime.now().plusDays(6).withHour(10).withMinute(0).toString());
+        payload.put("endTime", LocalDateTime.now().plusDays(6).withHour(11).withMinute(15).toString());
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .header("Authorization", "Bearer " + ownerTokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isNotFound());
+    }
+
     // =========================================================================
     // 3. VNPAY SIGNATURE VERIFICATION & CALLBACK HANDLING
     // =========================================================================
