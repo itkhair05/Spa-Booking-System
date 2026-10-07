@@ -8,8 +8,9 @@ import type {
   UpdateStaffSelfProfileRequest,
 } from '../../types/staff';
 
-export const getStaff = async (): Promise<Staff[]> => {
-  const response = await api.get<Staff[]>('/staff');
+export const getStaff = async (status?: string): Promise<Staff[]> => {
+  const params = status && status !== 'ALL' ? { status } : undefined;
+  const response = await api.get<Staff[]>('/staff', { params });
   return response.data;
 };
 

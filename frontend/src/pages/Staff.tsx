@@ -46,10 +46,13 @@ const Staff = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // Scheduling State (Phase B.8)
+  // Navigation & Filter State
   const [activeTab, setActiveTab] = useState<'staffList' | 'dailySchedule'>('staffList');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [scheduleStaff, setScheduleStaff] = useState<StaffType | null>(null);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+
+  const isStaffActive = useCallback((s: StaffType) => Boolean(s.isActive) && !s.isDeleted, []);
 
   const handleOpenScheduleModal = (member: StaffType) => {
     setScheduleStaff(member);
@@ -138,11 +141,12 @@ const Staff = () => {
     if (!toggleTarget) return;
     setIsToggling(true);
     try {
+      const currentActive = isStaffActive(toggleTarget);
       await updateStaff(toggleTarget.id, {
         name: toggleTarget.name,
         phone: toggleTarget.phone || undefined,
         email: toggleTarget.email || undefined,
-        isActive: !toggleTarget.isActive,
+        isActive: !currentActive,
       });
       setToggleTarget(null);
       await fetchStaff();
@@ -161,7 +165,7 @@ const Staff = () => {
         name: member.name,
         phone: member.phone || undefined,
         email: member.email || undefined,
-        isActive: member.isActive,
+        isActive: isStaffActive(member),
         showOnWebsite: !(member.showOnWebsite ?? true),
       });
       await fetchStaff();
@@ -191,6 +195,17 @@ const Staff = () => {
       setIsDeleting(false);
     }
   };
+
+  const allCount = staffList.length;
+  const activeCount = staffList.filter((s) => isStaffActive(s)).length;
+  const inactiveCount = staffList.filter((s) => !isStaffActive(s)).length;
+
+  const filteredStaff = staffList.filter((member) => {
+    const active = isStaffActive(member);
+    if (statusFilter === 'ACTIVE') return active;
+    if (statusFilter === 'INACTIVE') return !active;
+    return true;
+  });
 
   if (!isOwner) {
     return (
@@ -244,7 +259,7 @@ const Staff = () => {
           }`}
         >
           <UserRound size={16} />
-          Danh sách nhân viên ({staffList.length})
+          Danh sách nhân viên ({filteredStaff.length})
         </button>
         <button
           type="button"
@@ -276,202 +291,244 @@ const Staff = () => {
             </Alert>
           )}
 
-      {isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse" aria-busy="true">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i}>
-              <CardContent className="h-32 bg-stone-100 rounded-xl" />
-            </Card>
-          ))}
-        </div>
-      )}
+          {/* Status Filter Pills */}
+          <div className="flex items-center gap-2 mb-6 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setStatusFilter('ALL')}
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl border transition-colors cursor-pointer ${
+                statusFilter === 'ALL'
+                  ? 'bg-stone-900 text-white border-stone-900 shadow-xs'
+                  : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+              }`}
+            >
+              Tất cả ({allCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('ACTIVE')}
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl border transition-colors cursor-pointer ${
+                statusFilter === 'ACTIVE'
+                  ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                  : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+              }`}
+            >
+              Đang hoạt động ({activeCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('INACTIVE')}
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl border transition-colors cursor-pointer ${
+                statusFilter === 'INACTIVE'
+                  ? 'bg-stone-700 text-white border-stone-700 shadow-xs'
+                  : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+              }`}
+            >
+              Đã vô hiệu hóa ({inactiveCount})
+            </button>
+          </div>
 
-      {error && !isLoading && (
-        <ErrorState message={error} onRetry={fetchStaff} />
-      )}
+          {isLoading && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse" aria-busy="true">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i}>
+                  <CardContent className="h-32 bg-stone-100 rounded-xl" />
+                </Card>
+              ))}
+            </div>
+          )}
 
-      {!isLoading && !error && staffList.length === 0 && (
-        <EmptyState
-          icon={<UserRound size={22} />}
-          title="Chưa có nhân viên"
-          description={
-            isOwner
-              ? 'Thêm nhân viên đầu tiên để phân công lịch hẹn.'
-              : 'Hiện chưa có nhân viên nào. Vui lòng liên hệ chủ cơ sở để được cập nhật.'
-          }
-          action={
-            isOwner ? (
-              <Button onClick={() => handleOpenForm()}>
-                <Plus size={16} />
-                Thêm nhân viên
-              </Button>
-            ) : undefined
-          }
-        />
-      )}
+          {error && !isLoading && (
+            <ErrorState message={error} onRetry={fetchStaff} />
+          )}
 
-      {!isLoading && !error && staffList.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {staffList.map((member) => (
-            <Card key={member.id} className="border-[#e7e2d8] hover:border-[#c6d8c9] transition-all flex flex-col justify-between">
-              <CardContent className="p-5 flex flex-col h-full">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border border-[#c6d8c9] bg-stone-100 shrink-0 flex items-center justify-center">
-                    {member.avatarUrl ? (
-                      <img
-                        src={member.avatarUrl}
-                        alt={member.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-[#f2f6f3] text-[#465d4c] font-semibold text-sm">
-                        {member.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex justify-between items-start gap-1">
-                      <h4 className="font-semibold text-base text-stone-900 truncate">{member.name}</h4>
-                      <Badge tone={member.isActive ? 'success' : 'neutral'}>
-                        {member.isActive ? 'Hoạt động' : 'Đã vô hiệu hóa'}
-                      </Badge>
-                    </div>
-                    <span className="text-xs text-stone-500">Kỹ thuật viên</span>
-                  </div>
-                </div>
-
-                <div className="text-xs text-stone-600 space-y-2 mb-4 grow">
-                  {member.phone && (
-                    <p className="flex items-center gap-1.5">
-                      <Phone size={13} className="text-stone-400" />
-                      <span>{member.phone}</span>
-                    </p>
-                  )}
-                  {member.email && (
-                    <p className="flex items-center gap-1.5 break-all">
-                      <Mail size={13} className="text-stone-400" />
-                      <span>{member.email}</span>
-                    </p>
-                  )}
-
-                  {/* Account Status Badge */}
-                  <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-medium text-stone-500">Tài khoản đăng nhập:</span>
-                    {member.username ? (
-                      member.accountEnabled === false ? (
-                        <span
-                          className="inline-flex items-center gap-1 text-[11px] font-medium text-stone-500 bg-stone-100 border border-stone-200 px-2 py-0.5 rounded-full"
-                          title={`${member.username} — Đã vô hiệu hóa`}
-                        >
-                          <span className="max-w-[110px] truncate">{member.username}</span>
-                          <span className="text-stone-400">— Đã vô hiệu hóa</span>
-                        </span>
-                      ) : (
-                        <span
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#465d4c] bg-[#edf7f2] border border-[#b7e4c7] px-2 py-0.5 rounded-full"
-                          title={member.username}
-                        >
-                          <Check size={11} />
-                          <span className="max-w-[150px] truncate">{member.username}</span>
-                        </span>
-                      )
-                    ) : (
-                      <span className="text-[11px] text-stone-400">Chưa cấp</span>
-                    )}
-                  </div>
-
-                  {/* Public Website Visibility */}
-                  <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-medium text-stone-500">Hiển thị website:</span>
-                    {isOwner ? (
-                      <button
-                        type="button"
-                        onClick={() => handleToggleWebsiteVisibility(member)}
-                        className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
-                          member.showOnWebsite ?? true
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                            : 'bg-stone-100 text-stone-500 border-stone-200 hover:bg-stone-200'
-                        }`}
-                        title="Nhấn để bật/tắt hiển thị nhân viên trên website công khai"
-                      >
-                        <Globe size={11} />
-                        <span>{member.showOnWebsite ?? true ? 'Hiển thị trên website' : 'Ẩn khỏi website'}</span>
-                      </button>
-                    ) : (
-                      <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
-                        member.showOnWebsite ?? true
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                          : 'bg-stone-100 text-stone-500 border-stone-200'
-                      }`}>
-                        <Globe size={11} />
-                        <span>{member.showOnWebsite ?? true ? 'Hiển thị' : 'Ẩn'}</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Schedule & Days Off Action */}
-                <div className="pt-2 border-t border-stone-100">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="w-full text-xs justify-center"
-                    onClick={() => handleOpenScheduleModal(member)}
-                  >
-                    <Clock size={13} className="mr-1.5 text-stone-500" />
-                    {isOwner ? 'Lịch làm việc & Ngày nghỉ' : 'Xem lịch làm việc'}
+          {!isLoading && !error && filteredStaff.length === 0 && (
+            <EmptyState
+              icon={<UserRound size={22} />}
+              title={staffList.length === 0 ? "Chưa có nhân viên" : "Không có nhân viên phù hợp"}
+              description={
+                staffList.length === 0
+                  ? (isOwner
+                      ? 'Thêm nhân viên đầu tiên để phân công lịch hẹn.'
+                      : 'Hiện chưa có nhân viên nào. Vui lòng liên hệ chủ cơ sở để được cập nhật.')
+                  : 'Không có nhân viên nào phù hợp với bộ lọc đã chọn.'
+              }
+              action={
+                isOwner && staffList.length === 0 ? (
+                  <Button onClick={() => handleOpenForm()}>
+                    <Plus size={16} />
+                    Thêm nhân viên
                   </Button>
-                </div>
+                ) : undefined
+              }
+            />
+          )}
 
-                {isOwner && (
-                  <div className="mt-auto flex flex-col gap-2 pt-3 border-t border-stone-100">
-                    {!member.username && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="w-full text-xs justify-center"
-                        onClick={() => handleOpenAccountModal(member)}
-                      >
-                        <KeyRound size={13} className="mr-1.5 text-stone-500" />
-                        Cấp tài khoản đăng nhập
-                      </Button>
-                    )}
+          {!isLoading && !error && filteredStaff.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredStaff.map((member) => {
+                const active = isStaffActive(member);
+                return (
+                  <Card key={member.id} className="border-[#e7e2d8] hover:border-[#c6d8c9] transition-all flex flex-col justify-between">
+                    <CardContent className="p-5 flex flex-col h-full">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 rounded-full overflow-hidden border border-[#c6d8c9] bg-stone-100 shrink-0 flex items-center justify-center">
+                          {member.avatarUrl ? (
+                            <img
+                              src={member.avatarUrl}
+                              alt={member.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-[#f2f6f3] text-[#465d4c] font-semibold text-sm">
+                              {member.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex justify-between items-start gap-1">
+                            <h4 className="font-semibold text-base text-stone-900 truncate">{member.name}</h4>
+                            <Badge tone={active ? 'success' : 'neutral'}>
+                              {active ? 'Hoạt động' : 'Đã vô hiệu hóa'}
+                            </Badge>
+                          </div>
+                          <span className="text-xs text-stone-500">Kỹ thuật viên</span>
+                        </div>
+                      </div>
 
-                    <div className="flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setToggleTarget(member)}
-                        className={`text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors ${
-                          member.isActive
-                            ? 'border-stone-200 text-stone-600 hover:bg-stone-50'
-                            : 'border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
-                        }`}
-                      >
-                        {member.isActive ? 'Vô hiệu hóa' : 'Kích hoạt lại'}
-                      </button>
+                      <div className="text-xs text-stone-600 space-y-2 mb-4 grow">
+                        {member.phone && (
+                          <p className="flex items-center gap-1.5">
+                            <Phone size={13} className="text-stone-400" />
+                            <span>{member.phone}</span>
+                          </p>
+                        )}
+                        {member.email && (
+                          <p className="flex items-center gap-1.5 break-all">
+                            <Mail size={13} className="text-stone-400" />
+                            <span>{member.email}</span>
+                          </p>
+                        )}
 
-                      <div className="flex items-center gap-1.5">
-                        <Button variant="secondary" size="sm" onClick={() => handleOpenForm(member)}>
-                          Sửa
-                        </Button>
+                        {/* Account Status Badge */}
+                        <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-medium text-stone-500">Tài khoản đăng nhập:</span>
+                          {member.username ? (
+                            !active || member.accountEnabled === false ? (
+                              <span
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-stone-500 bg-stone-100 border border-stone-200 px-2 py-0.5 rounded-full"
+                                title={`${member.username} — Đã vô hiệu hóa`}
+                              >
+                                <span className="max-w-[110px] truncate">{member.username}</span>
+                                <span className="text-stone-400">— Đã vô hiệu hóa</span>
+                              </span>
+                            ) : (
+                              <span
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#465d4c] bg-[#edf7f2] border border-[#b7e4c7] px-2 py-0.5 rounded-full"
+                                title={member.username}
+                              >
+                                <Check size={11} />
+                                <span className="max-w-[150px] truncate">{member.username}</span>
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-[11px] text-stone-400">Chưa cấp</span>
+                          )}
+                        </div>
+
+                        {/* Public Website Visibility */}
+                        <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-medium text-stone-500">Hiển thị website:</span>
+                          {isOwner ? (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleWebsiteVisibility(member)}
+                              className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
+                                member.showOnWebsite ?? true
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                                  : 'bg-stone-100 text-stone-500 border-stone-200 hover:bg-stone-200'
+                              }`}
+                              title="Nhấn để bật/tắt hiển thị nhân viên trên website công khai"
+                            >
+                              <Globe size={11} />
+                              <span>{member.showOnWebsite ?? true ? 'Hiển thị trên website' : 'Ẩn khỏi website'}</span>
+                            </button>
+                          ) : (
+                            <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                              member.showOnWebsite ?? true
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : 'bg-stone-100 text-stone-500 border-stone-200'
+                            }`}>
+                              <Globe size={11} />
+                              <span>{member.showOnWebsite ?? true ? 'Hiển thị' : 'Ẩn'}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Schedule & Days Off Action */}
+                      <div className="pt-2 border-t border-stone-100">
                         <Button
-                          variant="danger-outline"
+                          variant="secondary"
                           size="sm"
-                          onClick={() => handleDeleteClick(member)}
-                          aria-label={`Xóa nhân viên ${member.name}`}
+                          className="w-full text-xs justify-center"
+                          onClick={() => handleOpenScheduleModal(member)}
                         >
-                          <Trash2 size={14} aria-hidden="true" />
+                          <Clock size={13} className="mr-1.5 text-stone-500" />
+                          {isOwner ? 'Lịch làm việc & Ngày nghỉ' : 'Xem lịch làm việc'}
                         </Button>
                       </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-      </>
+
+                      {isOwner && (
+                        <div className="mt-auto flex flex-col gap-2 pt-3 border-t border-stone-100">
+                          {!member.username && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="w-full text-xs justify-center"
+                              onClick={() => handleOpenAccountModal(member)}
+                            >
+                              <KeyRound size={13} className="mr-1.5 text-stone-500" />
+                              Cấp tài khoản đăng nhập
+                            </Button>
+                          )}
+
+                          <div className="flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setToggleTarget(member)}
+                              className={`text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors cursor-pointer ${
+                                active
+                                  ? 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                                  : 'border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
+                              }`}
+                            >
+                              {active ? 'Vô hiệu hóa' : 'Kích hoạt lại'}
+                            </button>
+
+                            <div className="flex items-center gap-1.5">
+                              <Button variant="secondary" size="sm" onClick={() => handleOpenForm(member)}>
+                                Sửa
+                              </Button>
+                              <Button
+                                variant="danger-outline"
+                                size="sm"
+                                onClick={() => handleDeleteClick(member)}
+                                aria-label={`Xóa nhân viên ${member.name}`}
+                              >
+                                <Trash2 size={14} aria-hidden="true" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* Create Staff Account Modal */}
@@ -548,11 +605,11 @@ const Staff = () => {
       {/* Toggle Active Confirmation Dialog (Vô hiệu hóa / Kích hoạt lại) */}
       <ConfirmDialog
         open={toggleTarget !== null}
-        title={toggleTarget?.isActive ? 'Vô hiệu hóa nhân viên?' : 'Kích hoạt lại nhân viên?'}
+        title={toggleTarget && isStaffActive(toggleTarget) ? 'Vô hiệu hóa nhân viên?' : 'Kích hoạt lại nhân viên?'}
         description={
           toggleTarget && (
             <>
-              {toggleTarget.isActive ? (
+              {isStaffActive(toggleTarget) ? (
                 <span>
                   Nhân viên <strong>{toggleTarget.name}</strong> sẽ được chuyển sang trạng thái <strong>Đã vô hiệu hóa</strong>.
                   Tài khoản đăng nhập liên kết của nhân viên này sẽ bị tạm khóa và không thể nhận thêm lịch hẹn mới.
@@ -567,7 +624,7 @@ const Staff = () => {
             </>
           )
         }
-        confirmLabel={toggleTarget?.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
+        confirmLabel={toggleTarget && isStaffActive(toggleTarget) ? 'Vô hiệu hóa' : 'Kích hoạt'}
         cancelLabel="Đóng"
         tone="primary"
         onConfirm={handleConfirmToggleActive}

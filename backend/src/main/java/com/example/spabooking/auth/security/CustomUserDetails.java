@@ -54,7 +54,7 @@ public class CustomUserDetails implements UserDetails {
         if (!userActive) {
             return false;
         }
-        if (user.getStaff() != null && !Boolean.TRUE.equals(user.getStaff().getIsActive())) {
+        if (user.getStaff() != null && (!Boolean.TRUE.equals(user.getStaff().getIsActive()) || Boolean.TRUE.equals(user.getStaff().getIsDeleted()))) {
             return false;
         }
         return true;
