@@ -15,7 +15,7 @@ services:
       MYSQL_DATABASE: ${DB_NAME:-spabooking_dev}
       TZ: Asia/Ho_Chi_Minh
     ports:
-      - "${MYSQL_HOST_PORT:-3307}:3306"
+      - "${MYSQL_BIND_IP:-127.0.0.1}:${MYSQL_HOST_PORT:-3307}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
