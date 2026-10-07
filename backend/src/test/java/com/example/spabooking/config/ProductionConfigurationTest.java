@@ -52,6 +52,13 @@ class ProductionConfigurationTest {
         // Trusted proxies
         assertNotNull(props.getProperty("security.rate-limit.trusted-proxies"));
 
+        // Production bootstrap configuration
+        assertNotNull(props.getProperty("bootstrap.production.enabled"));
+        assertNotNull(props.getProperty("bootstrap.production.tenant-name"));
+        assertNotNull(props.getProperty("bootstrap.production.tenant-slug"));
+        assertNotNull(props.getProperty("bootstrap.production.owner-username"));
+        assertNotNull(props.getProperty("bootstrap.production.owner-password"));
+
         // Production configuration must NOT contain dangerous localhost or sandbox fallbacks
         String dsUrl = props.getProperty("spring.datasource.url");
         assertNotNull(dsUrl);
