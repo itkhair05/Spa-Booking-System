@@ -87,4 +87,25 @@ Once all 4 CI checks pass on the protected `main` branch, the `CD Foundation` jo
 - Verifies image integrity and inspects layer sizes without publishing to external registries.
 
 ### 3. Production Deployment (Scope Boundary)
-*Note:* Actual production deployment (Cloudflare Pages, Railway/cloud containers, production MySQL provisioning, domain/SSL, and VNPay live credentials) is intentionally deferred to **Phase F**.
+*Note:* Actual production deployment (Cloudflare Pages, Railway/cloud containers, production MySQL provisioning, domain/SSL, and VNPay live credentials) is executed in **Phase F**.
+
+## Spring Boot Profiles & Configuration
+
+The backend supports two distinct runtime configuration profiles:
+
+### 1. Development Profile (`SPRING_PROFILES_ACTIVE=dev`)
+- Used by default in local Docker Compose (`docker-compose.yml`) and local development.
+- **DevDataSeeder**: Active (`@Profile("dev")`). Automatically seeds demo owner account (`owner@demo.local`), demo staff, and initial catalog using passwords provided in `DEV_OWNER_PASSWORD` and `DEV_STAFF_PASSWORD`.
+- **SQL Logging**: Enabled (`spring.jpa.show-sql=true`, `format_sql=true`) for inspection.
+- **Payment & CORS**: Uses VNPay Sandbox defaults and localhost origins.
+
+### 2. Production Profile (`SPRING_PROFILES_ACTIVE=prod`)
+- Activated with `SPRING_PROFILES_ACTIVE=prod`.
+- **Configuration Source**: [application-prod.properties](file:///f:/spa-booking-system/backend/src/main/resources/application-prod.properties).
+- **DevDataSeeder**: **Strictly disabled**. No demo users, staff, or placeholder data are created.
+- **Database & Schema**: Managed authoritatively via Flyway migrations with `spring.jpa.hibernate.ddl-auto=validate`. No auto-generation or alteration of database tables by Hibernate.
+- **Connection Pool**: HikariCP connection pool configured (`maximum-pool-size=10`, `minimum-idle=5`, timeouts).
+- **Graceful Shutdown**: Enabled (`server.shutdown=graceful`) with 20s shutdown phase timeout.
+- **SQL Logging**: **Disabled** (`show-sql=false`, `format_sql=false`) to protect sensitive data and prevent log bloat.
+- **Fast-fail Validation**: Production requires `SPRING_DATASOURCE_URL`, `DB_PASSWORD`, `JWT_SECRET`, `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL`, and `CORS_ALLOWED_ORIGINS`. If any required secret is missing, application startup fails fast without fallback to sandbox or localhost.
+- **Security**: Real secrets must be injected through cloud container environment variables. Never commit `.env` or production credentials to Git.
