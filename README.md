@@ -125,3 +125,21 @@ The backend supports two distinct runtime configuration profiles:
 - **Anti-Spoofing**: Forwarding headers (`CF-Connecting-IP`, `X-Real-IP`, `X-Forwarded-For`) are trusted **ONLY** when the immediate connection originates from a recognized trusted proxy (configured via `SECURITY_TRUSTED_PROXIES`, defaulting to loopback `127.0.0.1`, `::1` and RFC 1918 private subnets `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
 - Direct untrusted connections attempting to forge `CF-Connecting-IP` or `X-Forwarded-For` are ignored, and the rate limiter keys by their actual socket connection IP.
 - **Cloudflare Edge**: When deployed behind Cloudflare, Nginx forwards `CF-Connecting-IP`. If Nginx `real_ip` module is configured in production, official Cloudflare IP CIDR ranges must be configured in Nginx rather than using broad wildcard subnets.
+
+### 3. Production Initial Tenant & OWNER Bootstrap
+- **One-time Initialization**: In an empty production database, `DevDataSeeder` is inactive. The initial Tenant and OWNER account are created via `ProductionOwnerBootstrapSeeder`.
+- **Explicit Activation**: Disabled by default (`PRODUCTION_BOOTSTRAP_ENABLED=false`). Requires:
+  ```bash
+  PRODUCTION_BOOTSTRAP_ENABLED=true
+  BOOTSTRAP_TENANT_NAME="TIKEY SPA"
+  BOOTSTRAP_TENANT_SLUG="tikey-spa"
+  BOOTSTRAP_OWNER_USERNAME="owner@tikeyspa.com"
+  BOOTSTRAP_OWNER_PASSWORD="<STRONG_PASSWORD_MIN_8_CHARS>"
+  ```
+  Optional business fields: `BOOTSTRAP_TENANT_PHONE`, `BOOTSTRAP_TENANT_EMAIL`, `BOOTSTRAP_TENANT_ADDRESS`, `BOOTSTRAP_TENANT_TIMEZONE`.
+- **Operational Workflow**:
+  1. Set the bootstrap environment variables on the production container/service.
+  2. Start the application once under `SPRING_PROFILES_ACTIVE=prod`.
+  3. Verify OWNER authentication via `/api/v1/auth/login`.
+  4. Disable `PRODUCTION_BOOTSTRAP_ENABLED=false` (or remove the flag) and remove `BOOTSTRAP_OWNER_PASSWORD` from environment settings.
+- **Idempotency & Safety**: If the target Tenant slug or OWNER username already exists, bootstrap safely skips without modifying data or resetting passwords. Passwords are never logged and are hashed using BCrypt.
