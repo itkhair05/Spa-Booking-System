@@ -72,7 +72,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
             org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource,
-            @Value("${security.rate-limit.enabled:true}") boolean rateLimitEnabled) throws Exception {
+            @Value("${security.rate-limit.enabled:true}") boolean rateLimitEnabled,
+            com.example.spabooking.common.ratelimit.ClientIpResolver clientIpResolver) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .csrf(AbstractHttpConfigurer::disable)
@@ -100,7 +101,7 @@ public class SecurityConfig {
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(publicTenantContextFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterAfter(tenantContextFilter, UsernamePasswordAuthenticationFilter.class);
-        http.addFilterBefore(new RateLimitFilter(rateLimitEnabled), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new RateLimitFilter(rateLimitEnabled, clientIpResolver), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

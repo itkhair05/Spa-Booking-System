@@ -49,6 +49,9 @@ class ProductionConfigurationTest {
         assertEquals("INFO", props.getProperty("logging.level.root"));
         assertEquals("WARN", props.getProperty("logging.level.org.hibernate.SQL"));
 
+        // Trusted proxies
+        assertNotNull(props.getProperty("security.rate-limit.trusted-proxies"));
+
         // Production configuration must NOT contain dangerous localhost or sandbox fallbacks
         String dsUrl = props.getProperty("spring.datasource.url");
         assertNotNull(dsUrl);
