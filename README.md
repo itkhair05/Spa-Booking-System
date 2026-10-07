@@ -1,5 +1,7 @@
 # TIKEY SPA — Booking System
 
+[![CI](https://github.com/itkhair05/spa-booking-saas/actions/workflows/ci.yml/badge.svg)](https://github.com/itkhair05/spa-booking-saas/actions/workflows/ci.yml)
+
 Full-stack spa booking & management platform.
 
 ## Run with Docker
@@ -60,3 +62,16 @@ To stop containers and intentionally delete all persistent data (database and up
 ```bash
 docker compose down -v
 ```
+
+## Continuous Integration & Quality Gate
+
+Automated quality verification is enforced via GitHub Actions on every push to `main` and all Pull Requests targeting `main`:
+
+- **Workflow**: `.github/workflows/ci.yml`
+- **Required Checks**:
+  1. **Git Diff Check**: Enforces clean repository working tree and verifies code formatting/whitespace.
+  2. **Backend Test**: Runs Java 17 + Spring Boot test suite against a MySQL 8 service container.
+  3. **Frontend Check**: Runs `npm ci`, ESLint code standards (0 errors, 0 warnings), and Vite production build.
+  4. **Docker CI**: Validates Docker Compose configuration, builds backend & frontend production images, and executes startup healthchecks.
+
+All four checks must **PASS** before Pull Requests are eligible for merging into `main`.
