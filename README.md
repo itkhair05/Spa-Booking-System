@@ -109,3 +109,19 @@ The backend supports two distinct runtime configuration profiles:
 - **SQL Logging**: **Disabled** (`show-sql=false`, `format_sql=false`) to protect sensitive data and prevent log bloat.
 - **Fast-fail Validation**: Production requires `SPRING_DATASOURCE_URL`, `DB_PASSWORD`, `JWT_SECRET`, `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL`, and `CORS_ALLOWED_ORIGINS`. If any required secret is missing, application startup fails fast without fallback to sandbox or localhost.
 - **Security**: Real secrets must be injected through cloud container environment variables. Never commit `.env` or production credentials to Git.
+
+## Production Security & Network Hardening
+
+### 1. MySQL Network Isolation
+- **Development**: MySQL port defaults to `127.0.0.1:3307:3306` (`MYSQL_BIND_IP=127.0.0.1`), ensuring it is reachable locally via `localhost:3307` while preventing exposure to the public internet (`0.0.0.0`).
+- **Production**: Run with the production compose override:
+  ```bash
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+  ```
+  `docker-compose.prod.yml` completely strips the host port mapping (`ports: !reset []`). MySQL communicates exclusively with the backend via the private Docker bridge network (`spa-booking-network`).
+
+### 2. Reverse Proxy & Real Client IP Resolution
+- **Rate Limiting**: Rate limiter resolves real client IPs via `ClientIpResolver`.
+- **Anti-Spoofing**: Forwarding headers (`CF-Connecting-IP`, `X-Real-IP`, `X-Forwarded-For`) are trusted **ONLY** when the immediate connection originates from a recognized trusted proxy (configured via `SECURITY_TRUSTED_PROXIES`, defaulting to loopback `127.0.0.1`, `::1` and RFC 1918 private subnets `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
+- Direct untrusted connections attempting to forge `CF-Connecting-IP` or `X-Forwarded-For` are ignored, and the rate limiter keys by their actual socket connection IP.
+- **Cloudflare Edge**: When deployed behind Cloudflare, Nginx forwards `CF-Connecting-IP`. If Nginx `real_ip` module is configured in production, official Cloudflare IP CIDR ranges must be configured in Nginx rather than using broad wildcard subnets.

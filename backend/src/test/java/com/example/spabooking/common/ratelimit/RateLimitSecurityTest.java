@@ -193,4 +193,131 @@ public class RateLimitSecurityTest {
         mockMvc.perform(post("/api/v1/bookings/999999/refund").with(fromIp(ip)))
                 .andExpect(status().isTooManyRequests());
     }
+
+    @Test
+    void case1_directRequestWithoutProxyHeaderUsesRemoteAddr() throws Exception {
+        awaitFreshWindow();
+        String directIp = "203.0.113.111";
+
+        for (int i = 0; i < 10; i++) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .with(fromIp(directIp))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(loginBody()))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .with(fromIp(directIp))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody()))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void case2_trustedProxySupplyingRealClientIpResolvesRealIp() throws Exception {
+        awaitFreshWindow();
+        String trustedProxyIp = "127.0.0.1";
+        String realClientIp = "198.51.100.10";
+
+        for (int i = 0; i < 10; i++) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .with(fromIp(trustedProxyIp))
+                            .header("CF-Connecting-IP", realClientIp)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(loginBody()))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        // 11th request from realClientIp through trusted proxy is throttled
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .with(fromIp(trustedProxyIp))
+                        .header("CF-Connecting-IP", realClientIp)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody()))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void case3_untrustedClientSpoofingCfConnectingIpIsIgnored() throws Exception {
+        awaitFreshWindow();
+        String untrustedClientIp = "203.0.113.120"; // Public, untrusted socket address
+        String spoofedIp = "1.2.3.4";
+
+        // Client sends 10 requests with fake header. Rate limiter must key by actual IP (203.0.113.120)
+        for (int i = 0; i < 10; i++) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .with(fromIp(untrustedClientIp))
+                            .header("CF-Connecting-IP", spoofedIp)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(loginBody()))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        // Even if client changes the spoofed header on 11th request, they are still throttled because their actual IP is throttled
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .with(fromIp(untrustedClientIp))
+                        .header("CF-Connecting-IP", "9.9.9.9")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody()))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void case4_untrustedClientSpoofingXForwardedForIsIgnored() throws Exception {
+        awaitFreshWindow();
+        String untrustedClientIp = "203.0.113.130"; // Public, untrusted socket address
+        String spoofedXff = "5.6.7.8, 10.0.0.1";
+
+        for (int i = 0; i < 10; i++) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .with(fromIp(untrustedClientIp))
+                            .header("X-Forwarded-For", spoofedXff)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(loginBody()))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        // 11th request with different spoofed XFF is still blocked by actual IP
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .with(fromIp(untrustedClientIp))
+                        .header("X-Forwarded-For", "7.7.7.7")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody()))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void case5_multipleUsersThroughSameTrustedProxyHaveIndependentRateLimits() throws Exception {
+        awaitFreshWindow();
+        String trustedProxyIp = "127.0.0.1";
+        String userAIp = "203.0.113.141";
+        String userBIp = "203.0.113.142";
+
+        // Exhaust User A's rate limit
+        for (int i = 0; i < 10; i++) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .with(fromIp(trustedProxyIp))
+                            .header("CF-Connecting-IP", userAIp)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(loginBody()))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        // User A is now throttled (429)
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .with(fromIp(trustedProxyIp))
+                        .header("CF-Connecting-IP", userAIp)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody()))
+                .andExpect(status().isTooManyRequests());
+
+        // User B arriving through the EXACT SAME trusted proxy is NOT throttled (returns 401 Unauthorized, not 429)
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .with(fromIp(trustedProxyIp))
+                        .header("CF-Connecting-IP", userBIp)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody()))
+                .andExpect(status().isUnauthorized());
+    }
 }

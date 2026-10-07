@@ -37,12 +37,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final long STALE_WINDOW_AGE_SECONDS = 600;
 
     private final boolean enabled;
+    private final ClientIpResolver clientIpResolver;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
     private final ConcurrentHashMap<String, Window> windows = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public RateLimitFilter(boolean enabled) {
+        this(enabled, new ClientIpResolver());
+    }
+
+    public RateLimitFilter(boolean enabled, ClientIpResolver clientIpResolver) {
         this.enabled = enabled;
+        this.clientIpResolver = clientIpResolver != null ? clientIpResolver : new ClientIpResolver();
     }
 
     @Override
@@ -55,7 +61,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         Rule matched = matchRule(request);
         if (matched != null) {
-            long retryAfterSeconds = consume(matched, request.getRemoteAddr());
+            String clientIp = clientIpResolver.resolveClientIp(request);
+            long retryAfterSeconds = consume(matched, clientIp);
             if (retryAfterSeconds > 0) {
                 writeTooManyRequests(response, retryAfterSeconds);
                 return;
