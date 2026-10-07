@@ -63,15 +63,28 @@ To stop containers and intentionally delete all persistent data (database and up
 docker compose down -v
 ```
 
-## Continuous Integration & Quality Gate
+## CI / CD Pipeline & Quality Gate
 
-Automated quality verification is enforced via GitHub Actions on every push to `main` and all Pull Requests targeting `main`:
+Automated quality verification and continuous delivery foundations are managed via GitHub Actions:
 
 - **Workflow**: `.github/workflows/ci.yml`
-- **Required Checks**:
-  1. **Git Diff Check**: Enforces clean repository working tree and verifies code formatting/whitespace.
-  2. **Backend Test**: Runs Java 17 + Spring Boot test suite against a MySQL 8 service container.
-  3. **Frontend Check**: Runs `npm ci`, ESLint code standards (0 errors, 0 warnings), and Vite production build.
-  4. **Docker CI**: Validates Docker Compose configuration, builds backend & frontend production images, and executes startup healthchecks.
+
+### 1. Continuous Integration (Pull Requests & Main)
+Enforces 4 required status checks in parallel on every PR targeting `main` and pushes to `main`:
+1. **Git Diff Check**: Enforces clean repository working tree and verifies code formatting/whitespace.
+2. **Backend Test**: Runs Java 17 + Spring Boot test suite (343 tests) against a MySQL 8 service container.
+3. **Frontend Check**: Runs `npm ci`, ESLint code standards (0 errors, 0 warnings), and Vite production build.
+4. **Docker CI**: Validates Docker Compose configuration, builds backend & frontend images, and verifies startup healthchecks.
 
 All four checks must **PASS** before Pull Requests are eligible for merging into `main`.
+
+### 2. CD Foundation (Post-Merge on Main)
+Once all 4 CI checks pass on the protected `main` branch, the `CD Foundation` job automatically produces release-ready Docker artifacts:
+- Builds immutable production images tagged with the Git commit SHA:
+  - `tikey-spa-backend:<commit-sha>`
+  - `tikey-spa-frontend:<commit-sha>`
+- Injects standard OCI container labels (revision, title, created timestamp).
+- Verifies image integrity and inspects layer sizes without publishing to external registries.
+
+### 3. Production Deployment (Scope Boundary)
+*Note:* Actual production deployment (Cloudflare Pages, Railway/cloud containers, production MySQL provisioning, domain/SSL, and VNPay live credentials) is intentionally deferred to **Phase F**.
