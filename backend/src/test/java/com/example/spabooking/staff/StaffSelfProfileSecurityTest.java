@@ -251,7 +251,7 @@ public class StaffSelfProfileSecurityTest {
     }
 
     @Test
-    void ownerCanDeleteAndStaffDisappearsFromNormalList() throws Exception {
+    void ownerCanDeleteAndStaffMarkedInactiveInOwnerList() throws Exception {
         // OWNER calls DELETE /api/v1/staff/{id}
         mockMvc.perform(delete("/api/v1/staff/" + otherStaff.getId())
                         .header("Authorization", "Bearer " + ownerJwt))
@@ -273,10 +273,11 @@ public class StaffSelfProfileSecurityTest {
                         .content(objectMapper.writeValueAsString(loginReq)))
                 .andExpect(status().isUnauthorized());
 
-        // Deleted staff does NOT appear in normal OWNER staff list
+        // Deleted staff remains in OWNER staff list with isActive = false, isDeleted = true
         mockMvc.perform(get("/api/v1/staff")
                         .header("Authorization", "Bearer " + ownerJwt))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.id == " + otherStaff.getId() + ")]").doesNotExist());
+                .andExpect(jsonPath("$[?(@.id == " + otherStaff.getId() + ")].isActive").value(false))
+                .andExpect(jsonPath("$[?(@.id == " + otherStaff.getId() + ")].isDeleted").value(true));
     }
 }

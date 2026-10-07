@@ -38,8 +38,9 @@ public class StaffController {
 
     @GetMapping
     @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<List<StaffResponse>> getAllStaff() {
-        return ResponseEntity.ok(staffService.findAllWithAccounts());
+    public ResponseEntity<List<StaffResponse>> getAllStaff(
+            @RequestParam(required = false, defaultValue = "ALL") String status) {
+        return ResponseEntity.ok(staffService.findAllWithAccounts(status));
     }
 
     @GetMapping("/me")
@@ -153,7 +154,7 @@ public class StaffController {
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file) {
         String fileUrl = fileStorageService.storeFile(file, "avatars");
-        Staff staff = staffService.findById(id)
+        Staff staff = staffService.findEntityById(id)
                 .orElseThrow(() -> new com.example.spabooking.common.exception.ResourceNotFoundException("Staff not found"));
         staff.setAvatarUrl(fileUrl);
         Staff updatedStaff = staffService.update(id, staff);
@@ -163,7 +164,7 @@ public class StaffController {
     @DeleteMapping("/{id}/avatar")
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<Void> deleteStaffAvatar(@PathVariable Long id) {
-        Staff staff = staffService.findById(id)
+        Staff staff = staffService.findEntityById(id)
                 .orElseThrow(() -> new com.example.spabooking.common.exception.ResourceNotFoundException("Staff not found"));
         if (staff.getAvatarUrl() != null) {
             fileStorageService.deleteFileByUrl(staff.getAvatarUrl());

@@ -58,12 +58,28 @@ public class StaffService {
     }
 
     public List<StaffResponse> findAllWithAccounts() {
+        return findAllWithAccounts("ALL");
+    }
+
+    public List<StaffResponse> findAllWithAccounts(String status) {
         Long tenantId = TenantContext.requireTenantId();
-        // Return non-deleted staff for tenant so OWNER can see active & inactive staff, but not deleted
-        List<Staff> staffList = staffRepository.findAllByTenantIdAndIsDeletedFalse(tenantId);
+        // Return all staff for tenant so OWNER can see active & inactive/deleted staff
+        List<Staff> staffList = staffRepository.findAllByTenantId(tenantId);
         if (staffList.isEmpty()) {
             return List.of();
         }
+
+        String filter = status != null ? status.trim().toUpperCase() : "ALL";
+        if ("ACTIVE".equals(filter)) {
+            staffList = staffList.stream()
+                    .filter(s -> Boolean.TRUE.equals(s.getIsActive()) && !Boolean.TRUE.equals(s.getIsDeleted()))
+                    .collect(Collectors.toList());
+        } else if ("INACTIVE".equals(filter)) {
+            staffList = staffList.stream()
+                    .filter(s -> !Boolean.TRUE.equals(s.getIsActive()) || Boolean.TRUE.equals(s.getIsDeleted()))
+                    .collect(Collectors.toList());
+        }
+
         Map<Long, User> usersByStaffId = userRepository
                 .findAllByStaffIdIn(staffList.stream().map(Staff::getId).collect(Collectors.toList()))
                 .stream()
@@ -82,6 +98,11 @@ public class StaffService {
     public Optional<Staff> findById(Long id) {
         Long tenantId = TenantContext.requireTenantId();
         return staffRepository.findByIdAndTenantIdAndIsActiveTrueAndIsDeletedFalse(id, tenantId);
+    }
+
+    public Optional<Staff> findEntityById(Long id) {
+        Long tenantId = TenantContext.requireTenantId();
+        return staffRepository.findByIdAndTenantId(id, tenantId);
     }
 
     public StaffResponse findResponseById(Long id) {
@@ -106,7 +127,7 @@ public class StaffService {
     @Transactional
     public Staff update(Long id, Staff updatedDetails) {
         Long tenantId = TenantContext.requireTenantId();
-        Staff existingStaff = staffRepository.findByIdAndTenantIdAndIsDeletedFalse(id, tenantId)
+        Staff existingStaff = staffRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
 
         if (updatedDetails.getName() != null) {
@@ -128,6 +149,10 @@ public class StaffService {
 
         if (updatedDetails.getIsActive() != null) {
             existingStaff.setIsActive(updatedDetails.getIsActive());
+            // If reactivating, clear isDeleted flag as well so staff is fully restored
+            if (Boolean.TRUE.equals(updatedDetails.getIsActive())) {
+                existingStaff.setIsDeleted(false);
+            }
             // Sync status with associated user account if present
             userRepository.findByStaffIdAndTenantId(id, tenantId).ifPresent(user -> {
                 user.setIsActive(updatedDetails.getIsActive());
@@ -141,7 +166,7 @@ public class StaffService {
     @Transactional
     public void delete(Long id) {
         Long tenantId = TenantContext.requireTenantId();
-        Staff existingStaff = staffRepository.findByIdAndTenantIdAndIsDeletedFalse(id, tenantId)
+        Staff existingStaff = staffRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
 
         // Archive / soft-delete staff: preserve historical bookings and foreign key integrity

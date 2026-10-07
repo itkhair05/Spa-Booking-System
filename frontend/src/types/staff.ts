@@ -4,6 +4,7 @@ export interface Staff {
   phone: string | null;
   email: string | null;
   isActive: boolean;
+  isDeleted?: boolean;
   showOnWebsite?: boolean;
   avatarUrl?: string | null;
   username?: string | null;

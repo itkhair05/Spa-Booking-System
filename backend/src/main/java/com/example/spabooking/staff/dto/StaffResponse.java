@@ -13,6 +13,7 @@ public class StaffResponse {
     private String username;
     private Boolean accountEnabled;
     private Boolean isActive;
+    private Boolean isDeleted;
     private Boolean showOnWebsite;
     private String avatarUrl;
     private String accessToken;
@@ -35,13 +36,17 @@ public class StaffResponse {
         response.setEmail(staff.getEmail());
         response.setUsername(username);
         response.setAccountEnabled(accountEnabled);
-        response.setIsActive(staff.getIsActive());
+        response.setIsActive(Boolean.TRUE.equals(staff.getIsActive()) && !Boolean.TRUE.equals(staff.getIsDeleted()));
+        response.setIsDeleted(Boolean.TRUE.equals(staff.getIsDeleted()));
         response.setShowOnWebsite(staff.getShowOnWebsite());
         response.setAvatarUrl(staff.getAvatarUrl());
         response.setCreatedAt(staff.getCreatedAt());
         response.setUpdatedAt(staff.getUpdatedAt());
         return response;
     }
+
+    public Boolean getIsDeleted() { return isDeleted; }
+    public void setIsDeleted(Boolean isDeleted) { this.isDeleted = isDeleted; }
 
     public Boolean getShowOnWebsite() { return showOnWebsite; }
     public void setShowOnWebsite(Boolean showOnWebsite) { this.showOnWebsite = showOnWebsite; }
