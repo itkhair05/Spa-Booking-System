@@ -6,6 +6,7 @@ import { Alert } from '../components/ui/Alert';
 import { createStaff, updateStaff, uploadStaffAvatar, deleteStaffAvatar } from '../lib/api/staff';
 import type { Staff, CreateStaffRequest, UpdateStaffRequest } from '../types/staff';
 import { Upload, Trash2, Camera } from 'lucide-react';
+import { resolveMediaUrl } from '../lib/api/apiConfig';
 
 interface StaffFormProps {
   staff?: Staff; // if undefined, it's create mode
@@ -127,7 +128,7 @@ export const StaffForm = ({ staff, onSuccess, onCancel }: StaffFormProps) => {
                 {avatarPreview ? (
                   <img src={avatarPreview} alt="Xem trước" className="w-full h-full object-cover" />
                 ) : currentAvatarUrl ? (
-                  <img src={currentAvatarUrl} alt={name || 'Avatar'} className="w-full h-full object-cover" />
+                  <img src={resolveMediaUrl(currentAvatarUrl)} alt={name || 'Avatar'} className="w-full h-full object-cover" />
                 ) : (
                   <Camera className="w-6 h-6 text-stone-400" />
                 )}

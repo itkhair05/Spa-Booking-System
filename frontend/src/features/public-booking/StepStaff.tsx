@@ -3,6 +3,7 @@ import { useSpaBooking } from './SpaBookingContext';
 import { getPublicStaff } from '../../lib/api/publicBooking';
 import type { PublicStaffResponse } from '../../types/publicBooking';
 import { AlertCircle, User, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { resolveMediaUrl } from '../../lib/api/apiConfig';
 
 export function StepStaff() {
   const { slug, state, updateState, setStep } = useSpaBooking();
@@ -85,7 +86,7 @@ export function StepStaff() {
               >
                 <div className="w-10 h-10 rounded-full overflow-hidden bg-stone-200 flex items-center justify-center text-stone-500 mr-4 shrink-0">
                   {staff.avatarUrl ? (
-                    <img src={staff.avatarUrl} alt={staff.name} className="w-full h-full object-cover" />
+                    <img src={resolveMediaUrl(staff.avatarUrl)} alt={staff.name} className="w-full h-full object-cover" />
                   ) : (
                     <User className="w-5 h-5" aria-hidden="true" />
                   )}

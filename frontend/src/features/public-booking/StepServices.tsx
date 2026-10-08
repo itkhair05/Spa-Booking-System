@@ -4,6 +4,7 @@ import { getPublicServices } from '../../lib/api/publicBooking';
 import { formatCurrency } from '../../lib/format';
 import type { PublicServiceResponse } from '../../types/publicBooking';
 import { Clock, AlertCircle, CheckCircle2, Sparkles, ChevronRight } from 'lucide-react';
+import { resolveMediaUrl } from '../../lib/api/apiConfig';
 
 export function StepServices() {
   const { slug, state, updateState, setStep } = useSpaBooking();
@@ -193,7 +194,7 @@ export function StepServices() {
                         <div className="flex gap-3 items-start">
                           {service.imageUrl && (
                             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0 bg-stone-100 border border-stone-200">
-                              <img src={service.imageUrl} alt={service.name} className="w-full h-full object-cover" />
+                              <img src={resolveMediaUrl(service.imageUrl)} alt={service.name} className="w-full h-full object-cover" />
                             </div>
                           )}
 

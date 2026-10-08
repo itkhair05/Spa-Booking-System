@@ -13,6 +13,7 @@ import { ArticleForm } from './ArticleForm';
 import RestrictedAccess from '../components/RestrictedAccess';
 import { BookOpen, Plus, Trash2, Globe, EyeOff, Calendar } from 'lucide-react';
 import { useAuth } from '../app/auth/useAuth';
+import { resolveMediaUrl } from '../lib/api/apiConfig';
 
 const Articles = () => {
   const { user } = useAuth();
@@ -188,7 +189,7 @@ const Articles = () => {
                 {article.coverImage && (
                   <div className="h-40 w-full overflow-hidden bg-stone-100">
                     <img
-                      src={article.coverImage}
+                      src={resolveMediaUrl(article.coverImage)}
                       alt={article.title}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                     />
