@@ -109,7 +109,7 @@ public class ProductionDomainAndCorsSecurityTest {
     @Test
     @DisplayName("6. Forwarded HTTPS request (X-Forwarded-Proto: https) is recognized as secure and receives HSTS")
     void testForwardedHttpsEmitsHstsHeader() throws Exception {
-        mockMvc.perform(get("/api/v1/public/spas/tikey-spa")
+        mockMvc.perform(get("/actuator/health")
                         .header("X-Forwarded-Proto", "https")
                         .header("X-Forwarded-Port", "443")
                         .secure(true))
