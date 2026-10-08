@@ -170,3 +170,31 @@ The backend supports two distinct runtime configuration profiles:
 - **Configuration**:
   - Development / Sandbox: `VNPAY_QUERYDR_URL=https://sandbox.vnpayment.vn/merchant_webapi/api/transaction`
   - Production: `VNPAY_QUERYDR_URL=https://vnpayment.vn/merchant_webapi/api/transaction`
+
+## Health & Observability (Phase F.5)
+
+### 1. Actuator Endpoints & Probes
+Spring Boot Actuator is configured with minimal, production-safe settings:
+- **Aggregated Health Endpoint**: `GET /actuator/health`
+  - Returns `{"status":"UP"}` with HTTP 200 when all core components (including database) are healthy.
+  - Returns `{"status":"DOWN"}` with HTTP 503 when the database or critical components are unavailable.
+- **Liveness Probe**: `GET /actuator/health/liveness`
+  - Verifies the process is alive and internal application state is valid (`livenessState`).
+- **Readiness Probe**: `GET /actuator/health/readiness`
+  - Verifies the application is ready to accept traffic (`readinessState` and `db`).
+- **Security & Detail Masking**:
+  - `management.endpoint.health.show-details=never`: Responses omit internal database credentials, connection strings, disk info, and stack traces.
+  - `management.endpoints.web.exposure.include=health`: Only the `health` endpoint is exposed via web/HTTP. Sensitive Actuator endpoints (`/actuator/env`, `/actuator/beans`, `/actuator/configprops`, `/actuator/heapdump`, etc.) are completely disabled from web exposure.
+  - In `SecurityConfig`, only `/actuator/health` and `/actuator/health/**` are accessible unauthenticated for container orchestrators; root `/actuator` and any other management paths require authentication.
+
+### 2. Docker Healthcheck Integration
+The backend service in `docker-compose.yml` uses the Actuator health endpoint:
+```yaml
+healthcheck:
+  test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+  interval: 10s
+  timeout: 5s
+  retries: 6
+  start_period: 30s
+```
+This ensures container orchestrators (Docker Compose, ECS, Kubernetes) accurately track runtime health without relying on arbitrary file probes.
