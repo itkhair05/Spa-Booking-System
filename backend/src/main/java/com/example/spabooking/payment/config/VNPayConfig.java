@@ -28,6 +28,9 @@ public class VNPayConfig {
     @Value("${vnpay.refund-url:https://sandbox.vnpayment.vn/merchant_webapi/api/transaction}")
     private String refundUrl;
 
+    @Value("${vnpay.querydr-url:${vnpay.refund-url:https://sandbox.vnpayment.vn/merchant_webapi/api/transaction}}")
+    private String queryDrUrl;
+
     public String getTmnCode() {
         return tmnCode;
     }
@@ -51,6 +54,11 @@ public class VNPayConfig {
     public String getRefundUrl() {
         return refundUrl;
     }
+
+    public String getQueryDrUrl() {
+        return queryDrUrl;
+    }
+
 
     public static String hmacSHA512(String key, String data) {
         if (key == null || key.isBlank()) {

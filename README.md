@@ -143,3 +143,30 @@ The backend supports two distinct runtime configuration profiles:
   3. Verify OWNER authentication via `/api/v1/auth/login`.
   4. Disable `PRODUCTION_BOOTSTRAP_ENABLED=false` (or remove the flag) and remove `BOOTSTRAP_OWNER_PASSWORD` from environment settings.
 - **Idempotency & Safety**: If the target Tenant slug or OWNER username already exists, bootstrap safely skips without modifying data or resetting passwords. Passwords are never logged and are hashed using BCrypt.
+
+## VNPay IPN & QueryDR Reconciliation (Phase F.4)
+
+### 1. Server-to-Server VNPay IPN
+- **Endpoint**: `GET` / `POST` `/api/v1/payments/vnpay-ipn` (and `/api/v1/public/spas/{slug}/payments/vnpay-ipn`).
+- **Security**: Publicly accessible via exact URL match in Spring Security (`permitAll()`). Timing-attack resistant HMAC-SHA512 checksum validation (`MessageDigest.isEqual`).
+- **Server-Authoritative Validation**: Expected amount is strictly validated against the server-side payment entity amount before updating status.
+- **Idempotency & State Safety**:
+  - `PENDING` -> `PAID` (on `vnp_ResponseCode=00`) returns `{"RspCode":"00","Message":"Confirm Success"}`.
+  - Repeated/duplicate notifications on terminal states (`PAID`, `CANCELLED`, `FAILED`) return `{"RspCode":"02","Message":"Order already confirmed"}` without duplicate business side effects.
+  - Terminal `PAID` payments are never downgraded to `FAILED` or `CANCELLED`.
+  - Amount mismatch returns `{"RspCode":"04","Message":"Invalid Amount"}`.
+  - Invalid signature returns `{"RspCode":"97","Message":"Invalid Checksum"}`.
+  - Unknown payment returns `{"RspCode":"01","Message":"Order not found"}`.
+
+### 2. VNPay QueryDR Reconciliation
+- **Endpoint**: `POST /api/v1/payments/{paymentId}/reconcile`
+- **Authorization**: Protected, `ROLE_OWNER` only. Enforces tenant boundary isolation.
+- **Reconciliation Policy**:
+  - `PENDING` + Remote `00` -> Reconciled to `PAID`.
+  - `PENDING` + Remote `02`/`09` -> Reconciled to `FAILED`.
+  - `PAID` + Remote `00` -> Idempotent no-op (`reconciled = true`).
+  - `PAID` + Remote != `00` -> Flagged as discrepancy (`discrepancy = true`), payment is **not** downgraded.
+  - `FAILED`/`CANCELLED` + Remote `00` -> Flagged as discrepancy (`discrepancy = true`), requires manual review.
+- **Configuration**:
+  - Development / Sandbox: `VNPAY_QUERYDR_URL=https://sandbox.vnpayment.vn/merchant_webapi/api/transaction`
+  - Production: `VNPAY_QUERYDR_URL=https://vnpayment.vn/merchant_webapi/api/transaction`
