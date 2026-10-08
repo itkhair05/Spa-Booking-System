@@ -6,6 +6,7 @@ import { Alert } from '../components/ui/Alert';
 import { createArticle, updateArticle, uploadArticleCover } from '../lib/api/articles';
 import type { Article, CreateArticleRequest, UpdateArticleRequest } from '../types/article';
 import { Upload, Image as ImageIcon } from 'lucide-react';
+import { resolveMediaUrl } from '../lib/api/apiConfig';
 
 interface ArticleFormProps {
   article?: Article;
@@ -118,7 +119,7 @@ export const ArticleForm = ({ article, onSuccess, onCancel }: ArticleFormProps) 
                 {coverPreview ? (
                   <img src={coverPreview} alt="Xem trước" className="w-full h-full object-cover" />
                 ) : currentCover ? (
-                  <img src={currentCover} alt="Ảnh bìa" className="w-full h-full object-cover" />
+                  <img src={resolveMediaUrl(currentCover)} alt="Ảnh bìa" className="w-full h-full object-cover" />
                 ) : (
                   <ImageIcon className="w-7 h-7 text-stone-400" />
                 )}
