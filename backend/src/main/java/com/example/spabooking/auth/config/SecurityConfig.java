@@ -96,6 +96,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/payments/vnpay-ipn", "/api/v1/payments/vnpay/ipn").permitAll()
                 .requestMatchers("/api/v1/public/**").permitAll()
                 .requestMatchers("/api/v1/uploads/**").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                 .anyRequest().authenticated()
             );
 
