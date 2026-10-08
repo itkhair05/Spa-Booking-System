@@ -1,13 +1,10 @@
 import axios from 'axios';
 import type { InternalAxiosRequestConfig } from 'axios';
 import { emitAuthFailure } from './authEvents';
-
-// Base URL from environment variable; Vite dev-server proxy handles /api/* already,
-// so when VITE_API_BASE_URL is not set the default baseURL stays as /api/v1.
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
+import { API_BASE_URL } from './apiConfig';
 
 const api = axios.create({
-  baseURL: apiBaseUrl ? `${apiBaseUrl}` : '/api/v1',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
