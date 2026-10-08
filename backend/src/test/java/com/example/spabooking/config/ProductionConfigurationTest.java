@@ -59,10 +59,21 @@ class ProductionConfigurationTest {
         assertNotNull(props.getProperty("bootstrap.production.owner-username"));
         assertNotNull(props.getProperty("bootstrap.production.owner-password"));
 
-        // Production configuration must NOT contain dangerous localhost or sandbox fallbacks
+        // Production configuration must NOT contain dangerous localhost, docker container, or plaintext fallbacks
         String dsUrl = props.getProperty("spring.datasource.url");
         assertNotNull(dsUrl);
+        assertEquals("${SPRING_DATASOURCE_URL}", dsUrl, "Production datasource URL must be purely environment-driven");
         assertFalse(dsUrl.contains("localhost"), "Production datasource URL must not have a localhost fallback");
+        assertFalse(dsUrl.contains("mysql:"), "Production datasource URL must not hardcode Docker compose mysql service name");
+        assertFalse(dsUrl.contains("useSSL=false"), "Production datasource URL must not allow plaintext connections");
+
+        String dsUser = props.getProperty("spring.datasource.username");
+        assertNotNull(dsUser);
+        assertEquals("${SPRING_DATASOURCE_USERNAME}", dsUser, "Production datasource username must be environment-driven");
+
+        String dsPass = props.getProperty("spring.datasource.password");
+        assertNotNull(dsPass);
+        assertEquals("${DB_PASSWORD}", dsPass, "Production datasource password must be environment-driven");
 
         String cors = props.getProperty("app.cors.allowed-origins");
         assertNotNull(cors);
