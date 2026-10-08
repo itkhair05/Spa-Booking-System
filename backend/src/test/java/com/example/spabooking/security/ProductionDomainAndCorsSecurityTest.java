@@ -94,7 +94,8 @@ public class ProductionDomainAndCorsSecurityTest {
     @Test
     @DisplayName("5. Wildcard origin '*' is stripped when credentials are enabled to prevent vulnerability")
     void testWildcardOriginIsFilteredOut() {
-        var source = securityConfig.corsConfigurationSource("https://example.com, *, https://www.example.com");
+        var unproxiedConfig = new SecurityConfig(null, null, null, null);
+        var source = unproxiedConfig.corsConfigurationSource("https://example.com, *, https://www.example.com");
         MockHttpServletRequest request = new MockHttpServletRequest();
         CorsConfiguration config = source.getCorsConfiguration(request);
 
@@ -138,5 +139,39 @@ public class ProductionDomainAndCorsSecurityTest {
 
         String resolvedIp = clientIpResolver.resolveClientIp(request);
         assertEquals("198.51.100.12", resolvedIp, "Spoofed CF-Connecting-IP must be discarded from untrusted peers");
+    }
+
+    @Test
+    @DisplayName("9. Cloudflare Pages production origin is properly normalized (stripping quotes and trailing slashes)")
+    void testCloudflarePagesProductionOriginNormalization() {
+        var unproxiedConfig = new SecurityConfig(null, null, null, null);
+        var source = unproxiedConfig.corsConfigurationSource(
+                "https://spa-booking-system-dta.pages.dev/, \"https://spa-booking-system-production-6279.up.railway.app\" ");
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        CorsConfiguration config = source.getCorsConfiguration(request);
+
+        assertNotNull(config);
+        assertTrue(config.getAllowCredentials());
+        assertNotNull(config.getAllowedOrigins());
+        assertTrue(config.getAllowedOrigins().contains("https://spa-booking-system-dta.pages.dev"),
+                "Trailing slash must be stripped so exact origin match succeeds");
+        assertTrue(config.getAllowedOrigins().contains("https://spa-booking-system-production-6279.up.railway.app"),
+                "Quotes must be stripped so exact origin match succeeds");
+        assertFalse(config.getAllowedOrigins().contains("*"), "Wildcard origin must never be present");
+        assertTrue(config.getAllowedHeaders().contains("*"), "Allowed headers should accept all requested headers");
+    }
+
+    @Test
+    @DisplayName("10. Private endpoints strictly require authentication and cannot be accessed anonymously")
+    void testPrivateEndpointRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/v1/bookings"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("11. OPTIONS on public endpoints succeeds unauthenticated")
+    void testOptionsOnPublicEndpointSucceeds() throws Exception {
+        mockMvc.perform(options("/api/v1/public/spas/tikey-spa"))
+                .andExpect(status().isOk());
     }
 }

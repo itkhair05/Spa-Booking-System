@@ -191,10 +191,15 @@ public class PublicBookingService {
         Booking booking = bookingService.create(internalRequest);
 
         // Process payment
-        com.example.spabooking.payment.enums.PaymentMethod method =
-                "VNPAY".equalsIgnoreCase(request.getPaymentMethod())
-                        ? com.example.spabooking.payment.enums.PaymentMethod.VNPAY
-                        : com.example.spabooking.payment.enums.PaymentMethod.PAY_AT_SPA;
+        com.example.spabooking.payment.enums.PaymentMethod method;
+        String rawMethod = request.getPaymentMethod();
+        if (rawMethod == null || rawMethod.trim().isEmpty() || "PAY_AT_SPA".equalsIgnoreCase(rawMethod.trim())) {
+            method = com.example.spabooking.payment.enums.PaymentMethod.PAY_AT_SPA;
+        } else if ("VNPAY".equalsIgnoreCase(rawMethod.trim())) {
+            method = com.example.spabooking.payment.enums.PaymentMethod.VNPAY;
+        } else {
+            throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ: " + rawMethod);
+        }
 
         com.example.spabooking.payment.enums.PaymentProvider provider =
                 (method == com.example.spabooking.payment.enums.PaymentMethod.VNPAY)
