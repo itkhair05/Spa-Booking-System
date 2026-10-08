@@ -108,4 +108,15 @@ public class PublicController {
             @RequestParam java.util.Map<String, String> allParams) {
         return ResponseEntity.ok(publicBookingService.processVNPayCallback(allParams));
     }
+
+    @RequestMapping(value = "/payments/vnpay-ipn", method = {RequestMethod.GET, RequestMethod.POST})
+    public ResponseEntity<com.example.spabooking.payment.dto.VNPayIpnResponse> handleVNPayIpn(
+            @PathVariable String slug,
+            @RequestParam java.util.Map<String, String> allParams) {
+        try {
+            return ResponseEntity.ok(publicBookingService.processVNPayIpn(allParams));
+        } catch (Exception ex) {
+            return ResponseEntity.ok(new com.example.spabooking.payment.dto.VNPayIpnResponse("99", "Unknown error"));
+        }
+    }
 }
