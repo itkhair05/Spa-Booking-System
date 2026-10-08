@@ -13,3 +13,5 @@ Thumbs.db
 .agents/
 # Local
 backup/
+# Local TLS certificates
+*.pem
