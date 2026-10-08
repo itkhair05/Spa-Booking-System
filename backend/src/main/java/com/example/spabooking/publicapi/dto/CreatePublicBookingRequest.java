@@ -33,6 +33,7 @@ public class CreatePublicBookingRequest {
     @Size(max = 254, message = "Email must not exceed 254 characters")
     private String customerEmail;
 
+    @Pattern(regexp = "^(?i)(PAY_AT_SPA|VNPAY)?$", message = "Phương thức thanh toán không hợp lệ")
     private String paymentMethod;
 
     public String getPaymentMethod() { return paymentMethod; }
