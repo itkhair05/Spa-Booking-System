@@ -198,3 +198,92 @@ healthcheck:
   start_period: 30s
 ```
 This ensures container orchestrators (Docker Compose, ECS, Kubernetes) accurately track runtime health without relying on arbitrary file probes.
+
+## Cloudflare + Domain + HTTPS (Phase F.6 & F.6.1)
+
+### 1. Production Architecture & Topologies
+The production architecture separates static frontend delivery, containerized API execution, and managed relational persistence:
+
+```text
+                         Internet
+                            │
+                            ▼
+                       Cloudflare
+                      DNS / Proxy
+                     Edge HTTPS/CDN
+                       /         \
+                      /           \
+                     ▼             ▼
+          Cloudflare Pages      Railway
+             React/Vite       Spring Boot API
+            example.com       api.example.com
+                                      │
+                                      │ TLS (sslMode=REQUIRED)
+                                      ▼
+                                 Aiven MySQL
+```
+
+In contrast, local development runs entirely on the developer host:
+
+```text
+Browser
+   │
+   ▼
+React/Vite (localhost:5173)
+   │
+   ▼
+Spring Boot (localhost:8080)
+   │
+   ▼
+Docker MySQL (localhost:3307)
+```
+
+- **Frontend (Cloudflare Pages)**: Built React/Vite SPA hosted statically on Cloudflare Pages on the root domain (e.g. `https://example.com`, `https://www.example.com`). All client-side SPA routes fallback to `/index.html` via `_redirects`.
+- **Backend (Railway)**: Spring Boot API deployed as the sole application service on Railway, accessible via a custom API subdomain (e.g. `https://api.example.com`).
+- **Database (Aiven MySQL)**: External managed MySQL database provided by Aiven. The Railway backend connects directly to Aiven MySQL over TLS (`sslMode=REQUIRED`). Aiven MySQL is NOT on a Railway private network, NOT deployed as a Railway service, and is never exposed directly to the public web or Cloudflare DNS.
+- **Single-Spa Product**: Single tenant experience for TIKEY SPA (`tikey-spa`); no multi-tenant domain routing, tenant switching, or SaaS custom domain registration required.
+
+### 2. Deployment Responsibilities
+
+| Component | Provider | Responsibilities |
+| :--- | :--- | :--- |
+| **Edge & DNS** | **Cloudflare** | Authoritative DNS resolution, edge HTTPS termination, DDoS protection, edge caching/CDN, and client IP header forwarding (`CF-Connecting-IP`). |
+| **Frontend** | **Cloudflare Pages** | Static hosting of React/Vite SPA build artifacts (`dist/`), edge asset distribution, and client-side SPA route rewrites via `public/_redirects`. |
+| **Backend API** | **Railway** | Spring Boot runtime execution, custom domain management (`api.example.com`), automatic Let's Encrypt TLS renewal, and secure environment variable injection. |
+| **Database** | **Aiven** | Managed MySQL storage, automated backups, high availability according to selected service plan, and mandatory TLS encrypted connections. |
+
+### 3. DNS & Domain Configuration
+Use placeholders such as `example.com` and `api.example.com` when configuring environments:
+1. **Frontend (Cloudflare Pages)**:
+   - Connect the repository/build output to Cloudflare Pages.
+   - In Cloudflare Pages custom domains: associate `example.com` (and `www.example.com`).
+   - Cloudflare automatically routes traffic to the static Pages deployment.
+2. **Backend API (Railway)**:
+   - In Railway dashboard: Service Settings -> Networking -> Custom Domain -> add `api.example.com`.
+   - Railway generates custom domain DNS records (CNAME and TXT verification record).
+   - In Cloudflare DNS: add the CNAME pointing `api` to the Railway DNS target.
+3. **Origin Encryption Mode**:
+   - In Cloudflare SSL/TLS dashboard: configure encryption mode to **Full** (or Full strict once Railway origin certificates are provisioned).
+   - **Do NOT use Flexible SSL**: Flexible terminates HTTPS at Cloudflare but sends unencrypted HTTP to Railway, breaking secure cookies, HSTS, and credentials. Railway automatically provisions Let's Encrypt certificates for the custom API domain.
+
+### 4. Production Database Configuration (Aiven MySQL over TLS)
+- The production datasource configuration is completely environment-driven via `${SPRING_DATASOURCE_URL}`, `${SPRING_DATASOURCE_USERNAME}`, and `${DB_PASSWORD}` without any Docker service hostname (`mysql`) or localhost fallbacks.
+- Connections to Aiven MySQL **must enforce TLS**:
+  ```text
+  SPRING_DATASOURCE_URL=jdbc:mysql://YOUR_AIVEN_HOST:YOUR_AIVEN_PORT/defaultdb?useUnicode=true&characterEncoding=utf-8&sslMode=REQUIRED&serverTimezone=Asia/Ho_Chi_Minh
+  ```
+- Plaintext database connections (`useSSL=false`) are strictly forbidden in production. Certificate verification is preserved.
+- Real Aiven hostnames, ports, usernames, and passwords are never committed to Git and are configured exclusively in Railway environment variables during F.7 deployment.
+
+### 5. Production Environment Variables
+| Variable | Component | Example Value | Description |
+| :--- | :--- | :--- | :--- |
+| `CORS_ALLOWED_ORIGINS` | Backend (Railway) | `https://example.com,https://www.example.com` | Restricts CORS to the Cloudflare Pages domain; wildcards (`*`) are strictly rejected when credentials are enabled. |
+| `VITE_API_BASE_URL` | Frontend (Cloudflare Pages) | `https://api.example.com/api/v1` | Target API domain for browser requests; normalized automatically by the frontend API client. |
+| `SPRING_DATASOURCE_URL` | Backend (Railway) | `jdbc:mysql://YOUR_AIVEN_HOST:YOUR_AIVEN_PORT/defaultdb?...&sslMode=REQUIRED` | Managed database JDBC URL requiring TLS encryption to Aiven MySQL. |
+| `SPRING_DATASOURCE_USERNAME`| Backend (Railway) | `avnadmin` | Aiven MySQL database username provided by Railway environment variable. |
+| `DB_PASSWORD` | Backend (Railway) | `CHANGE_ME_AIVEN_DB_PASSWORD` | Aiven MySQL database password provided by Railway environment variable. |
+| `VNPAY_RETURN_URL` | Backend (Railway) | `https://example.com/dat-lich/callback` | Browser redirect URL after VNPay payment completion (points to Cloudflare Pages). |
+| `VNPAY_IPN_URL` | Backend (Railway) | `https://api.example.com/api/v1/payments/vnpay-ipn` | Server-to-server webhook callback URL for VNPay IPN notifications (points to Railway API). |
+| `SECURITY_TRUSTED_PROXIES` | Backend (Railway) | `127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16` | Trusted reverse proxy subnets for anti-spoofing and real client IP resolution (`CF-Connecting-IP`). |
+| `SERVER_FORWARD_HEADERS_STRATEGY` | Backend (Railway) | `framework` | Activates Spring Framework `ForwardedHeaderFilter` to recognize edge HTTPS headers (`X-Forwarded-Proto`). |
