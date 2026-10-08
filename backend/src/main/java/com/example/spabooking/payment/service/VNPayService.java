@@ -118,7 +118,10 @@ public class VNPayService {
             }
 
             String calculatedHash = VNPayConfig.hmacSHA512(vnPayConfig.getHashSecret(), hashData.toString());
-            return calculatedHash.equalsIgnoreCase(secureHash);
+            return java.security.MessageDigest.isEqual(
+                    calculatedHash.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8),
+                    secureHash.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8)
+            );
         } catch (Exception ex) {
             return false;
         }

@@ -233,4 +233,9 @@ public class PublicBookingService {
     public com.example.spabooking.payment.dto.VNPayCallbackResult processVNPayCallback(java.util.Map<String, String> params) {
         return paymentService.processVNPayCallback(params);
     }
+
+    @Transactional
+    public com.example.spabooking.payment.dto.VNPayIpnResponse processVNPayIpn(java.util.Map<String, String> params) {
+        return paymentService.processVNPayIpn(params);
+    }
 }
