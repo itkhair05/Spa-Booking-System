@@ -74,4 +74,160 @@ public class VNPayPaymentProviderServiceTest {
         assertEquals(RefundStatus.REFUND_FAILED, service.mapResponse("97", null, null, null).getStatus());
         assertEquals(RefundStatus.REFUND_FAILED, service.mapResponse(null, null, null, null).getStatus());
     }
+
+    @Test
+    @DisplayName("QueryDR rejects missing payment or missing txnRef")
+    void testQueryTransaction_InvalidPaymentParameters() {
+        var res1 = service.queryTransaction(null, "127.0.0.1");
+        assertFalse(res1.isSuccess());
+        assertEquals("ERR_INVALID_PAYMENT", res1.getResponseCode());
+
+        com.example.spabooking.payment.entity.Payment p = new com.example.spabooking.payment.entity.Payment();
+        var res2 = service.queryTransaction(p, "127.0.0.1");
+        assertFalse(res2.isSuccess());
+        assertEquals("ERR_INVALID_TXN_REF", res2.getResponseCode());
+    }
+
+    @Test
+    @DisplayName("QueryDR rejects response with missing secure hash on responseCode=00")
+    void testQueryTransaction_MissingSecureHashOnResponse00() throws Exception {
+        VNPayConfig mockConfig = org.mockito.Mockito.mock(VNPayConfig.class);
+        org.mockito.Mockito.when(mockConfig.getTmnCode()).thenReturn("TEST_TMN");
+        org.mockito.Mockito.when(mockConfig.getHashSecret()).thenReturn("SECRET_KEY_12345678901234567890");
+        org.mockito.Mockito.when(mockConfig.getQueryDrUrl()).thenReturn("https://sandbox.vnpayment.vn/merchant_webapi/api/transaction");
+
+        java.net.http.HttpClient mockHttpClient = org.mockito.Mockito.mock(java.net.http.HttpClient.class);
+        @SuppressWarnings("unchecked")
+        java.net.http.HttpResponse<String> mockResponse = org.mockito.Mockito.mock(java.net.http.HttpResponse.class);
+        org.mockito.Mockito.when(mockResponse.statusCode()).thenReturn(200);
+        org.mockito.Mockito.when(mockResponse.body()).thenReturn("{\"vnp_ResponseCode\":\"00\",\"vnp_TransactionStatus\":\"00\"}");
+        org.mockito.Mockito.doReturn(mockResponse).when(mockHttpClient).send(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+
+        VNPayPaymentProviderService providerService = new VNPayPaymentProviderService(mockConfig, new ObjectMapper(), mockHttpClient);
+
+        com.example.spabooking.payment.entity.Payment payment = new com.example.spabooking.payment.entity.Payment();
+        payment.setTxnRef("TIKEY-REF-12345");
+
+        var result = providerService.queryTransaction(payment, "127.0.0.1");
+        assertFalse(result.isSuccess());
+        assertEquals("97", result.getResponseCode());
+        assertTrue(result.getMessage().contains("chữ ký"));
+    }
+
+    @Test
+    @DisplayName("QueryDR rejects response with invalid secure hash")
+    void testQueryTransaction_InvalidSecureHash() throws Exception {
+        VNPayConfig mockConfig = org.mockito.Mockito.mock(VNPayConfig.class);
+        org.mockito.Mockito.when(mockConfig.getTmnCode()).thenReturn("TEST_TMN");
+        org.mockito.Mockito.when(mockConfig.getHashSecret()).thenReturn("SECRET_KEY_12345678901234567890");
+        org.mockito.Mockito.when(mockConfig.getQueryDrUrl()).thenReturn("https://sandbox.vnpayment.vn/merchant_webapi/api/transaction");
+
+        java.net.http.HttpClient mockHttpClient = org.mockito.Mockito.mock(java.net.http.HttpClient.class);
+        @SuppressWarnings("unchecked")
+        java.net.http.HttpResponse<String> mockResponse = org.mockito.Mockito.mock(java.net.http.HttpResponse.class);
+        org.mockito.Mockito.when(mockResponse.statusCode()).thenReturn(200);
+        org.mockito.Mockito.when(mockResponse.body()).thenReturn(
+                "{\"vnp_ResponseCode\":\"00\",\"vnp_TransactionStatus\":\"00\",\"vnp_SecureHash\":\"INVALID_HASH\"}");
+        org.mockito.Mockito.doReturn(mockResponse).when(mockHttpClient).send(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+
+        VNPayPaymentProviderService providerService = new VNPayPaymentProviderService(mockConfig, new ObjectMapper(), mockHttpClient);
+
+        com.example.spabooking.payment.entity.Payment payment = new com.example.spabooking.payment.entity.Payment();
+        payment.setTxnRef("TIKEY-REF-12345");
+
+        var result = providerService.queryTransaction(payment, "127.0.0.1");
+        assertFalse(result.isSuccess());
+        assertEquals("97", result.getResponseCode());
+    }
+
+    @Test
+    @DisplayName("QueryDR with valid signature and responseCode=00 returns success with transactionStatus")
+    void testQueryTransaction_ValidSignatureAndResponse00() throws Exception {
+        String secret = "SECRET_KEY_12345678901234567890";
+        VNPayConfig mockConfig = org.mockito.Mockito.mock(VNPayConfig.class);
+        org.mockito.Mockito.when(mockConfig.getTmnCode()).thenReturn("TEST_TMN");
+        org.mockito.Mockito.when(mockConfig.getHashSecret()).thenReturn(secret);
+        org.mockito.Mockito.when(mockConfig.getQueryDrUrl()).thenReturn("https://sandbox.vnpayment.vn/merchant_webapi/api/transaction");
+
+        // Format: vnp_ResponseId|vnp_Command|vnp_ResponseCode|vnp_Message|vnp_TmnCode|vnp_TxnRef|vnp_Amount|vnp_BankCode|vnp_PayDate|vnp_TransactionNo|vnp_TransactionType|vnp_TransactionStatus|vnp_OrderInfo
+        String hashData = "1|querydr|00|Success|TEST_TMN|TIKEY-REF-12345|50000000|NCB|20261008120000|998877|01|00|OrderInfo";
+        String validHash = VNPayConfig.hmacSHA512(secret, hashData);
+
+        String json = "{"
+                + "\"vnp_ResponseId\":\"1\","
+                + "\"vnp_Command\":\"querydr\","
+                + "\"vnp_ResponseCode\":\"00\","
+                + "\"vnp_Message\":\"Success\","
+                + "\"vnp_TmnCode\":\"TEST_TMN\","
+                + "\"vnp_TxnRef\":\"TIKEY-REF-12345\","
+                + "\"vnp_Amount\":\"50000000\","
+                + "\"vnp_BankCode\":\"NCB\","
+                + "\"vnp_PayDate\":\"20261008120000\","
+                + "\"vnp_TransactionNo\":\"998877\","
+                + "\"vnp_TransactionType\":\"01\","
+                + "\"vnp_TransactionStatus\":\"00\","
+                + "\"vnp_OrderInfo\":\"OrderInfo\","
+                + "\"vnp_SecureHash\":\"" + validHash + "\""
+                + "}";
+
+        java.net.http.HttpClient mockHttpClient = org.mockito.Mockito.mock(java.net.http.HttpClient.class);
+        @SuppressWarnings("unchecked")
+        java.net.http.HttpResponse<String> mockResponse = org.mockito.Mockito.mock(java.net.http.HttpResponse.class);
+        org.mockito.Mockito.when(mockResponse.statusCode()).thenReturn(200);
+        org.mockito.Mockito.when(mockResponse.body()).thenReturn(json);
+        org.mockito.Mockito.doReturn(mockResponse).when(mockHttpClient).send(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+
+        VNPayPaymentProviderService providerService = new VNPayPaymentProviderService(mockConfig, new ObjectMapper(), mockHttpClient);
+
+        com.example.spabooking.payment.entity.Payment payment = new com.example.spabooking.payment.entity.Payment();
+        payment.setTxnRef("TIKEY-REF-12345");
+
+        var result = providerService.queryTransaction(payment, "127.0.0.1");
+        assertTrue(result.isSuccess());
+        assertEquals("00", result.getResponseCode());
+        assertEquals("00", result.getTransactionStatus());
+        assertEquals("998877", result.getTransactionNo());
+        assertEquals("NCB", result.getBankCode());
+    }
+
+    @Test
+    @DisplayName("QueryDR with non-zero responseCode is treated as query failure, never as payment failure")
+    void testQueryTransaction_NonZeroResponseCode() throws Exception {
+        String secret = "SECRET_KEY_12345678901234567890";
+        VNPayConfig mockConfig = org.mockito.Mockito.mock(VNPayConfig.class);
+        org.mockito.Mockito.when(mockConfig.getTmnCode()).thenReturn("TEST_TMN");
+        org.mockito.Mockito.when(mockConfig.getHashSecret()).thenReturn(secret);
+        org.mockito.Mockito.when(mockConfig.getQueryDrUrl()).thenReturn("https://sandbox.vnpayment.vn/merchant_webapi/api/transaction");
+
+        // Response with responseCode=02 (invalid TmnCode)
+        String hashData = "1|querydr|02|Invalid TMN|TEST_TMN|TIKEY-REF-12345|||||||";
+        String validHash = VNPayConfig.hmacSHA512(secret, hashData);
+
+        String json = "{"
+                + "\"vnp_ResponseId\":\"1\","
+                + "\"vnp_Command\":\"querydr\","
+                + "\"vnp_ResponseCode\":\"02\","
+                + "\"vnp_Message\":\"Invalid TMN\","
+                + "\"vnp_TmnCode\":\"TEST_TMN\","
+                + "\"vnp_TxnRef\":\"TIKEY-REF-12345\","
+                + "\"vnp_SecureHash\":\"" + validHash + "\""
+                + "}";
+
+        java.net.http.HttpClient mockHttpClient = org.mockito.Mockito.mock(java.net.http.HttpClient.class);
+        @SuppressWarnings("unchecked")
+        java.net.http.HttpResponse<String> mockResponse = org.mockito.Mockito.mock(java.net.http.HttpResponse.class);
+        org.mockito.Mockito.when(mockResponse.statusCode()).thenReturn(200);
+        org.mockito.Mockito.when(mockResponse.body()).thenReturn(json);
+        org.mockito.Mockito.doReturn(mockResponse).when(mockHttpClient).send(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+
+        VNPayPaymentProviderService providerService = new VNPayPaymentProviderService(mockConfig, new ObjectMapper(), mockHttpClient);
+
+        com.example.spabooking.payment.entity.Payment payment = new com.example.spabooking.payment.entity.Payment();
+        payment.setTxnRef("TIKEY-REF-12345");
+
+        var result = providerService.queryTransaction(payment, "127.0.0.1");
+        assertFalse(result.isSuccess(), "Non-zero responseCode must be treated as query failure");
+        assertEquals("02", result.getResponseCode());
+        assertNull(result.getTransactionStatus());
+    }
 }
