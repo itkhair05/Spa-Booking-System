@@ -129,4 +129,27 @@ public class PublicApiControllerTest {
                 .content(crossTenantJson))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    public void testOptionsPublicEndpoint_Success() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/api/v1/public/spas/tikey-spa"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    public void testCreateBooking_InvalidPaymentMethodRejected() throws Exception {
+        String invalidPaymentMethodJson = "{"
+                + "\"serviceId\": 1,"
+                + "\"staffId\": 1,"
+                + "\"startTime\": \"2026-12-12T10:00:00\","
+                + "\"customerName\": \"Test Customer\","
+                + "\"customerPhone\": \"0912345678\","
+                + "\"paymentMethod\": \"UNSUPPORTED_CRYPTO\""
+                + "}";
+
+        mockMvc.perform(post("/api/v1/public/spas/tikey-spa/bookings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(invalidPaymentMethodJson))
+                .andExpect(status().isBadRequest());
+    }
 }

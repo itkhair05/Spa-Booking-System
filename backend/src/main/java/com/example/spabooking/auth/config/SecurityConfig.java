@@ -24,6 +24,8 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SecurityConfig.class);
+
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthEntryPointJwt unauthorizedHandler;
     private final com.example.spabooking.tenant.filter.TenantContextFilter tenantContextFilter;
@@ -55,11 +57,14 @@ public class SecurityConfig {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
         java.util.List<String> origins = java.util.Arrays.stream(allowedOriginsStr.split(","))
                 .map(String::trim)
+                .map(s -> s.replaceAll("^[\"']|[\"']$", ""))
+                .map(s -> s.replaceAll("/+$", ""))
                 .filter(s -> !s.isEmpty() && !"*".equals(s))
                 .toList();
+        logger.info("Configured CORS allowed origins: {}", origins);
         configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
+        configuration.setAllowedHeaders(java.util.List.of("*"));
         configuration.setExposedHeaders(java.util.List.of("Authorization"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
@@ -92,11 +97,14 @@ public class SecurityConfig {
                 .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))
             )
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/v1/auth/login").permitAll()
                 .requestMatchers("/api/v1/payments/vnpay-ipn", "/api/v1/payments/vnpay/ipn").permitAll()
                 .requestMatchers("/api/v1/public/**").permitAll()
                 .requestMatchers("/api/v1/uploads/**").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                .requestMatchers("/error").permitAll()
+                .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR, jakarta.servlet.DispatcherType.FORWARD).permitAll()
                 .anyRequest().authenticated()
             );
 
