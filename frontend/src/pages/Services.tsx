@@ -22,6 +22,7 @@ import { ServiceForm } from './ServiceForm';
 import RestrictedAccess from '../components/RestrictedAccess';
 import { Scissors, Trash2, Plus, Sparkles, FolderTree, X, Edit2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../app/auth/useAuth';
+import { resolveMediaUrl } from '../lib/api/apiConfig';
 
 const Services = () => {
   const { user } = useAuth();
@@ -292,7 +293,7 @@ const Services = () => {
               {service.imageUrl && (
                 <div className="h-36 w-full overflow-hidden bg-stone-100">
                   <img
-                    src={service.imageUrl}
+                    src={resolveMediaUrl(service.imageUrl)}
                     alt={service.name}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
