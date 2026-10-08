@@ -83,5 +83,13 @@ class ProductionConfigurationTest {
         String vnpQueryDrUrl = props.getProperty("vnpay.querydr-url");
         assertNotNull(vnpQueryDrUrl);
         assertFalse(vnpQueryDrUrl.contains("sandbox"), "Production VNPay QueryDR URL must not fall back to sandbox");
+
+        // Actuator health & observability configuration
+        assertEquals("health", props.getProperty("management.endpoints.web.exposure.include"));
+        assertEquals("true", props.getProperty("management.endpoint.health.probes.enabled"));
+        assertEquals("never", props.getProperty("management.endpoint.health.show-details"));
+        assertTrue(props.getProperty("management.endpoint.health.group.readiness.include").contains("db"));
+        assertEquals("livenessState", props.getProperty("management.endpoint.health.group.liveness.include"));
+        assertEquals("false", props.getProperty("management.info.env.enabled"));
     }
 }
