@@ -16,6 +16,7 @@ import { StaffScheduleModal } from './StaffScheduleModal';
 import { DailyScheduleView } from './DailyScheduleView';
 import { UserRound, Trash2, Plus, KeyRound, ShieldAlert, Check, Phone, Mail, Globe, Clock, Calendar } from 'lucide-react';
 import { useAuth } from '../app/auth/useAuth';
+import { resolveMediaUrl } from '../lib/api/apiConfig';
 
 const Staff = () => {
   const { user } = useAuth();
@@ -375,7 +376,7 @@ const Staff = () => {
                         <div className="w-12 h-12 rounded-full overflow-hidden border border-[#c6d8c9] bg-stone-100 shrink-0 flex items-center justify-center">
                           {member.avatarUrl ? (
                             <img
-                              src={member.avatarUrl}
+                              src={resolveMediaUrl(member.avatarUrl)}
                               alt={member.name}
                               className="w-full h-full object-cover"
                             />

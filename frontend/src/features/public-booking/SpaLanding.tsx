@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { getPublicServices, getPublicStaff, getPublicArticles, getPublicReviews } from '../../lib/api/publicBooking';
 import { submitPublicFeedback } from '../../lib/api/feedback';
 import { formatCurrency } from '../../lib/format';
+import { resolveMediaUrl } from '../../lib/api/apiConfig';
 import type {
   PublicSpaInfoResponse,
   PublicServiceResponse,
@@ -585,7 +586,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                     {service.imageUrl && (
                       <div className="h-44 w-full overflow-hidden bg-stone-100">
                         <img
-                          src={service.imageUrl}
+                          src={resolveMediaUrl(service.imageUrl)}
                           alt={service.name}
                           loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -688,7 +689,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
             <div className="flex items-center gap-4 mb-4">
               {selectedServiceDetail.imageUrl && (
                 <img
-                  src={selectedServiceDetail.imageUrl}
+                  src={resolveMediaUrl(selectedServiceDetail.imageUrl)}
                   alt={selectedServiceDetail.name}
                   className="w-16 h-16 rounded-2xl object-cover border border-stone-200 shrink-0"
                 />
@@ -805,7 +806,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                     >
                       {member.avatarUrl ? (
                         <img
-                          src={member.avatarUrl}
+                          src={resolveMediaUrl(member.avatarUrl)}
                           alt={member.name}
                           loading="lazy"
                           className="w-full h-full object-cover"
@@ -922,7 +923,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
             {readingArticle.coverImage && (
               <div className="rounded-2xl overflow-hidden mb-6 border border-stone-200 max-h-72">
                 <img
-                  src={readingArticle.coverImage}
+                  src={resolveMediaUrl(readingArticle.coverImage)}
                   alt={readingArticle.title}
                   className="w-full h-full object-cover"
                 />

@@ -8,6 +8,7 @@ import { getServiceCategories } from '../lib/api/serviceCategories';
 import type { Service, CreateServiceRequest, UpdateServiceRequest } from '../types/service';
 import type { ServiceCategory } from '../types/serviceCategory';
 import { Upload, Trash2, Image as ImageIcon, Sparkles, Plus, GripVertical } from 'lucide-react';
+import { resolveMediaUrl } from '../lib/api/apiConfig';
 
 interface ServiceFormProps {
   service?: Service; // if undefined, it's create mode
@@ -197,7 +198,7 @@ export const ServiceForm = ({ service, categories: initialCategories, onSuccess,
                 {imagePreview ? (
                   <img src={imagePreview} alt="Xem trước" className="w-full h-full object-cover" />
                 ) : currentImageUrl ? (
-                  <img src={currentImageUrl} alt="Dịch vụ" className="w-full h-full object-cover" />
+                  <img src={resolveMediaUrl(currentImageUrl)} alt="Dịch vụ" className="w-full h-full object-cover" />
                 ) : (
                   <ImageIcon className="w-8 h-8 text-stone-400" />
                 )}

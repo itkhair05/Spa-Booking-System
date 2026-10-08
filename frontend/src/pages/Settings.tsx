@@ -10,6 +10,7 @@ import { useAuth } from '../app/auth/useAuth';
 import { getBusinessProfile, updateBusinessProfile } from '../lib/api/businessProfile';
 import { getMyProfile, updateMyProfile, uploadMyAvatar, deleteMyAvatar } from '../lib/api/staff';
 import { changePassword } from '../lib/api/auth';
+import { resolveMediaUrl } from '../lib/api/apiConfig';
 import type { BusinessProfileResponse } from '../types/businessProfile';
 import type { Staff } from '../types/staff';
 import {
@@ -453,7 +454,7 @@ const Settings = () => {
                           />
                         ) : staffProfile?.avatarUrl ? (
                           <img
-                            src={staffProfile.avatarUrl}
+                            src={resolveMediaUrl(staffProfile.avatarUrl)}
                             alt={staffProfile.name || 'Ảnh đại diện'}
                             className="w-full h-full object-cover"
                           />
