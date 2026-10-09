@@ -34,11 +34,14 @@ public class FileStorageService {
     public FileStorageService(@Value("${app.upload.dir:uploads}") String uploadDir) {
         this.rootLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
         try {
+            Files.createDirectories(this.rootLocation);
             Files.createDirectories(this.rootLocation.resolve("avatars"));
             Files.createDirectories(this.rootLocation.resolve("services"));
             Files.createDirectories(this.rootLocation.resolve("articles"));
+            logger.info("Upload storage initialized at: {} (writable: {})",
+                    this.rootLocation, Files.isWritable(this.rootLocation));
         } catch (IOException e) {
-            logger.warn("Could not pre-create upload directories: {}", e.getMessage());
+            logger.warn("Could not pre-create upload directories under {}: {}", this.rootLocation, e.getMessage());
         }
     }
 
