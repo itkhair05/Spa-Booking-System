@@ -238,7 +238,7 @@ public class VNPayIpnAndQueryDrIntegrationTest {
                         hashData.append('&');
                     }
                     hashData.append(fieldName).append('=')
-                            .append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
+                            .append(URLEncoder.encode(fieldValue, StandardCharsets.UTF_8.toString()));
                 }
             }
             return VNPayConfig.hmacSHA512(secret, hashData.toString());

@@ -89,11 +89,13 @@ class ProductionConfigurationTest {
 
         String vnpPaymentUrl = props.getProperty("vnpay.payment-url");
         assertNotNull(vnpPaymentUrl);
-        assertFalse(vnpPaymentUrl.contains("sandbox"), "Production VNPay payment URL must not fall back to sandbox");
+        assertTrue(vnpPaymentUrl.contains("sandbox.vnpayment.vn"), "Production VNPay payment URL must default to Sandbox, never Live");
+        assertFalse(vnpPaymentUrl.contains("https://vnpayment.vn"), "Production VNPay payment URL must never point to Live VNPay");
 
         String vnpQueryDrUrl = props.getProperty("vnpay.querydr-url");
         assertNotNull(vnpQueryDrUrl);
-        assertFalse(vnpQueryDrUrl.contains("sandbox"), "Production VNPay QueryDR URL must not fall back to sandbox");
+        assertTrue(vnpQueryDrUrl.contains("sandbox.vnpayment.vn"), "Production VNPay QueryDR URL must default to Sandbox, never Live");
+        assertFalse(vnpQueryDrUrl.contains("https://vnpayment.vn"), "Production VNPay QueryDR URL must never point to Live VNPay");
 
         // Actuator health & observability configuration
         assertEquals("health", props.getProperty("management.endpoints.web.exposure.include"));
