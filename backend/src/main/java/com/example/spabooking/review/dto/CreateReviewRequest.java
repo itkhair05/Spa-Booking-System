@@ -2,27 +2,32 @@ package com.example.spabooking.review.dto;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public class UpdateReviewRequest {
+public class CreateReviewRequest {
 
+    @NotBlank(message = "Tên khách hàng không được để trống")
     @Size(max = 255, message = "Tên khách hàng không được vượt quá 255 ký tự")
     private String customerName;
 
+    @NotNull(message = "Số sao đánh giá không được để trống")
     @Min(value = 1, message = "Đánh giá tối thiểu 1 sao")
     @Max(value = 5, message = "Đánh giá tối đa 5 sao")
-    private Integer rating;
+    private Integer rating = 5;
 
+    @NotBlank(message = "Nội dung đánh giá không được để trống")
     private String comment;
 
     @Size(max = 255, message = "Tên dịch vụ không được vượt quá 255 ký tự")
     private String serviceName;
 
-    private Boolean isPublished;
+    private Boolean isPublished = false;
 
-    private Boolean isDemo;
+    private Boolean isDemo = false;
 
-    private Integer displayOrder;
+    private Integer displayOrder = 0;
 
     public String getCustomerName() {
         return customerName;
