@@ -106,12 +106,8 @@ class ProductionConfigurationTest {
         assertEquals("false", props.getProperty("management.info.env.enabled"));
 
         // Mail configuration must be purely environment-driven and contain no hardcoded credentials
-        assertNotNull(props.getProperty("spring.mail.host"));
-        assertTrue(props.getProperty("spring.mail.host").contains("${SPRING_MAIL_HOST"));
-        assertNotNull(props.getProperty("spring.mail.username"));
-        assertTrue(props.getProperty("spring.mail.username").contains("${SPRING_MAIL_USERNAME"));
-        assertNotNull(props.getProperty("spring.mail.password"));
-        assertTrue(props.getProperty("spring.mail.password").contains("${SPRING_MAIL_PASSWORD"));
+        assertNotNull(props.getProperty("resend.api-key"));
+        assertTrue(props.getProperty("resend.api-key").contains("${RESEND_API_KEY"));
         assertNotNull(props.getProperty("app.mail.from-address"));
         assertTrue(props.getProperty("app.mail.from-address").contains("${APP_MAIL_FROM_ADDRESS"));
     }
