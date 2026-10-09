@@ -279,13 +279,13 @@ export default function BookingResultPage() {
             )}
 
             {/* Booking Code Highlight Box */}
-            <div className="inline-flex flex-wrap items-center justify-center gap-3 bg-stone-50 border border-stone-200/90 px-5 py-2.5 rounded-2xl mt-4 shadow-2xs">
+            <div className="inline-flex flex-wrap items-center justify-center gap-3 bg-stone-50 border border-stone-200/90 px-5 py-2.5 rounded-2xl mt-4 shadow-2xs max-w-full">
               <span className="text-xs uppercase tracking-wider font-semibold text-stone-500">Mã lịch hẹn:</span>
-              <span className="font-mono text-lg font-bold text-stone-900 tracking-wide">{booking.bookingCode}</span>
+              <span className="font-mono text-lg font-bold text-stone-900 tracking-wide break-all">{booking.bookingCode}</span>
               <button
                 type="button"
                 onClick={handleCopyCode}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-stone-600 hover:text-stone-900 hover:bg-white rounded-lg border border-stone-200 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-3 py-2 min-h-11 text-xs font-medium text-stone-600 hover:text-stone-900 hover:bg-white rounded-lg border border-stone-200 transition-colors cursor-pointer"
                 title="Sao chép mã"
               >
                 {copied ? (

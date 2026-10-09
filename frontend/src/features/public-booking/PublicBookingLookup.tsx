@@ -301,7 +301,7 @@ export function PublicBookingLookup({ slug, spaName, spaPhone, defaultCode = '' 
                 if (error) setError(null);
               }}
               placeholder="Nhập mã lịch hẹn (VD: BK-9C4B7D2F...)"
-              className="w-full h-11 sm:h-12 pl-4 pr-10 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-sm font-mono focus:outline-none focus:bg-white focus:border-[#465d4c] focus:ring-2 focus:ring-[#465d4c]/15 transition-all"
+              className="w-full h-11 sm:h-12 pl-4 pr-12 rounded-xl bg-stone-50 border border-stone-200 text-stone-900 text-base sm:text-sm font-mono focus:outline-none focus:bg-white focus:border-[#465d4c] focus:ring-2 focus:ring-[#465d4c]/15 transition-all"
               aria-label="Mã lịch hẹn"
               disabled={loading}
             />
@@ -309,7 +309,7 @@ export function PublicBookingLookup({ slug, spaName, spaPhone, defaultCode = '' 
               <button
                 type="button"
                 onClick={handleClear}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400 hover:text-stone-700 cursor-pointer"
+                className="absolute right-2 top-1/2 -translate-y-1/2 min-h-11 min-w-11 flex items-center justify-center text-xs text-stone-400 hover:text-stone-700 cursor-pointer"
               >
                 Xóa
               </button>
@@ -355,13 +355,13 @@ export function PublicBookingLookup({ slug, spaName, spaPhone, defaultCode = '' 
                   Mã lịch hẹn khách hàng
                 </span>
                 <div className="flex items-center gap-2.5 mt-0.5">
-                  <span className="font-mono font-bold text-xl sm:text-2xl text-stone-900 select-all">
+                  <span className="font-mono font-bold text-xl sm:text-2xl text-stone-900 select-all break-all">
                     {result.bookingCode}
                   </span>
                   <button
                     type="button"
                     onClick={() => handleCopy(result.bookingCode)}
-                    className="p-1.5 rounded-lg hover:bg-stone-200 text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
+                    className="p-2 min-h-11 min-w-11 flex items-center justify-center rounded-lg hover:bg-stone-200 text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
                     title="Sao chép mã"
                     aria-label="Sao chép mã"
                   >
