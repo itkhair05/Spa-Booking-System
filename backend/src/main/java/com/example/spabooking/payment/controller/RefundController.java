@@ -18,10 +18,19 @@ public class RefundController {
 
     private final RefundService refundService;
     private final BookingService bookingService;
+    private final com.example.spabooking.common.ratelimit.ClientIpResolver clientIpResolver;
 
-    public RefundController(RefundService refundService, BookingService bookingService) {
+    @org.springframework.beans.factory.annotation.Autowired
+    public RefundController(RefundService refundService,
+                            BookingService bookingService,
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) com.example.spabooking.common.ratelimit.ClientIpResolver clientIpResolver) {
         this.refundService = refundService;
         this.bookingService = bookingService;
+        this.clientIpResolver = clientIpResolver;
+    }
+
+    public RefundController(RefundService refundService, BookingService bookingService) {
+        this(refundService, bookingService, null);
     }
 
     @GetMapping("/refund-eligibility")
@@ -40,7 +49,7 @@ public class RefundController {
             @PathVariable Long bookingId,
             @RequestBody(required = false) InitiateRefundRequest request,
             HttpServletRequest httpServletRequest) {
-        String clientIp = httpServletRequest.getRemoteAddr();
+        String clientIp = clientIpResolver != null ? clientIpResolver.resolveClientIp(httpServletRequest) : httpServletRequest.getRemoteAddr();
         String reason = request != null ? request.getReason() : null;
         RefundResponse response = refundService.initiateRefund(bookingId, reason, clientIp);
         return ResponseEntity.ok(response);
