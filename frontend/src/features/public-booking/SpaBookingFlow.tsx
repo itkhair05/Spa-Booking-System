@@ -241,18 +241,18 @@ export function SpaBookingFlow({ slug, spa }: SpaBookingFlowProps) {
     <SpaBookingContext.Provider value={contextValue}>
       <div className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden">
         {state.step < 6 && (
-          <div className="bg-stone-50 border-b border-stone-100 px-6 py-4 flex items-center justify-between">
-            <div className="flex gap-2" aria-hidden="true">
+          <div className="bg-stone-50 border-b border-stone-100 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex gap-1.5 sm:gap-2 w-full sm:w-auto" aria-hidden="true">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div
                   key={i}
-                  className={`h-1.5 w-8 rounded-full transition-colors ${
+                  className={`h-1.5 flex-1 sm:flex-initial sm:w-8 rounded-full transition-colors ${
                     i <= state.step ? 'bg-stone-800' : 'bg-stone-200'
                   }`}
                 />
               ))}
             </div>
-            <span className="text-sm font-medium text-stone-500">
+            <span className="text-xs sm:text-sm font-medium text-stone-500">
               Bước {state.step} / 5 &middot; {STEP_LABELS[state.step - 1]}
             </span>
           </div>

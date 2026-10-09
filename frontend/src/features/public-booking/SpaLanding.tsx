@@ -321,7 +321,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
             {/* Mobile menu button */}
             <button
               type="button"
-              className="lg:hidden p-2 text-stone-600 hover:text-stone-900 focus:outline-none"
+              className="lg:hidden p-2 min-w-11 min-h-11 flex items-center justify-center text-stone-600 hover:text-stone-900 rounded-lg focus:outline-none"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Mở menu chuyển trang"
             >
@@ -1123,7 +1123,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                           value={fbName}
                           onChange={(e) => setFbName(e.target.value)}
                           placeholder="Nguyễn Văn A"
-                          className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#465d4c]/30 focus:border-[#465d4c]"
+                          className="w-full px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#465d4c]/30 focus:border-[#465d4c]"
                         />
                       </div>
 
@@ -1138,7 +1138,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                           value={fbPhone}
                           onChange={(e) => setFbPhone(e.target.value)}
                           placeholder="0912 345 678"
-                          className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#465d4c]/30 focus:border-[#465d4c]"
+                          className="w-full px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#465d4c]/30 focus:border-[#465d4c]"
                         />
                       </div>
                     </div>
@@ -1154,7 +1154,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                           value={fbEmail}
                           onChange={(e) => setFbEmail(e.target.value)}
                           placeholder="email@example.com"
-                          className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#465d4c]/30 focus:border-[#465d4c]"
+                          className="w-full px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#465d4c]/30 focus:border-[#465d4c]"
                         />
                       </div>
 
@@ -1166,7 +1166,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                           id="fb-type"
                           value={fbType}
                           onChange={(e) => setFbType(e.target.value as FeedbackType)}
-                          className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#465d4c]/30 focus:border-[#465d4c]"
+                          className="w-full px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#465d4c]/30 focus:border-[#465d4c]"
                         >
                           <option value="SUGGESTION">Góp ý cải thiện dịch vụ</option>
                           <option value="COMPLAINT">Khiếu nại / Chưa hài lòng</option>
@@ -1186,7 +1186,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                         value={fbBookingCode}
                         onChange={(e) => setFbBookingCode(e.target.value)}
                         placeholder="Ví dụ: TK-ABCDE"
-                        className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-stone-300 bg-white uppercase font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-[#465d4c]/30 focus:border-[#465d4c]"
+                        className="w-full px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-stone-300 bg-white uppercase font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-[#465d4c]/30 focus:border-[#465d4c]"
                       />
                     </div>
 
@@ -1201,7 +1201,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                         value={fbMessage}
                         onChange={(e) => setFbMessage(e.target.value)}
                         placeholder="Quý khách vui lòng mô tả chi tiết trải nghiệm hoặc góp ý để chúng tôi hỗ trợ tốt nhất..."
-                        className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#465d4c]/30 focus:border-[#465d4c]"
+                        className="w-full px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#465d4c]/30 focus:border-[#465d4c]"
                       />
                     </div>
 
