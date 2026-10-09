@@ -12,8 +12,12 @@ import com.example.spabooking.tenant.context.TenantContext;
 import com.example.spabooking.payment.dto.ProviderQueryResult;
 import com.example.spabooking.payment.dto.ReconciliationResponse;
 import com.example.spabooking.payment.dto.VNPayIpnResponse;
+import com.example.spabooking.booking.enums.BookingStatus;
+import com.example.spabooking.booking.repository.BookingRepository;
+import com.example.spabooking.notification.event.BookingConfirmedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,16 +36,28 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final VNPayService vnPayService;
     private final PaymentProviderService paymentProviderService;
+    private final BookingRepository bookingRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @org.springframework.beans.factory.annotation.Autowired
-    public PaymentService(PaymentRepository paymentRepository, VNPayService vnPayService, PaymentProviderService paymentProviderService) {
+    public PaymentService(PaymentRepository paymentRepository,
+                          VNPayService vnPayService,
+                          PaymentProviderService paymentProviderService,
+                          @org.springframework.beans.factory.annotation.Autowired(required = false) BookingRepository bookingRepository,
+                          @org.springframework.beans.factory.annotation.Autowired(required = false) ApplicationEventPublisher eventPublisher) {
         this.paymentRepository = paymentRepository;
         this.vnPayService = vnPayService;
         this.paymentProviderService = paymentProviderService;
+        this.bookingRepository = bookingRepository;
+        this.eventPublisher = eventPublisher;
+    }
+
+    public PaymentService(PaymentRepository paymentRepository, VNPayService vnPayService, PaymentProviderService paymentProviderService) {
+        this(paymentRepository, vnPayService, paymentProviderService, null, null);
     }
 
     public PaymentService(PaymentRepository paymentRepository, VNPayService vnPayService) {
-        this(paymentRepository, vnPayService, null);
+        this(paymentRepository, vnPayService, null, null, null);
     }
 
     @Transactional
@@ -142,6 +158,8 @@ public class PaymentService {
             payment.setResponseCode(responseCode);
             paymentRepository.save(payment);
 
+            confirmBookingOnPaymentSuccess(payment);
+
             return new VNPayCallbackResult(true, "Thanh toán VNPay thành công",
                     payment.getBooking().getBookingCode(), txnRef, payment.getAmount(),
                     payment.getStatus().name(), responseCode, transactionNo, payment.getPaidAt());
@@ -237,6 +255,8 @@ public class PaymentService {
             payment.setResponseCode(responseCode);
             paymentRepository.save(payment);
 
+            confirmBookingOnPaymentSuccess(payment);
+
             log.info("VNPay IPN payment success confirmed: payment id={}, txnRef={}, vnpTxnNo={}",
                     payment.getId(), txnRef, transactionNo);
             return new VNPayIpnResponse("00", "Confirm Success");
@@ -320,6 +340,8 @@ public class PaymentService {
                 }
                 paymentRepository.save(payment);
 
+                confirmBookingOnPaymentSuccess(payment);
+
                 log.info("VNPay QueryDR reconciled payment id={} from {} to PAID", payment.getId(), localStatusBefore);
                 return new ReconciliationResponse(
                         payment.getId(), payment.getTxnRef(), localStatusBefore, payment.getStatus().name(),
@@ -395,6 +417,31 @@ public class PaymentService {
                         LocalDateTime.now()
                 );
             }
+        }
+    }
+
+    private void confirmBookingOnPaymentSuccess(Payment payment) {
+        if (payment == null || payment.getBooking() == null) {
+            return;
+        }
+        Booking booking = payment.getBooking();
+        boolean shouldPublishEvent = false;
+
+        if (booking.getStatus() == BookingStatus.PENDING) {
+            booking.setStatus(BookingStatus.CONFIRMED);
+            if (booking.getConfirmedAt() == null) {
+                booking.setConfirmedAt(LocalDateTime.now());
+            }
+            if (bookingRepository != null) {
+                booking = bookingRepository.save(booking);
+            }
+            shouldPublishEvent = true;
+        } else if (booking.getStatus() == BookingStatus.CONFIRMED && booking.getConfirmationEmailSentAt() == null) {
+            shouldPublishEvent = true;
+        }
+
+        if (shouldPublishEvent && eventPublisher != null) {
+            eventPublisher.publishEvent(new BookingConfirmedEvent(booking.getId()));
         }
     }
 }
