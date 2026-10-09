@@ -28,22 +28,22 @@ import com.example.spabooking.staff.repository.StaffRepository;
 import com.example.spabooking.tenant.context.TenantContext;
 import com.example.spabooking.tenant.entity.Tenant;
 import com.example.spabooking.tenant.repository.TenantRepository;
-import jakarta.mail.Session;
-import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.mail.MailSendException;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -54,8 +54,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest(properties = {
-        "spring.mail.host=smtp.test.com",
-        "spring.mail.port=587",
+        "resend.api-key=re_test_dummy_key_12345",
         "app.mail.enabled=true",
         "app.mail.from-address=noreply@tikeyspa.com",
         "app.mail.from-name=TIKEY SPA",
@@ -66,7 +65,7 @@ class BookingEmailIntegrationTest {
     private static final ZoneId VIETNAM_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     @MockitoBean
-    private JavaMailSender mailSender;
+    private HttpClient httpClient;
 
     @Autowired
     private TenantRepository tenantRepository;
@@ -116,9 +115,12 @@ class BookingEmailIntegrationTest {
     private Customer customer;
 
     @BeforeEach
-    void setUp() {
-        MimeMessage mimeMessage = new MimeMessage(Session.getInstance(new Properties()));
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+    @SuppressWarnings("unchecked")
+    void setUp() throws Exception {
+        HttpResponse<String> okResponse = mock(HttpResponse.class);
+        when(okResponse.statusCode()).thenReturn(200);
+        when(okResponse.body()).thenReturn("{\"id\":\"re_test_email_123\"}");
+        doReturn(okResponse).when(httpClient).send(any(HttpRequest.class), any());
 
         tenant = new Tenant();
         tenant.setName("TIKEY SPA Test");
@@ -166,7 +168,7 @@ class BookingEmailIntegrationTest {
 
     @Test
     @DisplayName("Created booking with PENDING status does NOT send confirmation email")
-    void testCreatedBooking_noEmailSentWhenPending() {
+    void testCreatedBooking_noEmailSentWhenPending() throws Exception {
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
         Booking created = txTemplate.execute(status -> {
             CreateBookingRequest request = new CreateBookingRequest();
@@ -181,12 +183,12 @@ class BookingEmailIntegrationTest {
         assertNotNull(created);
         assertEquals(BookingStatus.PENDING, created.getStatus());
         assertNull(created.getConfirmationEmailSentAt());
-        verify(mailSender, never()).send(any(MimeMessage.class));
+        verify(httpClient, never()).send(any(HttpRequest.class), any());
     }
 
     @Test
     @DisplayName("Confirming booking via bookingService sends email and avoids duplicate on re-confirm")
-    void testConfirmBooking_sendsEmailAndPreventsDuplicate() {
+    void testConfirmBooking_sendsEmailAndPreventsDuplicate() throws Exception {
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
         Booking booking = txTemplate.execute(status -> {
             CreateBookingRequest request = new CreateBookingRequest();
@@ -206,7 +208,7 @@ class BookingEmailIntegrationTest {
         });
 
         // Verify email was sent and delivery state recorded
-        verify(mailSender, times(1)).send(any(MimeMessage.class));
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
 
         Booking confirmed = bookingRepository.findById(booking.getId()).orElseThrow();
         assertEquals(BookingStatus.CONFIRMED, confirmed.getStatus());
@@ -218,12 +220,12 @@ class BookingEmailIntegrationTest {
         });
 
         // Ensure mail was NOT sent again
-        verify(mailSender, times(1)).send(any(MimeMessage.class));
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
     }
 
     @Test
     @DisplayName("VNPay callback marks payment PAID, confirms booking, sends email, and ignores duplicate IPN")
-    void testVNPayCallbackAndIpn_sendsEmailOnce() {
+    void testVNPayCallbackAndIpn_sendsEmailOnce() throws Exception {
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
 
         Booking booking = txTemplate.execute(status -> {
@@ -273,7 +275,7 @@ class BookingEmailIntegrationTest {
         assertNotNull(confirmedBooking.getConfirmationEmailSentAt());
 
         // Email should have been sent once
-        verify(mailSender, times(1)).send(any(MimeMessage.class));
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
 
         // Now simulate duplicate IPN arriving
         txTemplate.executeWithoutResult(status -> {
@@ -281,12 +283,12 @@ class BookingEmailIntegrationTest {
         });
 
         // Email should still only have been sent once!
-        verify(mailSender, times(1)).send(any(MimeMessage.class));
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
     }
 
     @Test
     @DisplayName("Reminder scheduler sends reminder to confirmed booking within 1h window and skips cancelled/completed")
-    void testReminderScheduler_eligibleBookingsOnly() {
+    void testReminderScheduler_eligibleBookingsOnly() throws Exception {
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
 
         LocalDateTime nowInVn = LocalDateTime.now(VIETNAM_ZONE);
@@ -340,13 +342,13 @@ class BookingEmailIntegrationTest {
         });
 
         // Reset mock invocation count from previous setup
-        clearInvocations(mailSender);
+        clearInvocations(httpClient);
 
         // Run scheduler
         reminderScheduler.sendUpcomingAppointmentReminders();
 
         // Verify email was sent only for eligible booking
-        verify(mailSender, times(1)).send(any(MimeMessage.class));
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
 
         Booking refreshedEligible = bookingRepository.findById(eligibleBooking.getId()).orElseThrow();
         assertTrue(refreshedEligible.getIsReminded());
@@ -360,12 +362,13 @@ class BookingEmailIntegrationTest {
 
         // Run scheduler a 2nd time -> verify no duplicate reminder is sent
         reminderScheduler.sendUpcomingAppointmentReminders();
-        verify(mailSender, times(1)).send(any(MimeMessage.class));
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
     }
 
     @Test
-    @DisplayName("Reminder scheduler retries on SMTP failure without premature mark")
-    void testReminderScheduler_retryOnFailure() {
+    @DisplayName("Reminder scheduler retries on HTTP failure without premature mark")
+    @SuppressWarnings("unchecked")
+    void testReminderScheduler_retryOnFailure() throws Exception {
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
         LocalDateTime nowInVn = LocalDateTime.now(VIETNAM_ZONE);
 
@@ -384,19 +387,25 @@ class BookingEmailIntegrationTest {
             return bookingRepository.save(b);
         });
 
-        clearInvocations(mailSender);
+        clearInvocations(httpClient);
 
-        // Simulate SMTP failure on first try
-        doThrow(new MailSendException("SMTP temporary network issue")).when(mailSender).send(any(MimeMessage.class));
+        // Simulate HTTP failure on first try
+        HttpResponse<String> errResponse = mock(HttpResponse.class);
+        when(errResponse.statusCode()).thenReturn(500);
+        when(errResponse.body()).thenReturn("{\"message\":\"Internal server error\"}");
+        doReturn(errResponse).when(httpClient).send(any(HttpRequest.class), any());
 
         reminderScheduler.sendUpcomingAppointmentReminders();
 
         Booking check1 = bookingRepository.findById(booking.getId()).orElseThrow();
-        assertFalse(check1.getIsReminded(), "isReminded must NOT be set prematurely on SMTP failure");
+        assertFalse(check1.getIsReminded(), "isReminded must NOT be set prematurely on HTTP failure");
         assertNull(check1.getRemindedAt());
 
-        // On second run, SMTP recovers
-        doNothing().when(mailSender).send(any(MimeMessage.class));
+        // On second run, HTTP recovers
+        HttpResponse<String> okResponse = mock(HttpResponse.class);
+        when(okResponse.statusCode()).thenReturn(200);
+        when(okResponse.body()).thenReturn("{\"id\":\"re_retry_ok\"}");
+        doReturn(okResponse).when(httpClient).send(any(HttpRequest.class), any());
 
         reminderScheduler.sendUpcomingAppointmentReminders();
 
@@ -407,7 +416,7 @@ class BookingEmailIntegrationTest {
 
     @Test
     @DisplayName("Updating booking status to CONFIRMED via updateStatus sends confirmation email")
-    void testUpdateStatusConfirmed_sendsEmail() {
+    void testUpdateStatusConfirmed_sendsEmail() throws Exception {
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
         Booking booking = txTemplate.execute(status -> {
             CreateBookingRequest request = new CreateBookingRequest();
@@ -420,7 +429,7 @@ class BookingEmailIntegrationTest {
         });
 
         assertNotNull(booking);
-        clearInvocations(mailSender);
+        clearInvocations(httpClient);
 
         txTemplate.executeWithoutResult(status -> {
             UpdateBookingStatusRequest statusReq = new UpdateBookingStatusRequest();
@@ -428,7 +437,7 @@ class BookingEmailIntegrationTest {
             bookingService.updateStatus(booking.getId(), statusReq);
         });
 
-        verify(mailSender, times(1)).send(any(MimeMessage.class));
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
 
         Booking confirmed = bookingRepository.findById(booking.getId()).orElseThrow();
         assertEquals(BookingStatus.CONFIRMED, confirmed.getStatus());
@@ -530,7 +539,7 @@ class BookingEmailIntegrationTest {
 
     @Test
     @DisplayName("Database-backed claim prevents duplicate reminder emails across concurrent calls")
-    void testConcurrentReminderClaim_preventsDuplicateEmail() {
+    void testConcurrentReminderClaim_preventsDuplicateEmail() throws Exception {
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
         LocalDateTime nowInVn = LocalDateTime.now(VIETNAM_ZONE);
 
@@ -550,13 +559,13 @@ class BookingEmailIntegrationTest {
         });
 
         assertNotNull(booking);
-        clearInvocations(mailSender);
+        clearInvocations(httpClient);
 
         // Instance 1 processes reminder
         bookingNotificationService.processAppointmentReminder(booking.getId());
 
         // Verify sent once
-        verify(mailSender, times(1)).send(any(MimeMessage.class));
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
 
         Booking afterFirst = bookingRepository.findById(booking.getId()).orElseThrow();
         assertTrue(afterFirst.getIsReminded());
@@ -565,8 +574,8 @@ class BookingEmailIntegrationTest {
         // Instance 2 (or second concurrent run) processes the same booking
         bookingNotificationService.processAppointmentReminder(booking.getId());
 
-        // Verify mailSender was NOT called a second time
-        verify(mailSender, times(1)).send(any(MimeMessage.class));
+        // Verify httpClient was NOT called a second time
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
     }
 
     private String calculateVNPayHash(Map<String, String> fields, String secret) {
