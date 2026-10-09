@@ -1,11 +1,13 @@
 package com.example.spabooking.review.controller;
 
+import com.example.spabooking.review.dto.CreateReviewRequest;
 import com.example.spabooking.review.dto.ReviewResponse;
 import com.example.spabooking.review.dto.UpdateReviewRequest;
 import com.example.spabooking.review.entity.Review;
 import com.example.spabooking.review.service.ReviewService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -39,6 +41,13 @@ public class ReviewController {
     public ResponseEntity<ReviewResponse> getById(@PathVariable Long id) {
         Review review = reviewService.findById(id);
         return ResponseEntity.ok(ReviewResponse.fromEntity(review));
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<ReviewResponse> create(@Valid @RequestBody CreateReviewRequest request) {
+        Review created = reviewService.create(request);
+        return new ResponseEntity<>(ReviewResponse.fromEntity(created), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")

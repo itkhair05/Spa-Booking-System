@@ -11,8 +11,22 @@ export interface Review {
   updatedAt: string;
 }
 
-export interface UpdateReviewRequest {
+export interface CreateReviewRequest {
+  customerName: string;
+  rating: number;
+  comment: string;
+  serviceName?: string | null;
   isPublished?: boolean;
+  isDemo?: boolean;
   displayOrder?: number;
+}
+
+export interface UpdateReviewRequest {
+  customerName?: string;
+  rating?: number;
   comment?: string;
+  serviceName?: string | null;
+  isPublished?: boolean;
+  isDemo?: boolean;
+  displayOrder?: number;
 }
