@@ -10,20 +10,23 @@ import com.example.spabooking.payment.enums.PaymentStatus;
 import com.example.spabooking.service.entity.Service;
 import com.example.spabooking.staff.entity.Staff;
 import com.example.spabooking.tenant.entity.Tenant;
-import jakarta.mail.Session;
-import jakarta.mail.internet.MimeMessage;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mail.MailSendException;
-import org.springframework.mail.javamail.JavaMailSender;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.time.LocalDateTime;
-import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,21 +36,27 @@ import static org.mockito.Mockito.*;
 class EmailServiceTest {
 
     @Mock
-    private JavaMailSender mailSender;
+    private HttpClient httpClient;
+
+    @Mock
+    private HttpResponse<String> httpResponse;
 
     private EmailProperties emailProperties;
+    private ObjectMapper objectMapper;
     private EmailService emailService;
 
     @BeforeEach
     void setUp() {
         emailProperties = new EmailProperties();
         emailProperties.setEnabled(true);
-        emailProperties.setHost("smtp.example.com");
-        emailProperties.setPort(587);
-        emailProperties.setFromAddress("contact@tikeyspa.com");
+        emailProperties.setResendApiKey("re_test_dummy_key_12345");
+        emailProperties.setResendApiUrl("https://api.resend.com/emails");
+        emailProperties.setTimeoutSeconds(10);
+        emailProperties.setFromAddress("booking@tikeyspa.com");
         emailProperties.setFromName("TIKEY SPA");
 
-        emailService = new EmailService(mailSender, emailProperties);
+        objectMapper = new ObjectMapper();
+        emailService = new EmailService(emailProperties, objectMapper, httpClient);
     }
 
     private Booking createSampleBooking() {
@@ -84,23 +93,16 @@ class EmailServiceTest {
     }
 
     @Test
-    @DisplayName("isConfigured returns false when mailSender is null")
-    void testIsConfigured_nullMailSender() {
-        EmailService service = new EmailService(null, emailProperties);
-        assertFalse(service.isConfigured());
-    }
-
-    @Test
-    @DisplayName("isConfigured returns false when host or fromAddress is missing or enabled is false")
-    void testIsConfigured_missingProperties() {
-        emailProperties.setHost("");
+    @DisplayName("isConfigured returns false when API key or fromAddress is missing or enabled is false")
+    void testIsConfigured_propertiesValidation() {
+        emailProperties.setResendApiKey("");
         assertFalse(emailService.isConfigured());
 
-        emailProperties.setHost("smtp.example.com");
+        emailProperties.setResendApiKey("re_test_key");
         emailProperties.setFromAddress("");
         assertFalse(emailService.isConfigured());
 
-        emailProperties.setFromAddress("contact@tikeyspa.com");
+        emailProperties.setFromAddress("booking@tikeyspa.com");
         emailProperties.setEnabled(false);
         assertFalse(emailService.isConfigured());
 
@@ -109,93 +111,129 @@ class EmailServiceTest {
     }
 
     @Test
-    @DisplayName("sendBookingConfirmation skips and returns false when SMTP is not configured")
-    void testSendBookingConfirmation_notConfigured() {
+    @DisplayName("sendBookingConfirmation skips and returns false when Resend is not configured")
+    void testSendBookingConfirmation_notConfigured() throws Exception {
         emailProperties.setEnabled(false);
         Booking booking = createSampleBooking();
 
         boolean sent = emailService.sendBookingConfirmation(booking, null);
 
         assertFalse(sent);
-        verify(mailSender, never()).send(any(MimeMessage.class));
+        verify(httpClient, never()).send(any(HttpRequest.class), any());
     }
 
     @Test
     @DisplayName("sendBookingConfirmation skips when customer email is missing or invalid")
-    void testSendBookingConfirmation_invalidCustomerEmail() {
+    void testSendBookingConfirmation_invalidCustomerEmail() throws Exception {
         Booking booking = createSampleBooking();
         booking.getCustomer().setEmail("");
 
         boolean sent = emailService.sendBookingConfirmation(booking, null);
 
         assertFalse(sent);
-        verify(mailSender, never()).send(any(MimeMessage.class));
+        verify(httpClient, never()).send(any(HttpRequest.class), any());
 
-        booking.getCustomer().setEmail("invalid-email-no-at");
+        booking.getCustomer().setEmail("invalid-email-without-at");
         sent = emailService.sendBookingConfirmation(booking, null);
 
         assertFalse(sent);
-        verify(mailSender, never()).send(any(MimeMessage.class));
+        verify(httpClient, never()).send(any(HttpRequest.class), any());
     }
 
     @Test
-    @DisplayName("sendBookingConfirmation sends email successfully with Vietnamese content")
-    void testSendBookingConfirmation_success() {
+    @DisplayName("sendBookingConfirmation sends email successfully via Resend HTTPS API")
+    void testSendBookingConfirmation_success() throws Exception {
         Booking booking = createSampleBooking();
         Payment payment = new Payment();
         payment.setStatus(PaymentStatus.PAID);
         payment.setPaymentMethod(PaymentMethod.VNPAY);
 
-        MimeMessage mimeMessage = new MimeMessage(Session.getInstance(new Properties()));
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+        when(httpResponse.statusCode()).thenReturn(200);
+        doReturn(httpResponse).when(httpClient).send(any(HttpRequest.class), any());
 
         boolean sent = emailService.sendBookingConfirmation(booking, payment);
 
         assertTrue(sent);
-        verify(mailSender, times(1)).send(mimeMessage);
+
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(httpClient, times(1)).send(requestCaptor.capture(), any());
+
+        HttpRequest sentRequest = requestCaptor.getValue();
+        assertEquals("POST", sentRequest.method());
+        assertEquals("https://api.resend.com/emails", sentRequest.uri().toString());
+        assertTrue(sentRequest.headers().firstValue("Authorization").orElse("").contains("Bearer re_test_dummy_key_12345"));
+        assertEquals("application/json", sentRequest.headers().firstValue("Content-Type").orElse(""));
     }
 
     @Test
-    @DisplayName("sendBookingConfirmation handles SMTP exception gracefully without rethrowing")
-    void testSendBookingConfirmation_smtpFailure() {
+    @DisplayName("sendBookingConfirmation handles non-2xx HTTP status from Resend API gracefully")
+    void testSendBookingConfirmation_apiError() throws Exception {
         Booking booking = createSampleBooking();
 
-        MimeMessage mimeMessage = new MimeMessage(Session.getInstance(new Properties()));
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        doThrow(new MailSendException("SMTP server connection timeout")).when(mailSender).send(mimeMessage);
+        when(httpResponse.statusCode()).thenReturn(422);
+        when(httpResponse.body()).thenReturn("{\"statusCode\":422,\"message\":\"Domain not verified\"}");
+        doReturn(httpResponse).when(httpClient).send(any(HttpRequest.class), any());
 
         boolean sent = emailService.sendBookingConfirmation(booking, null);
 
         assertFalse(sent);
-        verify(mailSender, times(1)).send(mimeMessage);
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
     }
 
     @Test
-    @DisplayName("sendAppointmentReminder sends reminder successfully")
-    void testSendAppointmentReminder_success() {
+    @DisplayName("sendBookingConfirmation handles HTTP timeout gracefully without throwing")
+    void testSendBookingConfirmation_timeout() throws Exception {
         Booking booking = createSampleBooking();
 
-        MimeMessage mimeMessage = new MimeMessage(Session.getInstance(new Properties()));
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+        when(httpClient.send(any(HttpRequest.class), any()))
+                .thenThrow(new HttpTimeoutException("Connection timed out after 10 seconds"));
+
+        boolean sent = emailService.sendBookingConfirmation(booking, null);
+
+        assertFalse(sent);
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
+    }
+
+    @Test
+    @DisplayName("sendBookingConfirmation handles IOException gracefully without throwing")
+    void testSendBookingConfirmation_ioException() throws Exception {
+        Booking booking = createSampleBooking();
+
+        when(httpClient.send(any(HttpRequest.class), any()))
+                .thenThrow(new IOException("Network unreachable"));
+
+        boolean sent = emailService.sendBookingConfirmation(booking, null);
+
+        assertFalse(sent);
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
+    }
+
+    @Test
+    @DisplayName("sendAppointmentReminder sends reminder successfully via Resend HTTPS API")
+    void testSendAppointmentReminder_success() throws Exception {
+        Booking booking = createSampleBooking();
+
+        when(httpResponse.statusCode()).thenReturn(200);
+        doReturn(httpResponse).when(httpClient).send(any(HttpRequest.class), any());
 
         boolean sent = emailService.sendAppointmentReminder(booking);
 
         assertTrue(sent);
-        verify(mailSender, times(1)).send(mimeMessage);
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
     }
 
     @Test
-    @DisplayName("sendAppointmentReminder handles SMTP failure gracefully")
-    void testSendAppointmentReminder_smtpFailure() {
+    @DisplayName("sendAppointmentReminder handles Resend API 500 error gracefully")
+    void testSendAppointmentReminder_serverError() throws Exception {
         Booking booking = createSampleBooking();
 
-        MimeMessage mimeMessage = new MimeMessage(Session.getInstance(new Properties()));
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        doThrow(new MailSendException("Connection refused")).when(mailSender).send(mimeMessage);
+        when(httpResponse.statusCode()).thenReturn(500);
+        when(httpResponse.body()).thenReturn("{\"message\":\"Internal server error\"}");
+        doReturn(httpResponse).when(httpClient).send(any(HttpRequest.class), any());
 
         boolean sent = emailService.sendAppointmentReminder(booking);
 
         assertFalse(sent);
-        verify(mailSender, times(1)).send(mimeMessage);
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any());
     }
 }
