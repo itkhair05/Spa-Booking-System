@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PostConstruct;
 import javax.crypto.SecretKey;
 import java.util.Date;
 
@@ -27,6 +28,17 @@ public class JwtUtils {
 
     @Value("${jwt.expirationMs}")
     private int jwtExpirationMs;
+
+    @PostConstruct
+    public void validateSecretKey() {
+        if (jwtSecret == null || jwtSecret.trim().isEmpty()) {
+            throw new IllegalStateException("JWT secret configuration ('jwt.secret') must not be null or empty.");
+        }
+        byte[] keyBytes = jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException("JWT secret configuration ('jwt.secret') must be at least 256 bits (32 bytes) long. Current length: " + keyBytes.length + " bytes.");
+        }
+    }
 
     private SecretKey key() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8));

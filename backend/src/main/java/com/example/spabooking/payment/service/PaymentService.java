@@ -141,11 +141,28 @@ public class PaymentService {
         String bankCode = vnpParams.get("vnp_BankCode");
         String cardType = vnpParams.get("vnp_CardType");
 
-        // 4. Idempotent check
+        // 4. Idempotent check & state transition guard
         if (payment.getStatus() == PaymentStatus.PAID) {
             return new VNPayCallbackResult(true, "Giao dịch đã được thanh toán thành công",
                     payment.getBooking().getBookingCode(), txnRef, payment.getAmount(),
                     payment.getStatus().name(), responseCode, payment.getTransactionNo(), payment.getPaidAt());
+        }
+
+        if (payment.getStatus() == PaymentStatus.REFUNDED || payment.getStatus() == PaymentStatus.REFUND_PENDING
+                || payment.getStatus() == PaymentStatus.REFUND_FAILED) {
+            log.warn("VNPay callback received for already refunded/refund-pending/refund-failed payment id={} txnRef={} with status={}",
+                    payment.getId(), txnRef, payment.getStatus());
+            return new VNPayCallbackResult(false, "Giao dịch đã được hoàn tiền hoặc đang xử lý hoàn tiền",
+                    payment.getBooking().getBookingCode(), txnRef, payment.getAmount(),
+                    payment.getStatus().name(), responseCode, payment.getTransactionNo(), payment.getPaidAt());
+        }
+
+        if (payment.getStatus() == PaymentStatus.CANCELLED || payment.getStatus() == PaymentStatus.FAILED) {
+            log.warn("VNPay callback received for already terminated payment id={} txnRef={} with status={}",
+                    payment.getId(), txnRef, payment.getStatus());
+            return new VNPayCallbackResult(false, "Giao dịch đã ở trạng thái kết thúc (" + payment.getStatus().name() + ")",
+                    payment.getBooking().getBookingCode(), txnRef, payment.getAmount(),
+                    payment.getStatus().name(), responseCode, payment.getTransactionNo(), null);
         }
 
         // 5. Status transitions
@@ -240,8 +257,10 @@ public class PaymentService {
             return new VNPayIpnResponse("02", "Order already confirmed");
         }
 
-        if (payment.getStatus() == PaymentStatus.CANCELLED || payment.getStatus() == PaymentStatus.FAILED) {
-            log.warn("VNPay IPN received for already terminated payment id={} txnRef={} with status={}",
+        if (payment.getStatus() == PaymentStatus.CANCELLED || payment.getStatus() == PaymentStatus.FAILED
+                || payment.getStatus() == PaymentStatus.REFUNDED || payment.getStatus() == PaymentStatus.REFUND_PENDING
+                || payment.getStatus() == PaymentStatus.REFUND_FAILED) {
+            log.warn("VNPay IPN received for already terminated or refunded payment id={} txnRef={} with status={}",
                     payment.getId(), txnRef, payment.getStatus());
             return new VNPayIpnResponse("02", "Order already confirmed");
         }
