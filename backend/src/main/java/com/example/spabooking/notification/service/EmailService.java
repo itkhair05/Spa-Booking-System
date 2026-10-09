@@ -4,22 +4,24 @@ import com.example.spabooking.booking.entity.Booking;
 import com.example.spabooking.notification.config.EmailProperties;
 import com.example.spabooking.payment.entity.Payment;
 import com.example.spabooking.payment.enums.PaymentStatus;
-import jakarta.mail.internet.InternetAddress;
-import jakarta.mail.internet.MimeMessage;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import java.io.UnsupportedEncodingException;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Locale;
+import java.util.*;
 
 @Service
 public class EmailService {
@@ -29,23 +31,28 @@ public class EmailService {
     private static final DateTimeFormatter VIETNAMESE_DATE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("HH:mm - 'ngày' dd/MM/yyyy").withZone(VIETNAM_ZONE);
 
-    private final JavaMailSender mailSender;
     private final EmailProperties emailProperties;
+    private final ObjectMapper objectMapper;
+    private final HttpClient httpClient;
 
     @Autowired
-    public EmailService(@Autowired(required = false) JavaMailSender mailSender,
-                        EmailProperties emailProperties) {
-        this.mailSender = mailSender;
+    public EmailService(EmailProperties emailProperties,
+                        @Autowired(required = false) ObjectMapper objectMapper,
+                        @Autowired(required = false) HttpClient httpClient) {
         this.emailProperties = emailProperties;
+        this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper();
+        this.httpClient = httpClient != null ? httpClient : HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(emailProperties != null && emailProperties.getTimeoutSeconds() > 0 ? emailProperties.getTimeoutSeconds() : 10))
+                .build();
     }
 
     public boolean isConfigured() {
-        return mailSender != null && emailProperties != null && emailProperties.isConfigured();
+        return emailProperties != null && emailProperties.isConfigured();
     }
 
     public boolean sendBookingConfirmation(Booking booking, Payment payment) {
         if (!isConfigured()) {
-            log.warn("SMTP email service is not configured. Skipping confirmation email for booking code: {}",
+            log.warn("Resend email service is not configured (missing RESEND_API_KEY or APP_MAIL_FROM_ADDRESS). Skipping confirmation email for booking code: {}",
                     booking != null ? booking.getBookingCode() : "UNKNOWN");
             return false;
         }
@@ -88,12 +95,12 @@ public class EmailService {
                 formattedTime, staffName, formattedPrice, paymentStatusText, spaAddress, spaPhone
         );
 
-        return sendMimeEmail(recipientEmail, customerName, subject, textContent, htmlContent, bookingCode, "Confirmation");
+        return sendViaResend(recipientEmail, subject, textContent, htmlContent, bookingCode, "Confirmation");
     }
 
     public boolean sendAppointmentReminder(Booking booking) {
         if (!isConfigured()) {
-            log.warn("SMTP email service is not configured. Skipping appointment reminder for booking code: {}",
+            log.warn("Resend email service is not configured (missing RESEND_API_KEY or APP_MAIL_FROM_ADDRESS). Skipping appointment reminder for booking code: {}",
                     booking != null ? booking.getBookingCode() : "UNKNOWN");
             return false;
         }
@@ -131,41 +138,87 @@ public class EmailService {
                 spaName, customerName, bookingCode, serviceName, formattedTime, staffName, spaAddress, spaPhone
         );
 
-        return sendMimeEmail(recipientEmail, customerName, subject, textContent, htmlContent, bookingCode, "Reminder");
+        return sendViaResend(recipientEmail, subject, textContent, htmlContent, bookingCode, "Reminder");
     }
 
-    private boolean sendMimeEmail(String toEmail, String toName, String subject,
+    private boolean sendViaResend(String recipientEmail, String subject,
                                   String textContent, String htmlContent,
                                   String bookingCode, String emailType) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
-
-            try {
-                helper.setFrom(new InternetAddress(emailProperties.getFromAddress(), emailProperties.getFromName(), StandardCharsets.UTF_8.name()));
-            } catch (UnsupportedEncodingException e) {
-                helper.setFrom(emailProperties.getFromAddress());
-            }
-
-            try {
-                helper.setTo(new InternetAddress(toEmail, toName, StandardCharsets.UTF_8.name()));
-            } catch (UnsupportedEncodingException e) {
-                helper.setTo(toEmail);
-            }
-
-            helper.setSubject(subject);
-            helper.setText(textContent, htmlContent);
-
-            mailSender.send(message);
-            log.info("Successfully sent {} email to recipient for booking code: {}", emailType, bookingCode);
-            return true;
-        } catch (MailException ex) {
-            log.error("SMTP error sending {} email for booking code {}: {}", emailType, bookingCode, ex.getMessage());
-            return false;
-        } catch (Exception ex) {
-            log.error("Unexpected error sending {} email for booking code {}: {}", emailType, bookingCode, ex.getMessage());
+        if (httpClient == null) {
+            log.error("HTTP client is not initialized. Cannot send {} email for booking code: {}", emailType, bookingCode);
             return false;
         }
+
+        String fromAddress = emailProperties.getFromAddress();
+        String fromName = emailProperties.getFromName();
+        String fromHeader;
+        if (fromAddress != null && fromAddress.contains("<") && fromAddress.contains(">")) {
+            fromHeader = fromAddress.trim();
+        } else if (fromName != null && !fromName.isBlank()) {
+            fromHeader = fromName.trim() + " <" + (fromAddress != null ? fromAddress.trim() : "") + ">";
+        } else {
+            fromHeader = fromAddress != null ? fromAddress.trim() : "";
+        }
+
+        Map<String, Object> requestPayload = new HashMap<>();
+        requestPayload.put("from", fromHeader);
+        requestPayload.put("to", List.of(recipientEmail.trim()));
+        requestPayload.put("subject", subject);
+        requestPayload.put("html", htmlContent);
+        requestPayload.put("text", textContent);
+
+        try {
+            String jsonBody = objectMapper.writeValueAsString(requestPayload);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(emailProperties.getResendApiUrl()))
+                    .header("Authorization", "Bearer " + emailProperties.getResendApiKey().trim())
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .timeout(Duration.ofSeconds(emailProperties.getTimeoutSeconds() > 0 ? emailProperties.getTimeoutSeconds() : 10))
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+            int statusCode = response.statusCode();
+            if (statusCode >= 200 && statusCode < 300) {
+                log.info("Successfully sent {} email via Resend HTTPS API for booking code: {}, httpStatus={}",
+                        emailType, bookingCode, statusCode);
+                return true;
+            } else {
+                log.error("Resend API rejected {} email for booking code {}: httpStatus={}, responseBody={}",
+                        emailType, bookingCode, statusCode, sanitizeResponseBody(response.body()));
+                return false;
+            }
+        } catch (HttpTimeoutException ex) {
+            log.error("Resend API request timed out sending {} email for booking code {}: {}",
+                    emailType, bookingCode, ex.getMessage());
+            return false;
+        } catch (IOException ex) {
+            log.error("I/O error communicating with Resend API for booking code {}: {}",
+                    bookingCode, ex.getMessage());
+            return false;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.error("Interrupted while sending {} email for booking code {}: {}",
+                    emailType, bookingCode, ex.getMessage());
+            return false;
+        } catch (Exception ex) {
+            log.error("Unexpected error sending {} email for booking code {}: {}",
+                    emailType, bookingCode, ex.getMessage());
+            return false;
+        }
+    }
+
+    private String sanitizeResponseBody(String body) {
+        if (body == null || body.isBlank()) {
+            return "[empty response]";
+        }
+        if (body.length() > 500) {
+            return body.substring(0, 500) + "...";
+        }
+        return body;
     }
 
     private String resolvePaymentStatusText(Payment payment) {
