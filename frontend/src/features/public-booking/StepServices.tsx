@@ -125,7 +125,7 @@ export function StepServices() {
             <button
               type="button"
               onClick={() => setSelectedCategory('ALL')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all whitespace-nowrap cursor-pointer ${
+              className={`px-3.5 py-2 min-h-9 text-xs font-medium rounded-full transition-all whitespace-nowrap cursor-pointer flex items-center justify-center ${
                 selectedCategory === 'ALL'
                   ? 'bg-[#465d4c] text-white shadow-xs'
                   : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
@@ -140,7 +140,7 @@ export function StepServices() {
                   key={cat}
                   type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all whitespace-nowrap cursor-pointer ${
+                  className={`px-3.5 py-2 min-h-9 text-xs font-medium rounded-full transition-all whitespace-nowrap cursor-pointer flex items-center justify-center ${
                     selectedCategory === cat
                       ? 'bg-[#465d4c] text-white shadow-xs'
                       : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
@@ -177,7 +177,17 @@ export function StepServices() {
                   return (
                     <div
                       key={service.id}
-                      className={`relative flex flex-col justify-between p-4 sm:p-5 rounded-2xl border transition-all text-left bg-white ${
+                      onClick={() => handleSelect(service)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleSelect(service);
+                        }
+                      }}
+                      aria-pressed={selected}
+                      className={`group relative flex flex-col justify-between p-4 sm:p-5 rounded-2xl border transition-all text-left bg-white cursor-pointer ${
                         selected
                           ? 'border-[#465d4c] ring-2 ring-[#465d4c]/20 bg-stone-50/60 shadow-sm'
                           : 'border-stone-200/90 hover:border-stone-300 hover:shadow-xs'
@@ -228,13 +238,12 @@ export function StepServices() {
                         <span className="text-xs text-stone-400">
                           {selected ? 'Đã chọn dịch vụ này' : 'Nhấn để tiếp tục'}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleSelect(service)}
-                          className={`inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-medium rounded-xl transition-colors cursor-pointer ${
+                        <span
+                          aria-hidden="true"
+                          className={`inline-flex items-center gap-1 px-3.5 py-1.5 min-h-9 text-xs font-medium rounded-xl transition-colors pointer-events-none select-none ${
                             selected
                               ? 'bg-[#465d4c] text-white'
-                              : 'bg-stone-100 text-stone-700 hover:bg-[#465d4c] hover:text-white'
+                              : 'bg-stone-100 text-stone-700 group-hover:bg-[#465d4c] group-hover:text-white'
                           }`}
                         >
                           {selected ? (
@@ -248,7 +257,7 @@ export function StepServices() {
                               <ChevronRight className="w-3.5 h-3.5" />
                             </>
                           )}
-                        </button>
+                        </span>
                       </div>
                     </div>
                   );
