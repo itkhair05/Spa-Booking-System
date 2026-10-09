@@ -30,7 +30,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
             new Rule("POST", "/api/v1/auth/change-password", 10, 60),
             new Rule("POST", "/api/v1/public/spas/*/bookings", 20, 60),
             new Rule("GET", "/api/v1/public/spas/*/bookings/**", 30, 60),
-            new Rule("POST", "/api/v1/bookings/*/refund", 10, 60)
+            new Rule("POST", "/api/v1/bookings/*/refund", 10, 60),
+            new Rule("POST", "/api/v1/public/spas/*/feedback", 10, 60)
     );
 
     private static final int CLEANUP_THRESHOLD = 10_000;
