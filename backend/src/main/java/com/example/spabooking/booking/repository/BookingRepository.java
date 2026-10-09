@@ -210,4 +210,53 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("SELECT b.customer.id, COUNT(b), MAX(b.startTime) FROM Booking b WHERE b.tenant.id = :tenantId GROUP BY b.customer.id")
     List<Object[]> findCustomerBookingStatsByTenantId(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT b FROM Booking b " +
+           "JOIN FETCH b.customer " +
+           "JOIN FETCH b.service " +
+           "LEFT JOIN FETCH b.staff " +
+           "JOIN FETCH b.tenant " +
+           "WHERE b.id = :id")
+    Optional<Booking> findByIdWithDetails(@Param("id") Long id);
+
+    @Query("SELECT b FROM Booking b " +
+           "JOIN FETCH b.customer c " +
+           "JOIN FETCH b.service s " +
+           "LEFT JOIN FETCH b.staff st " +
+           "JOIN FETCH b.tenant t " +
+           "WHERE b.status = :status " +
+           "AND b.isReminded = false " +
+           "AND b.startTime >= :windowStart AND b.startTime <= :windowEnd " +
+           "AND c.email IS NOT NULL AND TRIM(c.email) != '' " +
+           "ORDER BY b.startTime ASC")
+    List<Booking> findEligibleForReminder(
+            @Param("status") BookingStatus status,
+            @Param("windowStart") LocalDateTime windowStart,
+            @Param("windowEnd") LocalDateTime windowEnd);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT b FROM Booking b WHERE b.id = :id")
+    Optional<Booking> findByIdForUpdate(@Param("id") Long id);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Booking b SET b.confirmationEmailSentAt = :sentAt " +
+           "WHERE b.id = :id AND b.status = 'CONFIRMED' AND b.confirmationEmailSentAt IS NULL")
+    int claimConfirmationEmail(@Param("id") Long id, @Param("sentAt") LocalDateTime sentAt);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Booking b SET b.confirmationEmailSentAt = NULL WHERE b.id = :id")
+    int unclaimConfirmationEmail(@Param("id") Long id);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Booking b SET b.isReminded = true, b.remindedAt = :claimTime " +
+           "WHERE b.id = :id AND b.status = 'CONFIRMED' AND b.isReminded = false")
+    int claimAppointmentReminder(@Param("id") Long id, @Param("claimTime") LocalDateTime claimTime);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Booking b SET b.isReminded = false, b.remindedAt = NULL WHERE b.id = :id")
+    int unclaimAppointmentReminder(@Param("id") Long id);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Booking b SET b.isReminded = true, b.remindedAt = :remindedAt WHERE b.id = :id")
+    int markReminderSkippedNoEmail(@Param("id") Long id, @Param("remindedAt") LocalDateTime remindedAt);
 }

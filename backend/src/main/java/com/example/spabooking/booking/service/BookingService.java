@@ -44,6 +44,7 @@ public class BookingService {
     private final PaymentRepository paymentRepository;
     private final com.example.spabooking.payment.repository.RefundRepository refundRepository;
     private final com.example.spabooking.staff.service.StaffScheduleService staffScheduleService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Autowired
     public BookingService(BookingRepository bookingRepository,
@@ -53,7 +54,8 @@ public class BookingService {
                           TenantRepository tenantRepository,
                           PaymentRepository paymentRepository,
                           com.example.spabooking.payment.repository.RefundRepository refundRepository,
-                          com.example.spabooking.staff.service.StaffScheduleService staffScheduleService) {
+                          com.example.spabooking.staff.service.StaffScheduleService staffScheduleService,
+                          @Autowired(required = false) org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.bookingRepository = bookingRepository;
         this.customerRepository = customerRepository;
         this.staffRepository = staffRepository;
@@ -62,6 +64,7 @@ public class BookingService {
         this.paymentRepository = paymentRepository;
         this.refundRepository = refundRepository;
         this.staffScheduleService = staffScheduleService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -234,6 +237,10 @@ public class BookingService {
         existingBooking.setCustomer(customer);
         existingBooking.setStaff(staff);
         existingBooking.setService(service);
+        if (!existingBooking.getStartTime().equals(request.getStartTime())) {
+            existingBooking.setIsReminded(false);
+            existingBooking.setRemindedAt(null);
+        }
         existingBooking.setStartTime(request.getStartTime());
         existingBooking.setEndTime(endTime);
         // Do NOT update price on simple reschedule, it stays historical unless explicit pricing update.
@@ -260,7 +267,11 @@ public class BookingService {
         if (booking.getConfirmedAt() == null) {
             booking.setConfirmedAt(LocalDateTime.now());
         }
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new com.example.spabooking.notification.event.BookingConfirmedEvent(saved.getId()));
+        }
+        return saved;
     }
 
     @Transactional
@@ -414,10 +425,13 @@ public class BookingService {
         staffScheduleService.validateStaffAvailability(tenantId, staff.getId(), request.getStartTime(), endTime, booking.getId());
         checkCustomerOverlaps(tenantId, booking.getCustomer().getId(), request.getStartTime(), endTime, booking.getId());
 
+        if (!booking.getStartTime().equals(request.getStartTime())) {
+            booking.setIsReminded(false);
+            booking.setRemindedAt(null);
+        }
         booking.setStartTime(request.getStartTime());
         booking.setEndTime(endTime);
         booking.setStaff(staff);
-        booking.setIsReminded(false);
 
         return bookingRepository.save(booking);
     }

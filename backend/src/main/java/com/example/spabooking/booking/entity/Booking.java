@@ -77,6 +77,12 @@ public class Booking {
     @Column(name = "cancellation_reason")
     private String cancellationReason;
 
+    @Column(name = "confirmation_email_sent_at")
+    private LocalDateTime confirmationEmailSentAt;
+
+    @Column(name = "reminded_at")
+    private LocalDateTime remindedAt;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -155,6 +161,12 @@ public class Booking {
 
     public String getCancellationReason() { return cancellationReason; }
     public void setCancellationReason(String cancellationReason) { this.cancellationReason = cancellationReason; }
+
+    public LocalDateTime getConfirmationEmailSentAt() { return confirmationEmailSentAt; }
+    public void setConfirmationEmailSentAt(LocalDateTime confirmationEmailSentAt) { this.confirmationEmailSentAt = confirmationEmailSentAt; }
+
+    public LocalDateTime getRemindedAt() { return remindedAt; }
+    public void setRemindedAt(LocalDateTime remindedAt) { this.remindedAt = remindedAt; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
