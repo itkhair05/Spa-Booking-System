@@ -45,7 +45,7 @@ export function StepCustomer() {
   };
 
   const inputClass = (hasError: boolean) =>
-    `w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-stone-800 transition-shadow max-sm:min-h-11 ${
+    `w-full px-4 py-3 rounded-xl border text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-800 transition-shadow max-sm:min-h-11 ${
       hasError ? 'border-rose-500' : 'border-stone-300'
     }`;
 

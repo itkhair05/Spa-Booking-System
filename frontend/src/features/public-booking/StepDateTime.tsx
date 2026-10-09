@@ -83,7 +83,7 @@ export function StepDateTime() {
             min={today}
             value={selectedDate}
             onChange={handleDateChange}
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-stone-800 focus:border-stone-800 transition-shadow text-stone-900 max-sm:min-h-11"
+            className="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-stone-800 focus:border-stone-800 transition-shadow text-stone-900 text-base sm:text-sm max-sm:min-h-11"
           />
           <Calendar className="w-5 h-5 text-stone-400 absolute left-3 top-3.5 pointer-events-none" aria-hidden="true" />
         </div>

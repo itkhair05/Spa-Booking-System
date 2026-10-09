@@ -155,16 +155,16 @@ export function StepSuccess() {
       {/* Prominent Booking Code Card */}
       <div className="max-w-md mx-auto bg-stone-50 rounded-2xl p-5 sm:p-6 border border-stone-200 text-left mb-6 shadow-sm">
         <div className="flex items-center justify-between gap-2 pb-4 border-b border-stone-200">
-          <div>
+          <div className="min-w-0 flex-1">
             <span className="text-xs uppercase tracking-wider font-semibold text-stone-500">Mã tra cứu lịch hẹn</span>
-            <p className="text-xl sm:text-2xl font-mono font-bold text-stone-900 tracking-tight mt-0.5 select-all">
+            <p className="text-xl sm:text-2xl font-mono font-bold text-stone-900 tracking-tight mt-0.5 select-all break-all">
               {displayCode}
             </p>
           </div>
           <button
             type="button"
             onClick={handleCopyCode}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl bg-white border border-stone-200 text-stone-700 hover:bg-stone-100 hover:text-stone-900 transition-colors shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 min-h-11 text-xs font-medium rounded-xl bg-white border border-stone-200 text-stone-700 hover:bg-stone-100 hover:text-stone-900 transition-colors shadow-xs cursor-pointer shrink-0"
             aria-label="Sao chép mã tra cứu"
           >
             {copied ? (
