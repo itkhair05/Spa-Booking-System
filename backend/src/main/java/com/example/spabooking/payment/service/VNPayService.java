@@ -55,6 +55,8 @@ public class VNPayService {
         vnpParams.put("vnp_CreateDate", VNP_DATE_FORMAT.format(now));
         vnpParams.put("vnp_ExpireDate", VNP_DATE_FORMAT.format(now.plus(15, ChronoUnit.MINUTES)));
 
+        vnPayConfig.validateSandboxEndpoint(vnPayConfig.getPaymentUrl(), "payment-url");
+
         List<String> fieldNames = new ArrayList<>(vnpParams.keySet());
         Collections.sort(fieldNames);
 
@@ -70,11 +72,11 @@ public class VNPayService {
                         query.append('&');
                     }
                     hashData.append(fieldName).append('=')
-                            .append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
+                            .append(URLEncoder.encode(fieldValue, StandardCharsets.UTF_8.toString()));
 
-                    query.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII.toString()))
+                    query.append(URLEncoder.encode(fieldName, StandardCharsets.UTF_8.toString()))
                             .append('=')
-                            .append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
+                            .append(URLEncoder.encode(fieldValue, StandardCharsets.UTF_8.toString()));
                 }
             }
 
@@ -114,14 +116,28 @@ public class VNPayService {
                     hashData.append('&');
                 }
                 hashData.append(fieldName).append('=')
-                        .append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
+                        .append(URLEncoder.encode(fieldValue, StandardCharsets.UTF_8.toString()));
             }
 
             String calculatedHash = VNPayConfig.hmacSHA512(vnPayConfig.getHashSecret(), hashData.toString());
-            return java.security.MessageDigest.isEqual(
+            if (java.security.MessageDigest.isEqual(
                     calculatedHash.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8),
-                    secureHash.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8)
-            );
+                    secureHash.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8))) {
+                return true;
+            }
+
+            // Fallback for space encoding: handle clients/proxies that preserve %20 instead of +
+            if (hashData.indexOf("+") >= 0) {
+                String hashDataPercent20 = hashData.toString().replace("+", "%20");
+                String calculatedHashPercent20 = VNPayConfig.hmacSHA512(vnPayConfig.getHashSecret(), hashDataPercent20);
+                if (java.security.MessageDigest.isEqual(
+                        calculatedHashPercent20.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8),
+                        secureHash.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8))) {
+                    return true;
+                }
+            }
+
+            return false;
         } catch (Exception ex) {
             return false;
         }

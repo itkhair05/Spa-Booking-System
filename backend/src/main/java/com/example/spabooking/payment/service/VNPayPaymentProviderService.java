@@ -128,6 +128,8 @@ public class VNPayPaymentProviderService implements PaymentProviderService {
 
             String jsonBody = objectMapper.writeValueAsString(requestPayload);
 
+            vnPayConfig.validateSandboxEndpoint(vnPayConfig.getRefundUrl(), "refund-url");
+
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(vnPayConfig.getRefundUrl()))
                     .timeout(Duration.ofSeconds(15))
@@ -241,6 +243,8 @@ public class VNPayPaymentProviderService implements PaymentProviderService {
             requestPayload.put("vnp_SecureHash", secureHash);
 
             String jsonBody = objectMapper.writeValueAsString(requestPayload);
+
+            vnPayConfig.validateSandboxEndpoint(vnPayConfig.getQueryDrUrl(), "querydr-url");
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(vnPayConfig.getQueryDrUrl()))
