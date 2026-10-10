@@ -73,8 +73,13 @@ public class DashboardService {
         // OWNER metrics for the entire facility
         long todayBookingCount = bookingRepository.countTodayBookings(tenantId, startOfToday, startOfTomorrow);
         long upcomingBookingCount = bookingRepository.countUpcomingBookings(tenantId, now);
-        long pendingBookingCount = bookingRepository.countByTenantIdAndStatus(tenantId, BookingStatus.PENDING);
-        long confirmedBookingCount = bookingRepository.countByTenantIdAndStatus(tenantId, BookingStatus.CONFIRMED);
+
+        // Distribution of booking statuses (aggregated in a single query across all statuses)
+        List<Object[]> statusRows = bookingRepository.countBookingsByStatus(tenantId);
+        Map<BookingStatus, Long> statusCounts = statusRows.stream()
+                .collect(Collectors.toMap(row -> (BookingStatus) row[0], row -> (Long) row[1], (a, b) -> a));
+        long pendingBookingCount = statusCounts.getOrDefault(BookingStatus.PENDING, 0L);
+        long confirmedBookingCount = statusCounts.getOrDefault(BookingStatus.CONFIRMED, 0L);
         
         // Realized revenue: ONLY completed bookings contribute to completed revenue
         BigDecimal todayCompletedRevenue = bookingRepository.sumCompletedRevenue(tenantId, startOfToday, startOfTomorrow);
@@ -98,8 +103,7 @@ public class DashboardService {
         }
 
         // Distribution of booking statuses (only statuses that exist)
-        List<BookingStatusCount> bookingStatusDistribution = bookingRepository.countBookingsByStatus(tenantId)
-                .stream()
+        List<BookingStatusCount> bookingStatusDistribution = statusRows.stream()
                 .map(row -> new BookingStatusCount(((BookingStatus) row[0]).name(), (Long) row[1]))
                 .collect(Collectors.toList());
 

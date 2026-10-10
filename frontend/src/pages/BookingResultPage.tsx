@@ -138,13 +138,13 @@ export default function BookingResultPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
+      <main className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
         <div className="bg-white border border-stone-200 rounded-3xl p-8 max-w-md w-full text-center shadow-xs">
           <RefreshCw className="w-10 h-10 text-stone-800 animate-spin mx-auto mb-4" />
-          <h2 className="text-lg font-serif-title font-semibold text-stone-900 mb-2">Đang xác thực giao dịch</h2>
+          <h1 className="text-lg font-serif-title font-semibold text-stone-900 mb-2">Đang xác thực giao dịch</h1>
           <p className="text-sm text-stone-500">Hệ thống đang kết nối với cổng thanh toán để cập nhật trạng thái lịch hẹn...</p>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -306,9 +306,9 @@ export default function BookingResultPage() {
           {/* Next Steps Guidance Banner */}
           {isPaid && (
             <div className="bg-[#465d4c]/5 border border-[#465d4c]/20 rounded-2xl p-4 sm:p-5 text-left">
-              <h4 className="text-xs font-bold text-[#465d4c] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <h2 className="text-xs font-bold text-[#465d4c] uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <Sparkles size={14} /> Hướng dẫn tiếp theo cho quý khách
-              </h4>
+              </h2>
               <ul className="text-xs sm:text-sm text-stone-700 space-y-1.5 list-disc list-inside">
                 <li>Lịch hẹn đã được xác nhận tự động và chuyển đến đội ngũ chuyên viên kỹ thuật.</li>
                 <li>Quý khách vui lòng có mặt trước giờ hẹn <strong>10 - 15 phút</strong> để thưởng thức trà thảo mộc đón tiếp và chuẩn bị tốt nhất.</li>
@@ -321,7 +321,7 @@ export default function BookingResultPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Service & Process */}
             <div className="bg-stone-50/70 border border-stone-100 rounded-2xl p-5 space-y-3">
-              <div className="flex items-center gap-2 text-xs uppercase font-bold text-stone-400 tracking-wider">
+              <div className="flex items-center gap-2 text-xs uppercase font-bold text-stone-500 tracking-wider">
                 <Sparkles size={14} className="text-stone-500" /> Dịch vụ trị liệu
               </div>
               <div>
@@ -344,7 +344,7 @@ export default function BookingResultPage() {
               {/* Read-only Process steps if available */}
               {stepsList.length > 0 && (
                 <div className="pt-2 border-t border-stone-200/60 mt-3">
-                  <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block mb-1.5">
+                  <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block mb-1.5">
                     Quy trình thực hiện ({stepsList.length} bước)
                   </span>
                   <ol className="space-y-1 text-xs text-stone-600 list-decimal list-inside pl-1">
@@ -358,7 +358,7 @@ export default function BookingResultPage() {
 
             {/* Time & Staff */}
             <div className="bg-stone-50/70 border border-stone-100 rounded-2xl p-5 space-y-4">
-              <div className="flex items-center gap-2 text-xs uppercase font-bold text-stone-400 tracking-wider">
+              <div className="flex items-center gap-2 text-xs uppercase font-bold text-stone-500 tracking-wider">
                 <Calendar size={14} className="text-stone-500" /> Thời gian & Kỹ thuật viên
               </div>
               <div className="space-y-2 text-sm">
@@ -383,7 +383,7 @@ export default function BookingResultPage() {
 
             {/* Customer Info */}
             <div className="bg-stone-50/70 border border-stone-100 rounded-2xl p-5 space-y-3">
-              <div className="flex items-center gap-2 text-xs uppercase font-bold text-stone-400 tracking-wider">
+              <div className="flex items-center gap-2 text-xs uppercase font-bold text-stone-500 tracking-wider">
                 <User size={14} className="text-stone-500" /> Thông tin khách hàng
               </div>
               <div className="space-y-1.5 text-xs text-stone-700">
@@ -401,7 +401,7 @@ export default function BookingResultPage() {
 
             {/* Payment Summary */}
             <div className="bg-stone-50/70 border border-stone-100 rounded-2xl p-5 space-y-3">
-              <div className="flex items-center gap-2 text-xs uppercase font-bold text-stone-400 tracking-wider">
+              <div className="flex items-center gap-2 text-xs uppercase font-bold text-stone-500 tracking-wider">
                 <CreditCard size={14} className="text-stone-500" /> Thanh toán
               </div>
               <div className="space-y-1.5 text-xs">
@@ -426,7 +426,7 @@ export default function BookingResultPage() {
                   </span>
                 </div>
                 {booking.paidAt && (
-                  <div className="text-[11px] text-stone-400 pt-1">
+                  <div className="text-[11px] text-stone-500 pt-1">
                     Thanh toán lúc: {new Date(booking.paidAt).toLocaleString('vi-VN')}
                   </div>
                 )}

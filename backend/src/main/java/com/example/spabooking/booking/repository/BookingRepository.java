@@ -198,7 +198,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("endTime") LocalDateTime endTime,
             @Param("excludeBookingId") Long excludeBookingId);
 
-    @Query("SELECT b FROM Booking b WHERE b.tenant.id = :tenantId " +
+    @Query("SELECT b FROM Booking b " +
+           "JOIN FETCH b.customer " +
+           "JOIN FETCH b.service " +
+           "LEFT JOIN FETCH b.staff " +
+           "WHERE b.tenant.id = :tenantId " +
            "AND b.startTime >= :startOfDay AND b.startTime < :endOfDay " +
            "AND (:staffId IS NULL OR b.staff.id = :staffId) " +
            "ORDER BY b.startTime ASC")
@@ -207,6 +211,18 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("startOfDay") LocalDateTime startOfDay,
             @Param("endOfDay") LocalDateTime endOfDay,
             @Param("staffId") Long staffId);
+
+    @Query("SELECT b FROM Booking b " +
+           "LEFT JOIN FETCH b.staff " +
+           "WHERE b.tenant.id = :tenantId " +
+           "AND b.staff.id IN :staffIds " +
+           "AND b.status IN ('PENDING', 'CONFIRMED', 'CHECKED_IN', 'IN_PROGRESS') " +
+           "AND b.startTime < :endOfDay AND b.endTime > :startOfDay")
+    List<Booking> findBlockingBookingsForStaff(
+            @Param("tenantId") Long tenantId,
+            @Param("staffIds") List<Long> staffIds,
+            @Param("startOfDay") LocalDateTime startOfDay,
+            @Param("endOfDay") LocalDateTime endOfDay);
 
     @Query("SELECT b.customer.id, COUNT(b), MAX(b.startTime) FROM Booking b WHERE b.tenant.id = :tenantId GROUP BY b.customer.id")
     List<Object[]> findCustomerBookingStatsByTenantId(@Param("tenantId") Long tenantId);
