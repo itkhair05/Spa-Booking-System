@@ -118,7 +118,7 @@ const LoginPage = () => {
 
   return (
     <div className="login-page">
-      <div className="login-card">
+      <main className="login-card">
         {/* Brand */}
         <div className="login-brand">
           <span className="login-brand-icon" aria-hidden="true"><Sparkles size={24} className="text-[#465d4c]" /></span>
@@ -192,7 +192,7 @@ const LoginPage = () => {
             </a>
           </div>
         </form>
-      </div>
+      </main>
     </div>
   );
 };

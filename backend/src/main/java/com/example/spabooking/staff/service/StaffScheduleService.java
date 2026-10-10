@@ -306,7 +306,7 @@ public class StaffScheduleService {
 
         // Determine earliest open and latest close across working candidate staff for this day
         DayOfWeek dayOfWeek = date.getDayOfWeek();
-        List<StaffWorkingHours> activeSchedules = new ArrayList<>();
+        Map<Long, StaffWorkingHours> staffWorkingHoursMap = new HashMap<>();
         List<Staff> workingStaff = new ArrayList<>();
 
         for (Staff s : candidateStaff) {
@@ -319,20 +319,31 @@ public class StaffScheduleService {
                 whOpt = defaults.stream().filter(h -> h.getDayOfWeek() == dayOfWeek).findFirst();
             }
             if (whOpt.isPresent() && Boolean.TRUE.equals(whOpt.get().getIsActive())) {
-                activeSchedules.add(whOpt.get());
+                staffWorkingHoursMap.put(s.getId(), whOpt.get());
                 workingStaff.add(s);
             }
         }
 
-        if (activeSchedules.isEmpty() || workingStaff.isEmpty()) {
+        if (staffWorkingHoursMap.isEmpty() || workingStaff.isEmpty()) {
             return Collections.emptyList();
         }
 
-        LocalTime earliestOpen = activeSchedules.stream().map(StaffWorkingHours::getStartTime).min(LocalTime::compareTo).orElse(LocalTime.of(9, 0));
-        LocalTime latestClose = activeSchedules.stream().map(StaffWorkingHours::getEndTime).max(LocalTime::compareTo).orElse(LocalTime.of(18, 0));
+        LocalTime earliestOpen = staffWorkingHoursMap.values().stream()
+                .map(StaffWorkingHours::getStartTime).min(LocalTime::compareTo).orElse(LocalTime.of(9, 0));
+        LocalTime latestClose = staffWorkingHoursMap.values().stream()
+                .map(StaffWorkingHours::getEndTime).max(LocalTime::compareTo).orElse(LocalTime.of(18, 0));
 
         LocalDateTime currentSlot = date.atTime(earliestOpen);
         LocalDateTime endOfDay = date.atTime(latestClose);
+
+        // Pre-fetch all blocking bookings for working staff on this date in a single batch query
+        List<Long> workingStaffIds = workingStaff.stream().map(Staff::getId).collect(Collectors.toList());
+        LocalDateTime dayStart = date.atStartOfDay();
+        LocalDateTime dayEnd = date.plusDays(1).atStartOfDay();
+        List<Booking> blockingBookings = bookingRepository.findBlockingBookingsForStaff(tenantId, workingStaffIds, dayStart, dayEnd);
+        Map<Long, List<Booking>> bookingsByStaff = blockingBookings.stream()
+                .filter(b -> b.getStaff() != null)
+                .collect(Collectors.groupingBy(b -> b.getStaff().getId()));
 
         List<LocalDateTime> availableSlots = new ArrayList<>();
 
@@ -345,10 +356,32 @@ public class StaffScheduleService {
                 continue;
             }
 
-            // Check if at least one working staff member is available for this slot
+            LocalTime slotStartTime = currentSlot.toLocalTime();
+            LocalTime slotEndTime = slotEnd.toLocalTime();
+            boolean isSameDay = slotEnd.toLocalDate().isEqual(date);
+
+            // Check if at least one working staff member is available for this slot in-memory
             boolean anyStaffAvailable = false;
             for (Staff s : workingStaff) {
-                if (isStaffAvailable(tenantId, s.getId(), currentSlot, slotEnd, null)) {
+                StaffWorkingHours wh = staffWorkingHoursMap.get(s.getId());
+                if (wh == null) continue;
+
+                // Check staff working hours bounds
+                if (slotStartTime.isBefore(wh.getStartTime()) || !isSameDay || slotEndTime.isAfter(wh.getEndTime())) {
+                    continue;
+                }
+
+                // Check overlap against pre-fetched bookings for this staff member
+                List<Booking> staffBookings = bookingsByStaff.getOrDefault(s.getId(), Collections.emptyList());
+                boolean hasOverlap = false;
+                for (Booking b : staffBookings) {
+                    if (b.getStartTime().isBefore(slotEnd) && b.getEndTime().isAfter(currentSlot)) {
+                        hasOverlap = true;
+                        break;
+                    }
+                }
+
+                if (!hasOverlap) {
                     anyStaffAvailable = true;
                     break;
                 }
