@@ -247,6 +247,9 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
 
   return (
     <div className="min-h-screen bg-[#faf8f5] text-stone-800 flex flex-col font-sans antialiased selection:bg-[#465d4c] selection:text-white">
+      <a href="#main-content" className="skip-link">
+        Bỏ qua điều hướng
+      </a>
       {/* HEADER / NAVIGATION BAR */}
       <header
         className={`sticky top-0 z-40 transition-all duration-300 ${
@@ -374,7 +377,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               <a
                 href="#phan-hoi"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="whitespace-nowrap py-2 px-3 hover:bg-black/5 rounded-xl transition-colors text-[#b8976c] font-semibold"
+                className="whitespace-nowrap py-2 px-3 hover:bg-black/5 rounded-xl transition-colors text-[#8a6534] font-semibold"
               >
                 Phản hồi & Khiếu nại
               </a>
@@ -398,8 +401,10 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
         )}
       </header>
 
-      {/* 1. HERO SECTION */}
-      <section className="relative overflow-hidden pt-12 sm:pt-20 pb-16 sm:pb-24 border-b border-[#e7e2d8]">
+      {/* MAIN LANDMARK WRAPPER */}
+      <main id="main-content" className="flex-1">
+        {/* 1. HERO SECTION */}
+        <section className="relative overflow-hidden pt-12 sm:pt-20 pb-16 sm:pb-24 border-b border-[#e7e2d8]">
         <HeroAtmosphere />
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
@@ -451,7 +456,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                 <CalendarCheck className="w-5 h-5" aria-hidden="true" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-stone-900">Chọn giờ linh hoạt</h4>
+                <h2 className="text-sm font-semibold text-stone-900">Chọn giờ linh hoạt</h2>
                 <p className="text-xs text-stone-500 mt-0.5">Khung giờ cập nhật trực tiếp theo thời gian thực</p>
               </div>
             </div>
@@ -461,7 +466,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                 <UserRound className="w-5 h-5" aria-hidden="true" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-stone-900">Không cần tài khoản</h4>
+                <h2 className="text-sm font-semibold text-stone-900">Không cần tài khoản</h2>
                 <p className="text-xs text-stone-500 mt-0.5">Đặt lịch nhanh chóng với số điện thoại liên hệ</p>
               </div>
             </div>
@@ -471,7 +476,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                 <ShieldCheck className="w-5 h-5" aria-hidden="true" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-stone-900">Mã tra cứu bảo mật</h4>
+                <h2 className="text-sm font-semibold text-stone-900">Mã tra cứu bảo mật</h2>
                 <p className="text-xs text-stone-500 mt-0.5">Dễ dàng theo dõi tiến độ lịch hẹn bất cứ khi nào</p>
               </div>
             </div>
@@ -589,6 +594,8 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                           src={resolveMediaUrl(service.imageUrl)}
                           alt={service.name}
                           loading="lazy"
+                          width={400}
+                          height={176}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       </div>
@@ -620,7 +627,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                           {service.description}
                         </p>
                       ) : (
-                        <p className="text-xs text-stone-400 italic mb-4">
+                        <p className="text-xs text-stone-500 italic mb-4">
                           Liệu trình chăm sóc toàn diện tại spa.
                         </p>
                       )}
@@ -691,6 +698,8 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                 <img
                   src={resolveMediaUrl(selectedServiceDetail.imageUrl)}
                   alt={selectedServiceDetail.name}
+                  width={64}
+                  height={64}
                   className="w-16 h-16 rounded-2xl object-cover border border-stone-200 shrink-0"
                 />
               )}
@@ -719,7 +728,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
             <div className="space-y-5 flex-1">
               {selectedServiceDetail.description && (
                 <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-1.5">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1.5">
                     Mô tả liệu trình
                   </h4>
                   <p className="text-sm text-stone-600 leading-relaxed">
@@ -729,7 +738,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               )}
 
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-2.5">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-2.5">
                   Quy trình thực hiện ({parseProcessSteps(selectedServiceDetail.processSteps).length} bước)
                 </h4>
                 {parseProcessSteps(selectedServiceDetail.processSteps).length > 0 ? (
@@ -809,6 +818,8 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                           src={resolveMediaUrl(member.avatarUrl)}
                           alt={member.name}
                           loading="lazy"
+                          width={56}
+                          height={56}
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -816,7 +827,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                       )}
                     </div>
                     <div>
-                      <h4 className="font-semibold text-stone-900 text-base">{member.name}</h4>
+                      <h3 className="font-semibold text-stone-900 text-base">{member.name}</h3>
                       <p className="text-xs text-stone-500 mt-0.5">Kỹ thuật viên trị liệu</p>
                     </div>
                   </div>
@@ -861,7 +872,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                     <span className="px-2.5 py-0.5 rounded-full bg-[#f2f6f3] border border-[#c6d8c9]/60">
                       {art.category || 'Chăm sóc'}
                     </span>
-                    <span className="text-stone-400 font-normal">{art.readTime || '3 phút đọc'}</span>
+                    <span className="text-stone-500 font-normal">{art.readTime || '3 phút đọc'}</span>
                   </div>
 
                   <h3 className="font-serif-title font-medium text-base text-stone-900 mb-2.5 leading-snug line-clamp-2">
@@ -913,7 +924,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
               <span className="px-3 py-0.5 rounded-full bg-[#f2f6f3] border border-[#c6d8c9]">
                 {readingArticle.category || 'Góc chăm sóc'}
               </span>
-              <span className="text-stone-400 font-normal">{readingArticle.readTime || '3 phút đọc'}</span>
+              <span className="text-stone-500 font-normal">{readingArticle.readTime || '3 phút đọc'}</span>
             </div>
 
             <h2 id="modal-article-title" className="text-2xl sm:text-3xl font-serif-title font-medium text-stone-900 mb-6 leading-tight">
@@ -925,6 +936,9 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                 <img
                   src={resolveMediaUrl(readingArticle.coverImage)}
                   alt={readingArticle.title}
+                  loading="lazy"
+                  width={800}
+                  height={288}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -992,7 +1006,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
                   </div>
 
                   <div className="pt-4 border-t border-[#e7e2d8]">
-                    <h4 className="font-semibold text-stone-900 text-sm">{r.customerName}</h4>
+                    <h3 className="font-semibold text-stone-900 text-sm">{r.customerName}</h3>
                     {r.serviceName && (
                       <span className="text-[11px] text-[#566f5c] font-medium block truncate mt-0.5">
                         {r.serviceName}
@@ -1005,7 +1019,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
           )}
 
           <div className="mt-8 text-center">
-            <span className="text-[11px] text-stone-400 italic">
+            <span className="text-[11px] text-stone-500 italic">
               * Khách hàng trải nghiệm có thể đóng góp ý kiến trực tiếp tại mục Phản hồi bên dưới.
             </span>
           </div>
@@ -1023,7 +1037,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
             {/* Left Contact & Hotline Column */}
             <div className="lg:col-span-5 space-y-6">
               <div>
-                <span className="text-xs uppercase tracking-widest font-semibold text-[#b8976c]">
+                <span className="text-xs uppercase tracking-widest font-semibold text-[#8a6534]">
                   Lắng nghe & Tận tâm
                 </span>
                 <h2 id="feedback-heading" className="text-2xl sm:text-4xl font-serif-title font-medium text-stone-900 mt-1 mb-3">
@@ -1250,6 +1264,7 @@ export function SpaLanding({ slug, spa, children }: SpaLandingProps) {
           {children}
         </div>
       </section>
+      </main>
 
       {/* 10. FOOTER */}
       <footer id="lien-he" className="mt-auto bg-stone-900 text-stone-300">
