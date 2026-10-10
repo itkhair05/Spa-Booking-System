@@ -1,19 +1,20 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, lazy, Suspense, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './app/auth/AuthContext';
 import { useAuth } from './app/auth/useAuth';
-import LoginPage from './pages/LoginPage';
-import Dashboard from './pages/Dashboard';
-import Bookings from './pages/Bookings';
-import Customers from './pages/Customers';
-import Services from './pages/Services';
-import Staff from './pages/Staff';
-import FeedbackPage from './pages/Feedback';
-import Articles from './pages/Articles';
-import ReviewsPage from './pages/Reviews';
-import Settings from './pages/Settings';
 import PublicBooking from './pages/PublicBooking';
-import BookingResultPage from './pages/BookingResultPage';
+
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Bookings = lazy(() => import('./pages/Bookings'));
+const Customers = lazy(() => import('./pages/Customers'));
+const Services = lazy(() => import('./pages/Services'));
+const Staff = lazy(() => import('./pages/Staff'));
+const FeedbackPage = lazy(() => import('./pages/Feedback'));
+const Articles = lazy(() => import('./pages/Articles'));
+const ReviewsPage = lazy(() => import('./pages/Reviews'));
+const Settings = lazy(() => import('./pages/Settings'));
+const BookingResultPage = lazy(() => import('./pages/BookingResultPage'));
 
 /**
  * Ensures direct loads, reloads, and page navigation start at the top of the page
@@ -86,113 +87,124 @@ const PublicRoute = ({ children }: { children: ReactNode }) => {
   return user ? <Navigate to="/dashboard" replace /> : <>{children}</>;
 };
 
+function PageFallback() {
+  return (
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center font-sans" aria-busy="true">
+      <div className="w-8 h-8 rounded-full border-2 border-stone-300 border-t-[#465d4c] animate-spin" />
+      <span className="sr-only">Đang tải nội dung...</span>
+    </div>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <ScrollToTop />
-        <Routes>
-          {/* Public */}
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <LoginPage />
-              </PublicRoute>
-            }
-          />
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            {/* Public */}
+            <Route
+              path="/login"
+              element={
+                <PublicRoute>
+                  <LoginPage />
+                </PublicRoute>
+              }
+            />
 
-          <Route
-            path="/spas/:slug"
-            element={<PublicBooking />}
-          />
+            <Route
+              path="/spas/:slug"
+              element={<PublicBooking />}
+            />
 
-          {/* Legacy slug redirect */}
-          <Route path="/spas/demo-spa" element={<Navigate to="/spas/tikey-spa" replace />} />
+            {/* Legacy slug redirect */}
+            <Route path="/spas/demo-spa" element={<Navigate to="/spas/tikey-spa" replace />} />
 
-          {/* Protected */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/bookings"
-            element={
-              <ProtectedRoute>
-                <Bookings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/customers"
-            element={
-              <ProtectedRoute>
-                <Customers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/services"
-            element={
-              <ProtectedRoute>
-                <Services />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/staff"
-            element={
-              <ProtectedRoute>
-                <Staff />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/articles"
-            element={
-              <ProtectedRoute>
-                <Articles />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/reviews"
-            element={
-              <ProtectedRoute>
-                <ReviewsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/feedback"
-            element={
-              <ProtectedRoute>
-                <FeedbackPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
+            {/* Protected */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bookings"
+              element={
+                <ProtectedRoute>
+                  <Bookings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/customers"
+              element={
+                <ProtectedRoute>
+                  <Customers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/services"
+              element={
+                <ProtectedRoute>
+                  <Services />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/staff"
+              element={
+                <ProtectedRoute>
+                  <Staff />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/articles"
+              element={
+                <ProtectedRoute>
+                  <Articles />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reviews"
+              element={
+                <ProtectedRoute>
+                  <ReviewsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/feedback"
+              element={
+                <ProtectedRoute>
+                  <FeedbackPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Public landing on root, tra-cuu, and dat-lich callback/ket-qua */}
-          <Route path="/" element={<PublicBooking />} />
-          <Route path="/tra-cuu" element={<PublicBooking />} />
-          <Route path="/dat-lich/callback" element={<BookingResultPage />} />
-          <Route path="/dat-lich/ket-qua" element={<BookingResultPage />} />
+            {/* Public landing on root, tra-cuu, and dat-lich callback/ket-qua */}
+            <Route path="/" element={<PublicBooking />} />
+            <Route path="/tra-cuu" element={<PublicBooking />} />
+            <Route path="/dat-lich/callback" element={<BookingResultPage />} />
+            <Route path="/dat-lich/ket-qua" element={<BookingResultPage />} />
 
-          {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Catch-all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </AuthProvider>
   );
