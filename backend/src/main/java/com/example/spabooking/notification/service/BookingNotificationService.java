@@ -92,7 +92,7 @@ public class BookingNotificationService {
                 payment = paymentRepository.findByBookingId(booking.getId()).orElse(null);
             }
 
-            // SMTP sending executes completely outside any open DB lock or transaction
+            // Email sending executes completely outside any open DB lock or transaction (via Resend REST API)
             boolean sent = emailService.sendBookingConfirmation(booking, payment);
             if (sent) {
                 log.info("Successfully sent confirmation email for booking {}", booking.getBookingCode());
@@ -154,7 +154,7 @@ public class BookingNotificationService {
                 return;
             }
 
-            // Atomic database claim: prevents multi-instance concurrency without holding lock during SMTP
+            // Atomic database claim: prevents multi-instance concurrency without holding lock during external HTTP API call
             claimed = claimService.claimAppointmentReminder(bookingId, LocalDateTime.now());
             if (!claimed) {
                 log.info("Appointment reminder for booking {} was already claimed/sent by another instance, skipping",
@@ -162,7 +162,7 @@ public class BookingNotificationService {
                 return;
             }
 
-            // SMTP sending executes completely outside any open DB lock or transaction
+            // Email sending executes completely outside any open DB lock or transaction (via Resend REST API)
             boolean sent = emailService.sendAppointmentReminder(booking);
             if (sent) {
                 log.info("Successfully sent appointment reminder for booking {}", booking.getBookingCode());

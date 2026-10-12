@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -90,10 +91,20 @@ public class PublicApiControllerTest {
     
     @Test
     public void testGetAvailability_NotFoundWhenServiceMissing() throws Exception {
+        String futureDate = LocalDate.now().plusDays(1).toString();
         mockMvc.perform(get("/api/v1/public/spas/tikey-spa/availability")
                 .param("serviceId", "1")
-                .param("date", "2026-10-10"))
+                .param("date", futureDate))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void testGetAvailability_BadRequestWhenDateInPast() throws Exception {
+        String pastDate = LocalDate.now().minusDays(1).toString();
+        mockMvc.perform(get("/api/v1/public/spas/tikey-spa/availability")
+                .param("serviceId", "1")
+                .param("date", pastDate))
+                .andExpect(status().isBadRequest());
     }
     
     @Test
