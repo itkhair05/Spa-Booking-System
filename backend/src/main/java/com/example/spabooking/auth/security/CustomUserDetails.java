@@ -79,4 +79,8 @@ public class CustomUserDetails implements UserDetails {
     public boolean isOwner() {
         return user.getRole() == com.example.spabooking.auth.enums.UserRole.OWNER;
     }
+
+    public Integer getTokenVersion() {
+        return user != null && user.getTokenVersion() != null ? user.getTokenVersion() : 0;
+    }
 }

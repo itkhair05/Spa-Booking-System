@@ -40,6 +40,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 if (userDetails.isEnabled()) {
+                    if (userDetails instanceof CustomUserDetails customUserDetails) {
+                        Integer tokenTv = jwtUtils.getTokenVersionFromJwtToken(jwt);
+                        Integer currentTv = customUserDetails.getTokenVersion();
+                        if (!java.util.Objects.equals(tokenTv, currentTv)) {
+                            logger.warn("User {} provided JWT with token version {} but current version is {}. Authentication rejected.",
+                                    username, tokenTv, currentTv);
+                            filterChain.doFilter(request, response);
+                            return;
+                        }
+                    }
+
                     UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                             userDetails,

@@ -1,5 +1,5 @@
 import { useState, useId } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../app/auth/useAuth';
 import { Button } from '../components/ui/Button';
 import { Sparkles } from 'lucide-react';
@@ -172,6 +172,15 @@ const LoginPage = () => {
             onChange={(e) => setPassword(e.target.value)}
             aria-required="true"
           />
+
+          <div className="flex justify-end -mt-2">
+            <Link
+              to="/forgot-password"
+              className="text-xs font-medium text-[#465d4c] hover:text-[#36493c] transition-colors"
+            >
+              Quên mật khẩu?
+            </Link>
+          </div>
 
           <Button
             type="submit"
