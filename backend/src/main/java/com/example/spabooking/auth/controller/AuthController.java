@@ -17,7 +17,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.example.spabooking.auth.dto.ChangePasswordRequest;
+import com.example.spabooking.auth.dto.ForgotPasswordRequest;
+import com.example.spabooking.auth.dto.ResetPasswordRequest;
 import com.example.spabooking.auth.service.AuthService;
+import com.example.spabooking.auth.service.PasswordResetService;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.Map;
@@ -29,11 +32,16 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
 
-    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, AuthService authService) {
+    public AuthController(AuthenticationManager authenticationManager,
+                          JwtUtils jwtUtils,
+                          AuthService authService,
+                          PasswordResetService passwordResetService) {
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
         this.authService = authService;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/login")
@@ -58,5 +66,17 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         authService.changePassword(request);
         return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody(required = false) ForgotPasswordRequest request) {
+        passwordResetService.requestPasswordReset(request);
+        return ResponseEntity.ok(Map.of("message", PasswordResetService.GENERIC_FORGOT_SUCCESS_MESSAGE));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request);
+        return ResponseEntity.ok(Map.of("message", PasswordResetService.RESET_SUCCESS_MESSAGE));
     }
 }

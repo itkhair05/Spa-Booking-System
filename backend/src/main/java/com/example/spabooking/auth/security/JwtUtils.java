@@ -49,6 +49,7 @@ public class JwtUtils {
 
         return Jwts.builder()
                 .subject((userPrincipal.getUsername()))
+                .claim("tv", userPrincipal.getTokenVersion())
                 .issuedAt(new Date())
                 .expiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(key())
@@ -58,6 +59,19 @@ public class JwtUtils {
     public String getUserNameFromJwtToken(String token) {
         return Jwts.parser().verifyWith(key()).build()
                    .parseSignedClaims(token).getPayload().getSubject();
+    }
+
+    public Integer getTokenVersionFromJwtToken(String token) {
+        try {
+            Object tv = Jwts.parser().verifyWith(key()).build()
+                    .parseSignedClaims(token).getPayload().get("tv");
+            if (tv instanceof Number number) {
+                return number.intValue();
+            }
+            return 0;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     public boolean validateJwtToken(String authToken) {

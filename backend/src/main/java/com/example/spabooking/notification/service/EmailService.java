@@ -141,11 +141,33 @@ public class EmailService {
         return sendViaResend(recipientEmail, subject, textContent, htmlContent, bookingCode, "Reminder");
     }
 
+    public boolean sendPasswordResetEmail(String recipientEmail, String recipientName, String resetUrl, String spaName) {
+        if (!isConfigured()) {
+            log.warn("Resend email service is not configured (missing RESEND_API_KEY or APP_MAIL_FROM_ADDRESS). Skipping password reset email for: {}",
+                    maskTarget(recipientEmail));
+            return false;
+        }
+
+        if (recipientEmail == null || recipientEmail.trim().isEmpty() || !recipientEmail.contains("@")) {
+            log.warn("Recipient email is missing or invalid. Skipping password reset email delivery.");
+            return false;
+        }
+
+        String effectiveName = (recipientName != null && !recipientName.isBlank()) ? recipientName.trim() : "Quý khách";
+        String effectiveSpaName = (spaName != null && !spaName.isBlank()) ? spaName.trim() : "TIKEY SPA";
+        String subject = "[" + effectiveSpaName + "] Hướng dẫn đặt lại mật khẩu";
+
+        String textContent = buildPasswordResetTextContent(effectiveSpaName, effectiveName, resetUrl);
+        String htmlContent = buildPasswordResetHtmlContent(effectiveSpaName, effectiveName, resetUrl);
+
+        return sendViaResend(recipientEmail, subject, textContent, htmlContent, recipientEmail, "PasswordReset");
+    }
+
     private boolean sendViaResend(String recipientEmail, String subject,
                                   String textContent, String htmlContent,
-                                  String bookingCode, String emailType) {
+                                  String targetIdentifier, String emailType) {
         if (httpClient == null) {
-            log.error("HTTP client is not initialized. Cannot send {} email for booking code: {}", emailType, bookingCode);
+            log.error("HTTP client is not initialized. Cannot send {} email for target: {}", emailType, maskTarget(targetIdentifier));
             return false;
         }
 
@@ -183,32 +205,42 @@ public class EmailService {
 
             int statusCode = response.statusCode();
             if (statusCode >= 200 && statusCode < 300) {
-                log.info("Successfully sent {} email via Resend HTTPS API for booking code: {}, httpStatus={}",
-                        emailType, bookingCode, statusCode);
+                log.info("Successfully sent {} email via Resend HTTPS API for target: {}, httpStatus={}",
+                        emailType, maskTarget(targetIdentifier), statusCode);
                 return true;
             } else {
-                log.error("Resend API rejected {} email for booking code {}: httpStatus={}, responseBody={}",
-                        emailType, bookingCode, statusCode, sanitizeResponseBody(response.body()));
+                log.error("Resend API rejected {} email for target {}: httpStatus={}, responseBody={}",
+                        emailType, maskTarget(targetIdentifier), statusCode, sanitizeResponseBody(response.body()));
                 return false;
             }
         } catch (HttpTimeoutException ex) {
-            log.error("Resend API request timed out sending {} email for booking code {}: {}",
-                    emailType, bookingCode, ex.getMessage());
+            log.error("Resend API request timed out sending {} email for target {}: {}",
+                    emailType, maskTarget(targetIdentifier), ex.getMessage());
             return false;
         } catch (IOException ex) {
-            log.error("I/O error communicating with Resend API for booking code {}: {}",
-                    bookingCode, ex.getMessage());
+            log.error("I/O error communicating with Resend API for target {}: {}",
+                    maskTarget(targetIdentifier), ex.getMessage());
             return false;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
-            log.error("Interrupted while sending {} email for booking code {}: {}",
-                    emailType, bookingCode, ex.getMessage());
+            log.error("Interrupted while sending {} email for target {}: {}",
+                    emailType, maskTarget(targetIdentifier), ex.getMessage());
             return false;
         } catch (Exception ex) {
-            log.error("Unexpected error sending {} email for booking code {}: {}",
-                    emailType, bookingCode, ex.getMessage());
+            log.error("Unexpected error sending {} email for target {}: {}",
+                    emailType, maskTarget(targetIdentifier), ex.getMessage());
             return false;
         }
+    }
+
+    private String maskTarget(String target) {
+        if (target == null) return "UNKNOWN";
+        if (target.contains("@")) {
+            int at = target.indexOf('@');
+            if (at <= 2) return "***" + target.substring(at);
+            return target.substring(0, 2) + "***" + target.substring(at);
+        }
+        return target;
     }
 
     private String sanitizeResponseBody(String body) {
@@ -349,6 +381,51 @@ public class EmailService {
                 + "      </table>"
                 + "    </div>"
                 + "    <p style=\"font-size: 13px; color: #64748b;\"><em>Kính mong Quý khách sắp xếp thời gian đến đúng giờ để có trải nghiệm dịch vụ trọn vẹn nhất.</em></p>"
+                + "    <p style=\"margin-top: 24px;\">Trân trọng cảm ơn,<br><strong>" + escapeHtml(spaName) + "</strong></p>"
+                + "  </div>"
+                + "</div>"
+                + "</body></html>";
+    }
+
+    private String buildPasswordResetTextContent(String spaName, String recipientName, String resetUrl) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Kính chào ").append(recipientName).append(",\n\n");
+        sb.append("Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản quản trị của bạn tại ").append(spaName).append(".\n\n");
+        sb.append("Vui lòng truy cập liên kết sau để tạo mật khẩu mới:\n");
+        sb.append(resetUrl).append("\n\n");
+        sb.append("LƯU Ý QUAN TRỌNG:\n");
+        sb.append("- Liên kết này chỉ có hiệu lực trong vòng 15 phút kể từ thời điểm yêu cầu.\n");
+        sb.append("- Liên kết chỉ sử dụng được 01 lần duy nhất.\n");
+        sb.append("- Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email. Mật khẩu hiện tại của bạn vẫn được bảo vệ an toàn.\n\n");
+        sb.append("Trân trọng,\n").append(spaName);
+        return sb.toString();
+    }
+
+    private String buildPasswordResetHtmlContent(String spaName, String recipientName, String resetUrl) {
+        return "<!DOCTYPE html>"
+                + "<html lang=\"vi\">"
+                + "<head><meta charset=\"UTF-8\"></head>"
+                + "<body style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333333; background-color: #f7f9fa; margin: 0; padding: 20px;\">"
+                + "<div style=\"max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06);\">"
+                + "  <div style=\"background-color: #465d4c; padding: 24px; text-align: center; color: #ffffff;\">"
+                + "    <h1 style=\"margin: 0; font-size: 22px; font-weight: 600;\">" + escapeHtml(spaName) + "</h1>"
+                + "    <p style=\"margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;\">Yêu cầu đặt lại mật khẩu</p>"
+                + "  </div>"
+                + "  <div style=\"padding: 24px;\">"
+                + "    <p>Kính chào <strong>" + escapeHtml(recipientName) + "</strong>,</p>"
+                + "    <p>Hệ thống nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn tại <strong>" + escapeHtml(spaName) + "</strong>.</p>"
+                + "    <div style=\"text-align: center; margin: 30px 0;\">"
+                + "      <a href=\"" + escapeHtml(resetUrl) + "\" style=\"display: inline-block; background-color: #465d4c; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 15px;\">Đặt lại mật khẩu</a>"
+                + "    </div>"
+                + "    <div style=\"background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 20px 0; font-size: 13px; color: #475569;\">"
+                + "      <p style=\"margin: 0 0 8px 0; font-weight: 600; color: #0f172a;\">Lưu ý bảo mật:</p>"
+                + "      <ul style=\"margin: 0; padding-left: 20px;\">"
+                + "        <li>Liên kết này chỉ có hiệu lực trong vòng <strong>15 phút</strong>.</li>"
+                + "        <li>Liên kết chỉ có thể sử dụng <strong>01 lần</strong> duy nhất.</li>"
+                + "        <li>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này. Mật khẩu hiện tại của bạn vẫn an toàn.</li>"
+                + "      </ul>"
+                + "    </div>"
+                + "    <p style=\"font-size: 12px; color: #94a3b8; word-break: break-all;\">Nếu không bấm được nút trên, hãy sao chép và dán liên kết sau vào trình duyệt:<br><a href=\"" + escapeHtml(resetUrl) + "\" style=\"color: #465d4c;\">" + escapeHtml(resetUrl) + "</a></p>"
                 + "    <p style=\"margin-top: 24px;\">Trân trọng cảm ơn,<br><strong>" + escapeHtml(spaName) + "</strong></p>"
                 + "  </div>"
                 + "</div>"
