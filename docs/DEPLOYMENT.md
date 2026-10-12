@@ -136,6 +136,9 @@ Toàn bộ các biến môi trường bên dưới phải được thiết lập
 | `VNPAY_IPN_URL` | Không | `https://api.example.com/api/v1/payments/vnpay-ipn` | Đường dẫn Webhook IPN nhận kết quả bất đồng bộ từ máy chủ VNPay. |
 | `VNPAY_REFUND_URL` | Không | `https://sandbox.vnpayment.vn/merchant_webapi/api/transaction` | Cổng API gửi yêu cầu hoàn tiền tự động sang VNPay. |
 | `VNPAY_QUERYDR_URL` | Không | `https://sandbox.vnpayment.vn/merchant_webapi/api/transaction` | Cổng API đối soát tình trạng giao dịch QueryDR. |
+| `RESEND_API_KEY` | Không | *(Khóa bí mật do Resend cấp)* | Khóa API Resend (REST HTTPS) gửi email xác nhận và nhắc lịch. Nếu để trống, hệ thống ghi log cảnh báo và an toàn bỏ qua gửi mail. |
+| `APP_MAIL_FROM_ADDRESS` | Không | `booking@yourdomain.com` | Địa chỉ email người gửi (bắt buộc verify tên miền trên Resend Dashboard). |
+| `APP_MAIL_FROM_NAME` | Không | `TIKEY SPA` | Tên hiển thị người gửi email. |
 
 ---
 
